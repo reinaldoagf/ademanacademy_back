@@ -1,24 +1,24 @@
 // src/auth/auth.controller.ts
 import { Controller, Post, Body, Res, HttpCode, HttpStatus } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { RegisterDto } from './dto/register.dto';
+import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import * as express from 'express';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
-  @Post('register')
+  @Post('signup')
   @HttpCode(HttpStatus.CREATED)
-  async register(@Body() registerDto: RegisterDto) {
-    return this.authService.register(registerDto);
+  async signup(@Body() registerDto: SignupDto) {
+    return this.authService.signup(registerDto);
   }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(
-    @Body() loginDto: LoginDto, 
+    @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) response: express.Response
   ) {
     const { access_token, user } = await this.authService.login(loginDto);

@@ -1,39 +1,54 @@
 // src/auth/auth.service.ts
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { UsersService } from '../users/users.service';
-import { RegisterDto } from './dto/register.dto';
+import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcrypt';
+import { Role } from '../roles/entities/role.entity';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private usersService: UsersService,
+    private readonly usersService: UsersService,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
-  async register(registerDto: RegisterDto) {
-    console.log({registerDto})
-    // 1. Verificar duplicados en MySQL
+  async signup(registerDto: SignupDto) {
+    // 1. Validar si el email ya existe
     const userExists = await this.usersService.findByEmail(registerDto.email);
     if (userExists) {
       throw new BadRequestException('El correo electrónico ya está registrado');
     }
 
-    // 2. Encriptar contraseña de forma segura (Sal de 10 rondas)
+    // 2. Encriptar contraseña
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(registerDto.password || '', salt);
+    const hashedPassword = await bcrypt.hash(registerDto.password, salt);
 
-    // 3. Guardar en Base de Datos
+    // 3. 🧠 LÓGICA DE NEGOCIO: Verificar si es el primer usuario del sistema
+    const totalUsers = await this.usersService.countAll(); // Necesitas crear este método en UsersService
+
+    // Si no hay usuarios, el rol asignado es 'admin', sino, por defecto 'cliente'
+    const assignedRole: ('admin' | 'organizer' | 'client')[] =
+      totalUsers === 0 ? ['admin'] : ['client'];
+
+    // 4. Enviar al UsersService incluyendo el rol calculado internamente
     const user = await this.usersService.create({
-      ...registerDto,
-      role: (registerDto.role && registerDto.role.trim() !== '') ? registerDto.role : 'cliente',
+      name: registerDto.name,
+      email: registerDto.email,
       password: hashedPassword,
+      roles: assignedRole, // 👈 Pasado de forma segura en el servidor
     });
 
-    // Ocultamos la contraseña antes de retornar el objeto creado
-    delete user.password;
+
+    if (user && user.password) delete user.password;
+
     return user;
   }
 
@@ -53,10 +68,10 @@ export class AuthService {
     }
 
     // 3. Estructurar la información contenida en el token (Payload)
-    const payload = { 
-      sub: user.id, 
-      email: user.email, 
-      role: user.role 
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      roles: user.roles,
     };
 
     return {
@@ -65,7 +80,7 @@ export class AuthService {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role,
+        roles: user.roles,
       },
     };
   }

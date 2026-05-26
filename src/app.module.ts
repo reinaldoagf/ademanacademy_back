@@ -4,6 +4,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { User } from './users/entities/user.entity';
+import { Role } from './roles/entities/role.entity'; // 💡 Importa la entidad Role
 
 @Module({
   imports: [
@@ -26,6 +28,7 @@ import { UsersModule } from './users/users.module';
         synchronize: configService.get<string>('NODE_ENV') === 'development', // ⚠️ true solo en desarrollo (crea/modifica tablas automáticamente)
       }),
     }),
+    TypeOrmModule.forFeature([User, Role]),
     AuthModule,
     UsersModule,
   ],

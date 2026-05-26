@@ -1,5 +1,6 @@
 // src/users/entities/user.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToMany, JoinTable } from 'typeorm';
+import { Role } from '../../roles/entities/role.entity';
 
 @Entity('users')
 export class User {
@@ -15,16 +16,18 @@ export class User {
   @Column({ type: 'varchar', length: 255 })
   password?: string;
 
-  @Column({
-    type: 'enum',
-    enum: ['admin', 'organizador', 'cliente'],
-    default: 'cliente',
+  // 💡 NUEVO: Relación de muchos a muchos con la tabla de roles
+  @ManyToMany(() => Role, (role) => role.users, { cascade: true })
+  @JoinTable({
+    name: 'users_roles', // Nombre de la tabla intermedia
+    joinColumn: { name: 'userId', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'roleId', referencedColumnName: 'id' },
   })
-  role: 'admin' | 'organizador' | 'cliente';
+  roles: Role[];
 
-  @CreateDateColumn({ name: 'fecha_creacion' })
+  @CreateDateColumn({ name: 'createdAt' })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'fecha_actualizacion' })
+  @UpdateDateColumn({ name: 'updatedAt' })
   updatedAt: Date;
 }

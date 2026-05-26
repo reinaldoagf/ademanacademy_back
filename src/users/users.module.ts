@@ -1,16 +1,17 @@
-// src/users/users.module.ts
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 import { User } from './entities/user.entity';
+import { Role } from '../roles/entities/role.entity'; // 👈 Verifica esta importación
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User]), // Inyecta el repositorio nativo de TypeORM para la entidad User
+    // 💡 Registramos ambas entidades en las dependencias locales del módulo
+    TypeOrmModule.forFeature([User, Role]), 
   ],
   controllers: [UsersController],
   providers: [UsersService],
-  exports: [UsersService], // 👈 Crucial para que AuthModule pueda buscar usuarios por email
+  exports: [UsersService],
 })
 export class UsersModule {}

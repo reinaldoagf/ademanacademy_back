@@ -1,0 +1,13 @@
+{
+  // Establece a Prettier como el formateador por defecto para archivos TypeScript
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  // Configura ESLint para que auto-corrija problemas de código al guardar
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "always"
+  },
+  // Evita que el formateador nativo de VS Code choque con las herramientas
+  "editor.formatOnSave": false
+}
