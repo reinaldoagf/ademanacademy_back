@@ -5,13 +5,10 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { UsersService } from '../users/users.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcrypt';
-import { Role } from '../roles/entities/role.entity';
 
 @Injectable()
 export class AuthService {
@@ -34,16 +31,12 @@ export class AuthService {
     // 3. 🧠 LÓGICA DE NEGOCIO: Verificar si es el primer usuario del sistema
     const totalUsers = await this.usersService.countAll(); // Necesitas crear este método en UsersService
 
-    // Si no hay usuarios, el rol asignado es 'admin', sino, por defecto 'cliente'
-    const assignedRole: ('admin' | 'organizer' | 'client')[] =
-      totalUsers === 0 ? ['admin'] : ['client'];
-
     // 4. Enviar al UsersService incluyendo el rol calculado internamente
     const user = await this.usersService.create({
       name: registerDto.name,
       email: registerDto.email,
       password: hashedPassword,
-      roles: assignedRole, // 👈 Pasado de forma segura en el servidor
+      isAdmin: totalUsers === 0, // 👈 Pasado de forma segura en el servidor
     });
 
 
@@ -57,6 +50,7 @@ export class AuthService {
 
     // 1. Buscar usuario
     const user = await this.usersService.findByEmail(email);
+    console.log({ user })
     if (!user || !user.password) {
       throw new UnauthorizedException('Credenciales incorrectas');
     }
@@ -71,7 +65,7 @@ export class AuthService {
     const payload = {
       sub: user.id,
       email: user.email,
-      roles: user.roles,
+      isAdmin: user.isAdmin,
     };
 
     return {
@@ -80,7 +74,7 @@ export class AuthService {
         id: user.id,
         name: user.name,
         email: user.email,
-        roles: user.roles,
+        isAdmin: user.isAdmin,
       },
     };
   }

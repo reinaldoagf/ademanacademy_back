@@ -1,6 +1,5 @@
 // src/users/entities/user.entity.ts
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToMany, JoinTable } from 'typeorm';
-import { Role } from '../../roles/entities/role.entity';
 
 @Entity('users')
 export class User {
@@ -16,14 +15,9 @@ export class User {
   @Column({ type: 'varchar', length: 255 })
   password?: string;
 
-  // 💡 NUEVO: Relación de muchos a muchos con la tabla de roles
-  @ManyToMany(() => Role, (role) => role.users, { cascade: true })
-  @JoinTable({
-    name: 'users_roles', // Nombre de la tabla intermedia
-    joinColumn: { name: 'userId', referencedColumnName: 'id' },
-    inverseJoinColumn: { name: 'roleId', referencedColumnName: 'id' },
-  })
-  roles: Role[];
+  // 💡 NUEVO: Flag booleano para determinar si el usuario es administrador
+  @Column({ type: 'boolean', default: false })
+  isAdmin: boolean;
 
   @CreateDateColumn({ name: 'createdAt' })
   createdAt: Date;

@@ -14,12 +14,4 @@ export class SignupDto {
   @IsNotEmpty({ message: 'La contraseña es obligatoria' })
   password: string;
 
-  // 💡 Modificado: Ahora es un arreglo de roles validados por el Enum de la base de datos
-  /*  @IsArray({ message: 'Los roles deben enviarse en formato de arreglo []' })
-  @IsEnum(['admin', 'organizer', 'client'], {
-    each: true, // 👈 Valida que CADA elemento dentro del arreglo pertenezca al Enum
-    message: 'Uno o más roles seleccionados no son válidos',
-  })
- @IsOptional() // Sigue siendo opcional por si el frontend no envía nada (para aplicar el default)
-  roles?: ('admin' | 'organizer' | 'client')[]; */
 }

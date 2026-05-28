@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional, IsArray, IsEnum } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional, IsBoolean, IsEnum } from 'class-validator';
 
 export class CreateUserDto {
   @IsString({ message: 'El nombre debe ser una cadena de texto' })
@@ -14,12 +14,7 @@ export class CreateUserDto {
   @IsNotEmpty({ message: 'La contraseña es obligatoria' })
   password: string;
 
-  // 💡 Modificado: Ahora acepta un arreglo de roles validados individualmente por el Enum
-  @IsArray({ message: 'Los roles deben estructurarse en un arreglo []' })
-  @IsEnum(['admin', 'organizer', 'client'], {
-    each: true, // Valida uno a uno los elementos internos del array
-    message: 'Uno o más roles del listado no son válidos',
-  })
-  @IsOptional() // Permite omitirlo para que el servicio aplique el rol por defecto en cascada
-  roles?: ('admin' | 'organizer' | 'client')[];
+  @IsBoolean()
+  @IsOptional()
+  isAdmin?: boolean;
 }
