@@ -40,17 +40,18 @@ export class AuthService {
     });
 
 
-    if (user && user.password) delete user.password;
+    // 💡 SOLUCIÓN: Extraemos password y guardamos todo lo demás en 'userWithoutPassword'
+    const { password, ...userWithoutPassword } = user;
 
-    return user;
+    return userWithoutPassword;
   }
 
   async login(loginDto: LoginDto) {
+    console.log({ loginDto })
     const { email, password } = loginDto;
 
     // 1. Buscar usuario
     const user = await this.usersService.findByEmail(email);
-    console.log({ user })
     if (!user || !user.password) {
       throw new UnauthorizedException('Credenciales incorrectas');
     }

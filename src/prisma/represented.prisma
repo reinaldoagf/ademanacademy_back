@@ -1,0 +1,24 @@
+// prisma/schema/represented.prisma
+
+model Represented {
+  id                  String   @id @default(uuid())
+  firstName           String   @db.VarChar(150)
+  lastName            String   @db.VarChar(150)
+  birthDate           DateTime @db.Date
+  kinship             Kinship  @default(Hijo)
+  medicalObservations String?  @db.Text
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId              String   @db.VarChar(36)
+  createdAt           DateTime @default(now()) @map("createdAt")
+  updatedAt           DateTime @updatedAt @map("updatedAt")
+
+  @@map("represented")
+}
+
+enum Kinship {
+  Hijo
+  Hija
+  Sobrino
+  Sobrina
+  Tutorado
+}

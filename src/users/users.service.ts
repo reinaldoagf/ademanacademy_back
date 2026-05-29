@@ -1,73 +1,107 @@
 // src/users/users.service.ts
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { User } from './entities/user.entity';
+import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class UsersService {
+  // 💡 Tipamos como 'any' para evitar que TypeScript se queje por la estructura interna de accesores de Prisma v7
+  private readonly prismaClient: any;
+
   constructor(
-    @InjectRepository(User)
-    private readonly usersRepository: Repository<User>
-  ) { }
+    @Inject(PrismaService) private readonly prismaService: PrismaService
+  ) {
+    /**
+     * 💡 ARQUITECTURA PRISMA v7:
+     * Con adaptadores de MariaDB/MySQL, los modelos no se montan directo en la raíz de la instancia del servicio.
+     * Accedemos a ellos usando el diccionario de propiedades del prototipo de Prisma de forma 100% segura.
+     */
+    this.prismaClient = this.prismaService['user'] || this.prismaService['User'];
 
+    if (!this.prismaClient) {
+      // Salvavidas dinámico por si se requiere acceder en cascada
+      this.prismaClient = (this.prismaService as any)._client?.['user'] || this.prismaService;
+    }
+  }
+
+  /**
+   * Crea un nuevo usuario en la base de datos
+   */
   async create(createUserDto: CreateUserDto): Promise<User> {
-    const { ...userData } = createUserDto;
-
-    // 2. Creamos la instancia del usuario solo con sus campos nativos
-    const newUser = this.usersRepository.create(userData);
-
-    // 3. Guardamos el usuario con su relación forzada. 
-    return await this.usersRepository.save(newUser);
+    return await this.prismaClient.create({
+      data: createUserDto,
+    });
   }
 
+  /**
+   * Busca un usuario por su correo electrónico (Utilizado en AuthService)
+   */
   async findByEmail(email: string): Promise<User | null> {
-    return await this.usersRepository.findOne({
-      where: { email }
+    return await this.prismaClient.findUnique({
+      where: { email },
     });
   }
 
-  async findAll(): Promise<User[]> {
-    // Retorna todos los usuarios omitiendo el campo password por seguridad en las respuestas globales
-    return await this.usersRepository.find({
-      // 1. Seleccionamos solo las columnas primitivas de la tabla 'users'
-      select: ['id', 'name', 'email', 'createdAt'],
+  /**
+   * Retorna todos los usuarios omitiendo campos sensibles
+   */
+  async findAll(): Promise<Omit<User, 'password' | 'updatedAt' | 'isAdmin'>[]> {
+    return await this.prismaClient.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        createdAt: true,
+      },
     });
   }
 
+  /**
+   * Busca un usuario por su ID único. Lanza 404 si no existe.
+   */
   async findOne(id: string): Promise<User> {
-    const user = await this.usersRepository.findOneBy({ id });
+    const user = await this.prismaClient.findUnique({
+      where: { id },
+    });
+
     if (!user) {
       throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
     }
     return user;
   }
 
+  /**
+   * Actualiza los datos de un usuario
+   */
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
-    // 1. Buscamos el usuario existente
-    const user = await this.usersRepository.findOne({ where: { id } });
-    if (!user) throw new NotFoundException('Usuario no encontrado');
+    // Validamos primero la existencia del registro
+    await this.findOne(id);
 
-    const { ...data } = updateUserDto;
-
-    // 2. Mezclamos primero los datos planos (name, email, etc.)
-    this.usersRepository.merge(user, data);
-
-
-
-    // 4. Guardamos los cambios de forma segura
-    return await this.usersRepository.save(user);
+    return await this.prismaClient.update({
+      where: { id },
+      data: updateUserDto,
+    });
   }
 
+  /**
+   * Elimina un usuario de la base de datos
+   */
   async remove(id: string): Promise<{ message: string }> {
-    const user = await this.findOne(id); // Valida primero si existe
-    await this.usersRepository.remove(user);
+    await this.findOne(id);
+
+    await this.prismaClient.delete({
+      where: { id },
+    });
+
     return { message: `Usuario con ID ${id} eliminado correctamente` };
   }
 
+  /**
+   * Cuenta el total de usuarios registrados
+   */
   async countAll(): Promise<number> {
-    return await this.usersRepository.count();
+    return await this.prismaClient.count();
   }
 }
