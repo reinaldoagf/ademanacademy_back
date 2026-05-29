@@ -15,37 +15,37 @@ datasource db {
 
 // 💡 MODELO: USUARIOS
 model User {
-  id          String        @id @default(uuid()) // Genera UUID v4 automáticamente
-  name        String        @db.VarChar(150)
-  email       String        @unique @db.VarChar(180)
-  password    String?       @db.VarChar(255)
-  isAdmin     Boolean       @default(false)
-  createdAt   DateTime      @default(now()) @map("createdAt")
-  updatedAt   DateTime      @updatedAt @map("updatedAt")
+  id        String    @id @default(uuid())
+  name      String    @db.VarChar(150)
+  email     String    @unique @db.VarChar(180)
+  password  String?   @db.VarChar(255)
+  isAdmin   Boolean   @default(false)
+  createdAt DateTime  @default(now()) @map("createdAt")
+  updatedAt DateTime  @updatedAt @map("updatedAt")
   
-  // Relación inversa: Un usuario tiene muchos representados
-  represented Represented[]
+  // Relación inversa: Un usuario puede tener muchos representados
+  student   Student[]
 
-  @@map("users") // Mapea el modelo a la tabla "users" en MySQL
+  @@map("users")
 }
 
 // 💡 MODELO: REPRESENTADOS
-model Represented {
-  id                 String   @id @default(uuid())
-  firstName          String   @db.VarChar(150)
-  lastName           String   @db.VarChar(150)
-  birthDate          DateTime @db.Date // Formato de fecha pura en MySQL
-  kinship            Kinship  @default(Hijo)
+model Student {
+  id                  String   @id @default(uuid())
+  firstName           String   @db.VarChar(150)
+  lastName            String   @db.VarChar(150)
+  birthDate           DateTime @db.Date
+  kinship             Kinship  @default(Hijo)
   medicalObservations String?  @db.Text
 
-  // Configuración de la Llave Foránea y relación relacional
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId             String   @db.VarChar(36) // Mismo tamaño exacto del UUID de User
+  // 💡 CORRECCIÓN: Volvemos opcional el objeto relacional y su llave foránea
+  user                User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId              String?  @db.VarChar(36) // Ahora acepta NULL en MySQL si el Admin registra al estudiante directamente
 
-  createdAt          DateTime @default(now()) @map("createdAt")
-  updatedAt          DateTime @updatedAt @map("updatedAt")
+  createdAt           DateTime @default(now()) @map("createdAt")
+  updatedAt           DateTime @updatedAt @map("updatedAt")
 
-  @@map("represented") // Mapea el modelo a la tabla "represented" en MySQL
+  @@map("student")
 }
 
 // Enum para limitar los parentescos permitidos

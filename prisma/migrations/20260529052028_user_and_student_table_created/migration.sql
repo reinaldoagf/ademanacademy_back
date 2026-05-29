@@ -13,14 +13,14 @@ CREATE TABLE `users` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `represented` (
+CREATE TABLE `student` (
     `id` VARCHAR(191) NOT NULL,
     `firstName` VARCHAR(150) NOT NULL,
     `lastName` VARCHAR(150) NOT NULL,
     `birthDate` DATE NOT NULL,
     `kinship` ENUM('Hijo', 'Hija', 'Sobrino', 'Sobrina', 'Tutorado') NOT NULL DEFAULT 'Hijo',
     `medicalObservations` TEXT NULL,
-    `userId` VARCHAR(36) NOT NULL,
+    `userId` VARCHAR(36) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
@@ -28,4 +28,4 @@ CREATE TABLE `represented` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- AddForeignKey
-ALTER TABLE `represented` ADD CONSTRAINT `represented_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `student` ADD CONSTRAINT `student_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

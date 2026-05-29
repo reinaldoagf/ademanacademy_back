@@ -1,6 +1,6 @@
-// prisma/schema/represented.prisma
+// prisma/schema/student.prisma
 
-model Represented {
+model Student {
   id                  String   @id @default(uuid())
   firstName           String   @db.VarChar(150)
   lastName            String   @db.VarChar(150)
@@ -12,7 +12,7 @@ model Represented {
   createdAt           DateTime @default(now()) @map("createdAt")
   updatedAt           DateTime @updatedAt @map("updatedAt")
 
-  @@map("represented")
+  @@map("student")
 }
 
 enum Kinship {

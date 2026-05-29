@@ -8,7 +8,7 @@ model User {
   isAdmin     Boolean       @default(false)
   createdAt   DateTime      @default(now()) @map("createdAt")
   updatedAt   DateTime      @updatedAt @map("updatedAt")
-  represented Represented[]
+  student Student[]
 
   @@map("users")
 }
