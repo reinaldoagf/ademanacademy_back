@@ -4,27 +4,25 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "mysql"
 }
 
-
 // 💡 MODELO: USUARIOS
 model User {
-  id        String    @id @default(uuid())
-  name      String    @db.VarChar(150)
-  email     String    @unique @db.VarChar(180)
-  password  String?   @db.VarChar(255)
-  isAdmin   Boolean   @default(false)
-  createdAt DateTime  @default(now()) @map("createdAt")
-  updatedAt DateTime  @updatedAt @map("updatedAt")
-  
+  id        String   @id @default(uuid())
+  name      String   @db.VarChar(150)
+  email     String   @unique @db.VarChar(180)
+  password  String?  @db.VarChar(255)
+  isAdmin   Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("createdAt")
+  updatedAt DateTime @updatedAt @map("updatedAt")
+
   // Relación inversa: Un usuario puede tener muchos representados
-  student   Student[]
+  student Student[]
 
   @@map("users")
 }
@@ -32,6 +30,7 @@ model User {
 // 💡 MODELO: REPRESENTADOS
 model Student {
   id                  String   @id @default(uuid())
+  dni                 String   @unique @db.VarChar(30) // 💡 Añadido DNI único
   firstName           String   @db.VarChar(150)
   lastName            String   @db.VarChar(150)
   birthDate           DateTime @db.Date
@@ -39,13 +38,13 @@ model Student {
   medicalObservations String?  @db.Text
 
   // 💡 CORRECCIÓN: Volvemos opcional el objeto relacional y su llave foránea
-  user                User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId              String?  @db.VarChar(36) // Ahora acepta NULL en MySQL si el Admin registra al estudiante directamente
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String? @db.VarChar(36) // Ahora acepta NULL en MySQL si el Admin registra al estudiante directamente
 
-  createdAt           DateTime @default(now()) @map("createdAt")
-  updatedAt           DateTime @updatedAt @map("updatedAt")
+  createdAt DateTime @default(now()) @map("createdAt")
+  updatedAt DateTime @updatedAt @map("updatedAt")
 
-  @@map("student")
+  @@map("students")
 }
 
 // Enum para limitar los parentescos permitidos

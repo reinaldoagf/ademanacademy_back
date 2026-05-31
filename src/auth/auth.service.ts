@@ -47,7 +47,6 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    console.log({ loginDto })
     const { email, password } = loginDto;
 
     // 1. Buscar usuario
