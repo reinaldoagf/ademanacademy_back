@@ -19,7 +19,7 @@ CREATE TABLE `students` (
     `firstName` VARCHAR(150) NOT NULL,
     `lastName` VARCHAR(150) NOT NULL,
     `birthDate` DATE NOT NULL,
-    `kinship` ENUM('Hijo', 'Hija', 'Sobrino', 'Sobrina', 'Tutorado') NOT NULL DEFAULT 'Hijo',
+    `kinship` ENUM('Hijo', 'Hija', 'Sobrino', 'Sobrina', 'Tutorado', 'Otro') NOT NULL DEFAULT 'Hijo',
     `medicalObservations` TEXT NULL,
     `userId` VARCHAR(36) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),

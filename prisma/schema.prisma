@@ -54,4 +54,5 @@ enum Kinship {
   Sobrino
   Sobrina
   Tutorado
+  Otro
 }

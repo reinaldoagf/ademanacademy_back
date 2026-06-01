@@ -11,8 +11,12 @@ export class StudentsController {
     constructor(private readonly studentsService: StudentsService) { }
 
     @Post()
+    @UseGuards(JwtAuthGuard) // 🔒 Protege la ruta y valida el Bearer Token del Header
     @HttpCode(HttpStatus.CREATED)
-    create(@Body() createStudentDto: CreateStudentDto) {
+    create(
+        @Body() createStudentDto: CreateStudentDto,
+        @CurrentUser() user: any // 👈 El decorador extrae el user automáticamente
+    ) {
         return this.studentsService.create(createStudentDto);
     }
 
