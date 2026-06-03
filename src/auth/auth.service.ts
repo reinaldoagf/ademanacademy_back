@@ -35,6 +35,7 @@ export class AuthService {
     const user = await this.usersService.create({
       name: registerDto.name,
       email: registerDto.email,
+      dni: registerDto.dni,
       password: hashedPassword,
       isAdmin: totalUsers === 0, // 👈 Pasado de forma segura en el servidor
     });
@@ -44,6 +45,7 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       isAdmin: user.isAdmin,
+      dni: user.dni,
     };
 
     // 💡 SOLUCIÓN: Extraemos password y guardamos todo lo demás en 'userWithoutPassword'
@@ -75,6 +77,7 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       isAdmin: user.isAdmin,
+      dni: user.dni,
     };
 
     return {
@@ -84,6 +87,9 @@ export class AuthService {
         name: user.name,
         email: user.email,
         isAdmin: user.isAdmin,
+        profileOnboarding: user.profileOnboarding,
+        profileType: user.profileType,
+        dni: user.dni,
       },
     };
   }

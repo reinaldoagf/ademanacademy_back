@@ -17,4 +17,8 @@ export class CreateUserDto {
   @IsBoolean()
   @IsOptional()
   isAdmin?: boolean;
+
+  @IsString()
+  @IsNotEmpty()
+  dni: string;
 }

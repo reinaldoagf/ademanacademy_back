@@ -1,6 +1,10 @@
 import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional, IsArray, IsEnum } from 'class-validator';
 
 export class SignupDto {
+  @IsString()
+  @IsNotEmpty({ message: 'El DNI es obligatorio' })
+  dni: string;
+
   @IsString({ message: 'El nombre debe ser una cadena de texto' })
   @IsNotEmpty({ message: 'El nombre es obligatorio' })
   name: string;
@@ -13,5 +17,4 @@ export class SignupDto {
   @MinLength(6, { message: 'La contraseña debe tener al menos 6 caracteres' })
   @IsNotEmpty({ message: 'La contraseña es obligatoria' })
   password: string;
-
 }

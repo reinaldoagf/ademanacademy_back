@@ -163,7 +163,7 @@ export class UsersService {
             data: {
               firstName,
               lastName,
-              dni: 'POR_DEFINIR', // Se le pedirá actualizar en su perfil interno
+              dni: user.dni, // Se le pedirá actualizar en su perfil interno
               birthDate: new Date(),
               kinship: 'Otro',
               userId: userId, // El estudiante se apunta a sí mismo

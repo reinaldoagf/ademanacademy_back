@@ -14,6 +14,7 @@ datasource db {
 // 💡 MODELO: USUARIOS
 model User {
   id                String       @id @default(uuid())
+  dni               String       @unique @db.VarChar(30) // 💡 Añadido DNI único
   name              String       @db.VarChar(150)
   email             String       @unique @db.VarChar(180)
   password          String?      @db.VarChar(255)
