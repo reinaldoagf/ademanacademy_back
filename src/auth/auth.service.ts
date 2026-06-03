@@ -39,11 +39,20 @@ export class AuthService {
       isAdmin: totalUsers === 0, // 👈 Pasado de forma segura en el servidor
     });
 
+    // Estructurar la información contenida en el token (Payload)
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      isAdmin: user.isAdmin,
+    };
 
     // 💡 SOLUCIÓN: Extraemos password y guardamos todo lo demás en 'userWithoutPassword'
     const { password, ...userWithoutPassword } = user;
 
-    return userWithoutPassword;
+    return {
+      access_token: this.jwtService.sign(payload),
+      user: userWithoutPassword,
+    };
   }
 
   async login(loginDto: LoginDto) {

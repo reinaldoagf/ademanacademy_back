@@ -5,6 +5,8 @@ CREATE TABLE `users` (
     `email` VARCHAR(180) NOT NULL,
     `password` VARCHAR(255) NULL,
     `isAdmin` BOOLEAN NOT NULL DEFAULT false,
+    `profileOnboarding` BOOLEAN NOT NULL DEFAULT false,
+    `profileType` ENUM('representative', 'student') NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 

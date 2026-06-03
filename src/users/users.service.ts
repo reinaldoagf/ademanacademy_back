@@ -1,8 +1,9 @@
 // src/users/users.service.ts
-import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { CompleteOnboardingDto, ProfileType } from './dto/complete-onboarding.dto';
 import { User } from '@prisma/client'; // 🎯 Importación nativa estándar
 
 @Injectable()
@@ -11,6 +12,7 @@ export class UsersService {
   private readonly prismaClient: any;
 
   constructor(
+    private readonly prisma: PrismaService,
     @Inject(PrismaService) private readonly prismaService: PrismaService
   ) {
     /**
@@ -103,5 +105,86 @@ export class UsersService {
    */
   async countAll(): Promise<number> {
     return await this.prismaClient.count();
+  }
+
+  async completeOnboarding(userId: string, dto: CompleteOnboardingDto) {
+    // 1. Validar que el usuario exista y no haya completado el onboarding previamente
+    const user = await this.prismaClient.findUnique({ where: { id: userId } });
+
+    if (!user) {
+      throw new BadRequestException('Usuario no encontrado.');
+    }
+
+    if (user.profileOnboarding) {
+      throw new BadRequestException('El proceso de onboarding ya fue completado para esta cuenta.');
+    }
+
+    try {
+      // 2. Ejecutar transacciones robustas en Prisma
+      return await this.prisma.$transaction(async (tx) => {
+
+        // Operación A: Actualizar el estatus del usuario y su rol en la plataforma
+        const updatedUser = await tx.user.update({
+          where: { id: userId },
+          data: {
+            profileType: dto.profileType, // Ajusta si usas ENUMs en Postgres/MySQL ('STUDENT' o 'REPRESENTATIVE')
+            profileOnboarding: true,
+          },
+          select: { id: true, name: true, email: true, profileType: true, profileOnboarding: true }
+        });
+
+        // Operación B: Si es REPRESENTATIVE, insertar la lista de alumnos bajo su tutoría
+        if (dto.profileType === ProfileType.REPRESENTATIVE && dto.representedStudents) {
+
+          // Mapeamos los estudiantes adaptando strings a fechas nativas de JS requeridas por Prisma
+          const studentsData = dto.representedStudents.map((student) => ({
+            firstName: student.firstName,
+            lastName: student.lastName,
+            dni: student.dni,
+            birthDate: new Date(student.birthDate), // 🎯 Formateo nativo DateTime
+            kinship: student.kinship,
+            userId: userId, // Relación FK al usuario (Representante)// Categoría automática opcional por edad
+          }));
+
+          // Creamos todos los registros en lote
+          await tx.student.createMany({
+            data: studentsData,
+          });
+        }
+
+        // Operación C: Si es STUDENT autónomo, creamos su registro espejo en la tabla de alumnos
+        if (dto.profileType === ProfileType.STUDENT) {
+          // Desestructuramos del nombre del usuario para crear su perfil técnico inicial de alumno
+          const nameParts = user.name.split(' ');
+          const firstName = nameParts[0] || 'Por definir';
+          const lastName = nameParts.slice(1).join(' ') || 'Por definir';
+
+          await tx.student.create({
+            data: {
+              firstName,
+              lastName,
+              dni: 'POR_DEFINIR', // Se le pedirá actualizar en su perfil interno
+              birthDate: new Date(),
+              kinship: 'Otro',
+              userId: userId, // El estudiante se apunta a sí mismo
+            }
+          });
+        }
+
+        return {
+          message: 'Onboarding completado con éxito.',
+          user: updatedUser,
+        };
+      });
+
+    } catch (error: any) {
+      console.log({ error })
+      // Control de errores de restricción única de Prisma (ej: DNI repetido)
+      if (error.code === 'P2002') {
+        throw new BadRequestException('El DNI de uno de los estudiantes ya se encuentra registrado en el sistema.');
+      }
+
+      throw new InternalServerErrorException('Error en el servidor al procesar el onboarding.');
+    }
   }
 }

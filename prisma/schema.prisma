@@ -13,13 +13,15 @@ datasource db {
 
 // 💡 MODELO: USUARIOS
 model User {
-  id        String   @id @default(uuid())
-  name      String   @db.VarChar(150)
-  email     String   @unique @db.VarChar(180)
-  password  String?  @db.VarChar(255)
-  isAdmin   Boolean  @default(false)
-  createdAt DateTime @default(now()) @map("createdAt")
-  updatedAt DateTime @updatedAt @map("updatedAt")
+  id                String       @id @default(uuid())
+  name              String       @db.VarChar(150)
+  email             String       @unique @db.VarChar(180)
+  password          String?      @db.VarChar(255)
+  isAdmin           Boolean      @default(false)
+  profileOnboarding Boolean      @default(false)
+  profileType       ProfileType?
+  createdAt         DateTime     @default(now()) @map("createdAt")
+  updatedAt         DateTime     @updatedAt @map("updatedAt")
 
   // Relación inversa: Un usuario puede tener muchos representados
   student Student[]
@@ -45,6 +47,12 @@ model Student {
   updatedAt DateTime @updatedAt @map("updatedAt")
 
   @@map("students")
+}
+
+// Enum para limitar los tipos de perfiles 
+enum ProfileType {
+  representative
+  student
 }
 
 // Enum para limitar los parentescos permitidos

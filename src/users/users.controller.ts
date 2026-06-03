@@ -1,12 +1,15 @@
 // src/users/users.controller.ts
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, HttpStatus, UseGuards, BadRequestException } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { CompleteOnboardingDto, ProfileType } from './dto/complete-onboarding.dto';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -32,5 +35,23 @@ export class UsersController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.usersService.remove(id);
+  }
+  @Post('complete-onboarding')
+  @UseGuards(JwtAuthGuard) // 🛡️ Asegura que solo usuarios firmados entren
+  async completeOnboarding(
+    @CurrentUser() user: any, // 👈 El decorador extrae el user automáticamente
+    @Body() completeOnboardingDto: CompleteOnboardingDto,
+  ) {
+    // Extraemos el id de forma 100% segura y limpia
+    const userId = user?.sub;
+    // Regla de negocio en controlador: Validación de payload condicional
+    if (
+      completeOnboardingDto.profileType === ProfileType.REPRESENTATIVE &&
+      (!completeOnboardingDto.representedStudents || completeOnboardingDto.representedStudents.length === 0)
+    ) {
+      throw new BadRequestException('Como representante, debes registrar al menos a un estudiante.');
+    }
+
+    return this.usersService.completeOnboarding(userId, completeOnboardingDto);
   }
 }
