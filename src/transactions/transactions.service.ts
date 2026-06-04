@@ -82,7 +82,6 @@ export class TransactionsService {
 
         const totalPages = Math.ceil(totalItems / limit);
 
-        console.log({ transactions })
 
         // Adaptamos la respuesta para que encaje perfectamente con la UI genérica
         return {

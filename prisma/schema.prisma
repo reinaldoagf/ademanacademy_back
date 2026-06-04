@@ -17,6 +17,7 @@ model User {
   dni               String       @unique @db.VarChar(30) // 💡 Añadido DNI único
   name              String       @db.VarChar(150)
   email             String       @unique @db.VarChar(180)
+  phone             String       @unique @db.VarChar(180)
   password          String?      @db.VarChar(255)
   isAdmin           Boolean      @default(false)
   profileOnboarding Boolean      @default(false)

@@ -35,6 +35,7 @@ export class AuthService {
     const user = await this.usersService.create({
       name: registerDto.name,
       email: registerDto.email,
+      phone: registerDto.phone,
       dni: registerDto.dni,
       password: hashedPassword,
       isAdmin: totalUsers === 0, // 👈 Pasado de forma segura en el servidor

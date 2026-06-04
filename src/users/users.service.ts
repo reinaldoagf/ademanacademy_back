@@ -55,6 +55,7 @@ export class UsersService {
         id: true,
         name: true,
         email: true,
+        phone: true,
         createdAt: true,
       },
     });
@@ -130,7 +131,7 @@ export class UsersService {
             profileType: dto.profileType, // Ajusta si usas ENUMs en Postgres/MySQL ('STUDENT' o 'REPRESENTATIVE')
             profileOnboarding: true,
           },
-          select: { id: true, name: true, email: true, profileType: true, profileOnboarding: true }
+          select: { id: true, name: true, email: true, phone: true, profileType: true, profileOnboarding: true }
         });
 
         // Operación B: Si es REPRESENTATIVE, insertar la lista de alumnos bajo su tutoría

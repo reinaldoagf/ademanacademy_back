@@ -4,6 +4,7 @@ CREATE TABLE `users` (
     `dni` VARCHAR(30) NOT NULL,
     `name` VARCHAR(150) NOT NULL,
     `email` VARCHAR(180) NOT NULL,
+    `phone` VARCHAR(180) NOT NULL,
     `password` VARCHAR(255) NULL,
     `isAdmin` BOOLEAN NOT NULL DEFAULT false,
     `profileOnboarding` BOOLEAN NOT NULL DEFAULT false,
@@ -13,6 +14,7 @@ CREATE TABLE `users` (
 
     UNIQUE INDEX `users_dni_key`(`dni`),
     UNIQUE INDEX `users_email_key`(`email`),
+    UNIQUE INDEX `users_phone_key`(`phone`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
