@@ -25,7 +25,8 @@ model User {
   updatedAt         DateTime     @updatedAt @map("updatedAt")
 
   // Relación inversa: Un usuario puede tener muchos representados
-  student Student[]
+  student      Student[]
+  transactions Transaction[]
 
   @@map("users")
 }
@@ -44,10 +45,50 @@ model Student {
   user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String? @db.VarChar(36) // Ahora acepta NULL en MySQL si el Admin registra al estudiante directamente
 
+  transactions Transaction[]
+
   createdAt DateTime @default(now()) @map("createdAt")
   updatedAt DateTime @updatedAt @map("updatedAt")
 
   @@map("students")
+}
+
+model Transaction {
+  id     String @id @default(cuid()) // Generará IDs únicos estables
+  userId String // Llave foránea hacia tu tabla de Usuario
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  studentId String? // Llave foránea hacia tu tabla de Alumnos
+  student   Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  concept ConceptType
+  amount  Decimal           @db.Decimal(10, 2) // Recomendado para datos financieros (previene bugs de flotantes)
+  method  PaymentMethod
+  status  TransactionStatus @default(pendiente)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("transactions")
+}
+
+enum ConceptType {
+  mensualidad   @map("Mensualidad")
+  matricula     @map("Matrícula")
+  uniforme      @map("Uniforme")
+  entradas_gala @map("Entradas Gala")
+}
+
+enum PaymentMethod {
+  transferencia @map("Transferencia")
+  tarjeta       @map("Tarjeta")
+  efectivo      @map("Efectivo")
+  pago_movil    @map("Pago Móvil")
+}
+
+enum TransactionStatus {
+  aprobado  @map("Aprobado")
+  pendiente @map("Pendiente")
 }
 
 // Enum para limitar los tipos de perfiles 
