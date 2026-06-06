@@ -1,13 +1,15 @@
 // src/users/users.controller.ts
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, HttpStatus, UseGuards, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Query, Delete, HttpCode, HttpStatus, UseGuards, BadRequestException } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { GetUsersFilterDto } from './dto/get-users-filter.dto';
 import { CompleteOnboardingDto, ProfileType } from './dto/complete-onboarding.dto';
 
 @Controller('users')
+@UseGuards(JwtAuthGuard) // 🔒 Protege la ruta y valida el Bearer Token del Header
 export class UsersController {
   constructor(private readonly usersService: UsersService) { }
 
@@ -18,8 +20,8 @@ export class UsersController {
   }
 
   @Get()
-  findAll() {
-    return this.usersService.findAll();
+  findAll(@Query() filters: GetUsersFilterDto) {
+    return this.usersService.findAll(filters);
   }
 
   @Get(':id')

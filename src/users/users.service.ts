@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CompleteOnboardingDto, ProfileType } from './dto/complete-onboarding.dto';
+import { GetUsersFilterDto } from './dto/get-users-filter.dto';
 import { User } from '@prisma/client'; // 🎯 Importación nativa estándar
 
 @Injectable()
@@ -49,16 +50,52 @@ export class UsersService {
   /**
    * Retorna todos los usuarios omitiendo campos sensibles
    */
-  async findAll(): Promise<Omit<User, 'password' | 'updatedAt' | 'isAdmin'>[]> {
-    return await this.prismaClient.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        createdAt: true,
-      },
-    });
+
+  async findAll(filters: GetUsersFilterDto) {
+    const { page = 1, limit = 10, search } = filters;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search } },
+        { email: { contains: search } },
+        { dni: { contains: search } },
+        { phone: { contains: search } },
+      ];
+    }
+
+    const [data, totalItems] = await Promise.all([
+      this.prismaClient.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          name: true,
+          dni: true,
+          email: true,
+          phone: true,
+          createdAt: true,
+        },
+      }),
+      this.prismaClient.count({ where })
+    ]);
+
+    const totalPages = Math.ceil(totalItems / limit);
+
+    return {
+      data,
+      meta: {
+        totalItems,
+        itemCount: data.length,
+        itemsPerPage: limit,
+        totalPages,
+        currentPage: page,
+      }
+    };
   }
 
   /**

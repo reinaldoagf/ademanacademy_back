@@ -7,11 +7,11 @@ import { UpdateStudentDto } from './dto/update-student.dto';
 import { GetStudentsFilterDto } from './dto/get-students-filter.dto';
 
 @Controller('students')
+@UseGuards(JwtAuthGuard) // 🔒 Protege la ruta y valida el Bearer Token del Header
 export class StudentsController {
     constructor(private readonly studentsService: StudentsService) { }
 
     @Post()
-    @UseGuards(JwtAuthGuard) // 🔒 Protege la ruta y valida el Bearer Token del Header
     @HttpCode(HttpStatus.CREATED)
     create(
         @Body() createStudentDto: CreateStudentDto,
