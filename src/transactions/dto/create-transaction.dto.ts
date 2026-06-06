@@ -7,6 +7,10 @@ export class CreateTransactionDto {
     @IsNotEmpty({ message: 'El ID del usuario es obligatorio.' })
     userId: string;
 
+    @IsString()
+    @IsNotEmpty({ message: 'El ID de la orden de pago es obligatorio.' })
+    paymentOrderId: string;
+
     @IsEnum(ConceptType, { message: 'El concepto de pago no es válido.' })
     concept: ConceptType;
 

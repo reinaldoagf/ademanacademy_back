@@ -166,7 +166,7 @@ export class UsersService {
               lastName,
               dni: user.dni, // Se le pedirá actualizar en su perfil interno
               birthDate: new Date(),
-              kinship: 'Otro',
+              kinship: 'other',
               userId: userId, // El estudiante se apunta a sí mismo
             }
           });

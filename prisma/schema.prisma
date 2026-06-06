@@ -26,8 +26,10 @@ model User {
   updatedAt         DateTime     @updatedAt @map("updatedAt")
 
   // Relación inversa: Un usuario puede tener muchos representados
-  student      Student[]
-  transactions Transaction[]
+  student       Student[]
+  paymentOrders PaymentOrder[]
+  orders        Order[]
+  transactions  Transaction[]
 
   @@map("users")
 }
@@ -39,14 +41,16 @@ model Student {
   firstName           String   @db.VarChar(150)
   lastName            String   @db.VarChar(150)
   birthDate           DateTime @db.Date
-  kinship             Kinship  @default(Hijo)
+  kinship             Kinship  @default(son)
   medicalObservations String?  @db.Text
 
   // 💡 CORRECCIÓN: Volvemos opcional el objeto relacional y su llave foránea
   user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String? @db.VarChar(36) // Ahora acepta NULL en MySQL si el Admin registra al estudiante directamente
 
-  transactions Transaction[]
+  transactions  Transaction[]
+  paymentOrders PaymentOrder[]
+  orderItems    OrderItem[]
 
   createdAt DateTime @default(now()) @map("createdAt")
   updatedAt DateTime @updatedAt @map("updatedAt")
@@ -54,18 +58,89 @@ model Student {
   @@map("students")
 }
 
-model Transaction {
-  id     String @id @default(cuid()) // Generará IDs únicos estables
-  userId String // Llave foránea hacia tu tabla de Usuario
+model Order {
+  id     String @id @default(cuid())
+  userId String @db.VarChar(36)
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  studentId String? // Llave foránea hacia tu tabla de Alumnos
+  totalAmount Decimal     @db.Decimal(10, 2)
+  status      OrderStatus @default(pending_preparation) // Estado logístico
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  items        OrderItem[] // El desglose de lo que compró (2 uniformes, 1 entrada...)
+  paymentOrder PaymentOrder? // Relación 1-a-1: Este pedido genera ÚNICAMENTE UNA orden de pago
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id      String @id @default(cuid())
+  orderId String @db.VarChar(255)
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  studentId String?     @db.VarChar(36)
+  student   Student?    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  concept   ConceptType // Mensualidad/Matrícula no aplican aquí, pero Vestuario y Entradas sí.
+  quantity  Int         @default(1)
+  price     Decimal     @db.Decimal(10, 2) // Precio unitario al momento de la compra
+
+  @@map("order_items")
+}
+
+// =========================================================================
+// 🎯 2. TABLA DE ÓRDENES DE PAGO (FINANZAS / CUENTAS POR COBRAR)
+// =========================================================================
+
+model PaymentOrder {
+  id        String   @id @default(cuid())
+  userId    String   @db.VarChar(36)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentId String?  @db.VarChar(36)
   student   Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
+  // 🔗 Conexión opcional con Pedidos: 
+  // - Si viene de la tienda, se conecta a un 'OrderId'.
+  // - Si es una mensualidad automática del sistema, 'orderId' queda NULL porque no nace de una compra.
+  orderId String? @unique @db.VarChar(255)
+  order   Order?  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
   concept ConceptType
-  amount  Decimal           @db.Decimal(10, 2) // Recomendado para datos financieros (previene bugs de flotantes)
+  amount  Decimal            @db.Decimal(10, 2)
+  dueDate DateTime           @db.Date
+  status  PaymentOrderStatus @default(pending) // Estado del dinero
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions Transaction[] // Una orden de pago puede tener varios intentos de transacciones
+
+  @@map("payment_orders")
+}
+
+// =========================================================================
+// 🎯 3. TABLA DE TRANSACCIONES (CAJA / CONTROL DE EFECTIVO Y BANCOS)
+// =========================================================================
+
+model Transaction {
+  id        String   @id @default(cuid())
+  userId    String   @db.VarChar(36)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentId String?  @db.VarChar(36)
+  student   Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  // 🔗 Conexión con la Orden de Pago: Toda transacción debe saldar una deuda (Orden de Pago)
+  paymentOrderId String       @db.VarChar(255)
+  paymentOrder   PaymentOrder @relation(fields: [paymentOrderId], references: [id], onDelete: Cascade)
+
+  concept ConceptType
+  amount  Decimal           @db.Decimal(10, 2)
   method  PaymentMethod
-  status  TransactionStatus @default(pendiente)
+  status  TransactionStatus @default(pending)
+
+  // Datos de auditoría bancaria (Opcionales pero recomendados para Transferencias/Pago Móvil)
+  referenceNumber String? @db.VarChar(100)
+  bankName        String? @db.VarChar(100)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -73,37 +148,55 @@ model Transaction {
   @@map("transactions")
 }
 
+// ==================== ENUMS CORREGIDOS Y SEPARADOS ====================
+
 enum ConceptType {
-  mensualidad   @map("Mensualidad")
-  matricula     @map("Matrícula")
-  uniforme      @map("Uniforme")
-  entradas_gala @map("Entradas Gala")
+  monthly_payment @map("Mensualidad")
+  tuition         @map("Matrícula")
+  locker_room     @map("Vestuario")
+  ticket          @map("Entradas Gala")
 }
 
 enum PaymentMethod {
-  transferencia @map("Transferencia")
-  tarjeta       @map("Tarjeta")
-  efectivo      @map("Efectivo")
-  pago_movil    @map("Pago Móvil")
+  bank_transfer        @map("Transferencia")
+  credit_or_debit_card @map("Tarjeta")
+  cash                 @map("Efectivo")
+  mobile_payment       @map("Pago Móvil")
 }
 
+// 🎯 Estados específicos para la entrega física de productos
+enum OrderStatus {
+  pending_preparation @map("Pendiente por Preparar")
+  ready_for_delivery  @map("Listo para Entregar")
+  delivered           @map("Entregado")
+  canceled            @map("Cancelado")
+}
+
+// 🎯 Estados específicos para el flujo del dinero adeudado
+enum PaymentOrderStatus {
+  pending  @map("Pendiente")
+  paid     @map("Pagada")
+  defeated @map("Vencida")
+  annulled @map("Anulada")
+}
+
+// 🎯 Estados específicos para la verificación bancaria de la caja
 enum TransactionStatus {
-  aprobado  @map("Aprobado")
-  pendiente @map("Pendiente")
+  approved @map("Aprobado")
+  pending  @map("Pendiente")
+  refused  @map("Rechazado")
 }
 
-// Enum para limitar los tipos de perfiles 
 enum ProfileType {
-  representative
-  student
+  representative @map("Representante")
+  student        @map("Alumno")
 }
 
-// Enum para limitar los parentescos permitidos
 enum Kinship {
-  Hijo
-  Hija
-  Sobrino
-  Sobrina
-  Tutorado
-  Otro
+  son      @map("Hijo")
+  daughter @map("Hija")
+  nephew   @map("Sobrino")
+  niece    @map("Sobrina")
+  tutored  @map("Tutorado")
+  other    @map("Otro")
 }

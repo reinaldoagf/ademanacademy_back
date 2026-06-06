@@ -7,10 +7,10 @@ import { ConceptType, PaymentMethod } from '@prisma/client';
 
 // Diccionario para los métodos de pago
 export const PaymentMethodLabel: Record<PaymentMethod, string> = {
-    [PaymentMethod.transferencia]: 'Transferencia',
-    [PaymentMethod.tarjeta]: 'Tarjeta',
-    [PaymentMethod.efectivo]: 'Efectivo',
-    [PaymentMethod.pago_movil]: 'Pago Móvil',
+    [PaymentMethod.bank_transfer]: 'Transferencia',
+    [PaymentMethod.credit_or_debit_card]: 'Tarjeta',
+    [PaymentMethod.cash]: 'Efectivo',
+    [PaymentMethod.mobile_payment]: 'Pago Móvil',
 };
 
 // Diccionario para los conceptos (por si también quieres traducirlos)
