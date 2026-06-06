@@ -15,10 +15,10 @@ export const PaymentMethodLabel: Record<PaymentMethod, string> = {
 
 // Diccionario para los conceptos (por si también quieres traducirlos)
 export const ConceptTypeLabel: Record<ConceptType, string> = {
-    [ConceptType.mensualidad]: 'Mensualidad',
-    [ConceptType.matricula]: 'Matrícula',
-    [ConceptType.uniforme]: 'Uniforme',
-    [ConceptType.entradas_gala]: 'Entradas Gala',
+    [ConceptType.monthly_payment]: 'Mensualidad',
+    [ConceptType.tuition]: 'Matrícula',
+    [ConceptType.locker_room]: 'Vestuario',
+    [ConceptType.ticket]: 'Entradas Gala',
 };
 @Injectable()
 export class TransactionsService {
@@ -72,7 +72,7 @@ export class TransactionsService {
                 orderBy: { createdAt: 'desc' }, // Transacciones más recientes primero
                 include: {
                     user: {
-                        select: { name: true, email: true, dni: true },
+                        select: { name: true, email: true, dni: true, phone: true },
                     },
                     student: true
                 },

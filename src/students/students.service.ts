@@ -3,7 +3,17 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { GetStudentsFilterDto } from './dto/get-students-filter.dto';
+import { Kinship } from '@prisma/client';
 
+// Diccionario para los conceptos (por si también quieres traducirlos)
+export const KinshipLabel: Record<Kinship, string> = {
+    [Kinship.son]: 'Hijo',
+    [Kinship.daughter]: 'Hija',
+    [Kinship.nephew]: 'Sobrino',
+    [Kinship.niece]: 'Sobrina',
+    [Kinship.tutored]: 'Tutorado',
+    [Kinship.other]: 'Otro',
+};
 @Injectable()
 export class StudentsService {
 
@@ -81,7 +91,7 @@ export class StudentsService {
         const totalPages = Math.ceil(totalItems / limit);
 
         return {
-            data,
+            data: data.map(e => ({ ...e, kinship: KinshipLabel[e.kinship] })),
             meta: {
                 totalItems,
                 itemCount: data.length,
