@@ -36,12 +36,14 @@ export class StudentsService {
      */
     async create(createStudentDto: CreateStudentDto): Promise<any> {
         // 🎯 Ahora usamos "this.client" en lugar de "this.prismaClient"
-        const existingStudent = await this.client.findUnique({
-            where: { dni: createStudentDto.dni },
-        });
+        if (createStudentDto.dni) {
+            const existingStudent = await this.client.findUnique({
+                where: { dni: createStudentDto.dni },
+            });
 
-        if (existingStudent) {
-            throw new ConflictException(`El estudiante con DNI ${createStudentDto.dni} ya está registrado`);
+            if (existingStudent) {
+                throw new ConflictException(`El estudiante con DNI ${createStudentDto.dni} ya está registrado`);
+            }
         }
 
         return await this.client.create({

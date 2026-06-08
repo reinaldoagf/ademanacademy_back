@@ -165,10 +165,12 @@ export class UsersService {
         const updatedUser = await tx.user.update({
           where: { id: userId },
           data: {
-            profileType: dto.profileType, // Ajusta si usas ENUMs en Postgres/MySQL ('STUDENT' o 'REPRESENTATIVE')
+            profileType: dto.profileType, // 'student' | 'representative' Mapeado desde el enum del DTO
             profileOnboarding: true,
+            // 🎯 NUEVO: Guardamos la ocupación únicamente si el rol seleccionado es REPRESENTATIVE
+            occupation: dto.profileType === ProfileType.REPRESENTATIVE ? dto.representativeOccupation : undefined,
           },
-          select: { id: true, name: true, email: true, phone: true, profileType: true, profileOnboarding: true }
+          select: { id: true, name: true, email: true, phone: true, profileType: true, profileOnboarding: true, occupation: true }
         });
 
         // Operación B: Si es REPRESENTATIVE, insertar la lista de alumnos bajo su tutoría
@@ -178,10 +180,18 @@ export class UsersService {
           const studentsData = dto.representedStudents.map((student) => ({
             firstName: student.firstName,
             lastName: student.lastName,
-            dni: student.dni,
+            dni: student.dni || null, // 🎯 Guardamos nulo si viene vacío para evitar colisiones
             birthDate: new Date(student.birthDate), // 🎯 Formateo nativo DateTime
             kinship: student.kinship,
-            userId: userId, // Relación FK al usuario (Representante)// Categoría automática opcional por edad
+            userId: userId, // Relación FK al usuario (Representante)
+
+            // 🎯 NUEVOS CAMPOS DEL ALUMNO MAPEADOS AL MODELO DE BASE DE DATOS
+            address: student.address,
+            phone: student.phone || null,
+            shirtSize: student.shirtSize,
+            hasExperience: student.hasExperience,
+            group: student.group,
+            medicalObservations: student.medicalObservations || null,
           }));
 
           // Creamos todos los registros en lote
@@ -201,10 +211,18 @@ export class UsersService {
             data: {
               firstName,
               lastName,
-              dni: user.dni, // Se le pedirá actualizar en su perfil interno
-              birthDate: new Date(),
+              dni: user.dni,
+              birthDate: new Date(), // Se asume que completará sus datos biológicos en su configuración de perfil posterior
               kinship: 'other',
               userId: userId, // El estudiante se apunta a sí mismo
+
+              // 🎯 VALORES POR DEFECTO REQUERIDOS para que no rompa la restricción de campos obligatorios en Prisma
+              address: 'Dirección por definir',
+              phone: user.phone || null,
+              shirtSize: 'M',
+              hasExperience: false,
+              group: 'adulto', // Se asume adulto por defecto en registro directo o se puede dejar configurable
+              medicalObservations: null,
             }
           });
         }

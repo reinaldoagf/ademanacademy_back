@@ -22,6 +22,8 @@ model User {
   isAdmin           Boolean      @default(false)
   profileOnboarding Boolean      @default(false)
   profileType       ProfileType?
+  // 🎯 NUEVO: Ocupación exclusiva para cuando el usuario actúa como Representante
+  occupation        String?      @db.VarChar(150)
   createdAt         DateTime     @default(now()) @map("createdAt")
   updatedAt         DateTime     @updatedAt @map("updatedAt")
 
@@ -37,12 +39,20 @@ model User {
 // 💡 MODELO: REPRESENTADOS
 model Student {
   id                  String   @id @default(uuid())
-  dni                 String   @unique @db.VarChar(30) // 💡 Añadido DNI único
+  // 🎯 CAMBIO: El DNI del alumno ahora es opcional y NO unique para evitar fallos si varios alumnos no lo tienen
+  dni                 String?  @db.VarChar(30)
   firstName           String   @db.VarChar(150)
   lastName            String   @db.VarChar(150)
   birthDate           DateTime @db.Date
   kinship             Kinship  @default(son)
   medicalObservations String?  @db.Text
+
+  // 🎯 NUEVOS CAMPOS DEL ALUMNO
+  address       String  @db.Text
+  phone         String? @db.VarChar(40) // Opcional
+  shirtSize     String  @db.VarChar(10) // Ej: "12", "M"
+  hasExperience Boolean @default(false)
+  group         String  @db.VarChar(50) // Ej: "baby_dance", "infantil"
 
   // 💡 CORRECCIÓN: Volvemos opcional el objeto relacional y su llave foránea
   user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)

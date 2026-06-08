@@ -9,6 +9,7 @@ CREATE TABLE `users` (
     `isAdmin` BOOLEAN NOT NULL DEFAULT false,
     `profileOnboarding` BOOLEAN NOT NULL DEFAULT false,
     `profileType` ENUM('Representante', 'Alumno') NULL,
+    `occupation` VARCHAR(150) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
@@ -21,17 +22,21 @@ CREATE TABLE `users` (
 -- CreateTable
 CREATE TABLE `students` (
     `id` VARCHAR(191) NOT NULL,
-    `dni` VARCHAR(30) NOT NULL,
+    `dni` VARCHAR(30) NULL,
     `firstName` VARCHAR(150) NOT NULL,
     `lastName` VARCHAR(150) NOT NULL,
     `birthDate` DATE NOT NULL,
     `kinship` ENUM('Hijo', 'Hija', 'Sobrino', 'Sobrina', 'Tutorado', 'Otro') NOT NULL DEFAULT 'Hijo',
     `medicalObservations` TEXT NULL,
+    `address` TEXT NOT NULL,
+    `phone` VARCHAR(40) NULL,
+    `shirtSize` VARCHAR(10) NOT NULL,
+    `hasExperience` BOOLEAN NOT NULL DEFAULT false,
+    `group` VARCHAR(50) NOT NULL,
     `userId` VARCHAR(36) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
-    UNIQUE INDEX `students_dni_key`(`dni`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
