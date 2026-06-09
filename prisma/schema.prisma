@@ -158,6 +158,23 @@ model Transaction {
   @@map("transactions")
 }
 
+model Classroom {
+  id          String          @id @default(uuid())
+  address     String          @db.Text
+  name        String          @unique
+  maxCapacity Int
+  type        ClassroomType
+  status      ClassroomStatus @default(active)
+  description String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  // Relación inversa: Un salón puede albergar múltiples grupos
+  // groups      Group[]
+
+  @@map("classrooms")
+}
+
 // ==================== ENUMS CORREGIDOS Y SEPARADOS ====================
 
 enum ConceptType {
@@ -209,4 +226,16 @@ enum Kinship {
   niece    @map("Sobrina")
   tutored  @map("Tutorado")
   other    @map("Otro")
+}
+
+enum ClassroomType {
+  mirrors  @map("Espejos")
+  urban    @map("Urbano")
+  free     @map("Libre")
+  theories @map("Teorias") // Prisma no recomienda caracteres con tildes en identificadores de Enum
+}
+
+enum ClassroomStatus {
+  active      @map("Activo")
+  maintenance @map("Mantenimiento")
 }
