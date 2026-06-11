@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } f
 import { ClassroomsService } from './classrooms.service';
 import { CreateClassroomDto } from './dto/create-classroom.dto';
 import { UpdateClassroomDto } from './dto/update-classroom.dto';
+import { GetClassroomsFilterDto } from './dto/get-classrooms-filter.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('classrooms')
@@ -15,14 +16,8 @@ export class ClassroomsController {
     }
 
     @Get()
-    async findAll(
-        @Query('page') page?: string,
-        @Query('limit') limit?: string,
-        @Query('search') search?: string,
-    ) {
-        const pageNum = page ? parseInt(page, 10) : 1;
-        const limitNum = limit ? parseInt(limit, 10) : 10;
-        return this.classroomsService.findAll(pageNum, limitNum, search);
+    async findAll(@Query() filters: GetClassroomsFilterDto) {
+        return this.classroomsService.findAll(filters);
     }
 
     @Get(':id')

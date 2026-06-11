@@ -1,7 +1,22 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { ClassroomType, ClassroomStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service'; // Ajusta la ruta según tu proyecto
 import { CreateClassroomDto } from './dto/create-classroom.dto';
 import { UpdateClassroomDto } from './dto/update-classroom.dto';
+import { GetClassroomsFilterDto } from './dto/get-classrooms-filter.dto'
+
+// Diccionario para los conceptos (por si también quieres traducirlos)
+export const ClassroomTypeLabel: Record<ClassroomType, string> = {
+    [ClassroomType.mirrors]: 'Espejos',
+    [ClassroomType.urban]: 'Urbano',
+    [ClassroomType.free]: 'Libre',
+    [ClassroomType.theories]: 'Teorias',
+};
+
+export const ClassroomStatusLabel: Record<ClassroomStatus, string> = {
+    [ClassroomStatus.active]: 'Activo',
+    [ClassroomStatus.maintenance]: 'Mantenimiento'
+};
 
 @Injectable()
 export class ClassroomsService {
@@ -10,9 +25,15 @@ export class ClassroomsService {
     // ➕ CREATE
     async create(createClassroomDto: CreateClassroomDto) {
         try {
-            return await this.prisma.classroom.create({
+            const data = await this.prisma.classroom.create({
                 data: createClassroomDto,
-            });
+            })
+
+            return {
+                ...data,
+                type: ClassroomTypeLabel[data.type],
+                status: ClassroomStatusLabel[data.status]
+            };
         } catch (error: any) {
             // Error P2002 es la restricción única de Prisma (Unique constraint)
             if (error.code === 'P2002') {
@@ -23,14 +44,22 @@ export class ClassroomsService {
     }
 
     // 🔍 READ ALL (Con paginación y filtro por nombre del salón o tipo)
-    async findAll(page: number = 1, limit: number = 10, search?: string) {
+    async findAll(filters: GetClassroomsFilterDto) {
+        const { page = 1, limit = 10, search, status, type } = filters;
         const skip = (page - 1) * limit;
 
         // Construcción de condiciones dinámicas de búsqueda
         const where: any = {};
+        if (status) {
+            where.status = status;
+        }
+        if (type) {
+            where.type = type;
+        }
         if (search) {
             where.OR = [
                 { name: { contains: search, mode: 'insensitive' } },
+                { address: { contains: search, mode: 'insensitive' } },
                 { description: { contains: search, mode: 'insensitive' } },
             ];
         }
@@ -61,7 +90,7 @@ export class ClassroomsService {
                 totalPages,
                 currentPage: page,
             },
-            data,
+            data: data.map(e => ({ ...e, type: ClassroomTypeLabel[e.type], status: ClassroomStatusLabel[e.status] })),
         };
     }
 
@@ -85,10 +114,15 @@ export class ClassroomsService {
         await this.findOne(id);
 
         try {
-            return await this.prisma.classroom.update({
+            const data = await this.prisma.classroom.update({
                 where: { id },
                 data: updateClassroomDto,
-            });
+            })
+            return {
+                ...data,
+                type: ClassroomTypeLabel[data.type],
+                status: ClassroomStatusLabel[data.status]
+            };
         } catch (error: any) {
             if (error.code === 'P2002') {
                 throw new ConflictException('El nombre ingresado ya está siendo usado por otro salón.');
