@@ -58,9 +58,9 @@ export class ClassroomsService {
         }
         if (search) {
             where.OR = [
-                { name: { contains: search, mode: 'insensitive' } },
-                { address: { contains: search, mode: 'insensitive' } },
-                { description: { contains: search, mode: 'insensitive' } },
+                { name: { contains: search } },
+                { address: { contains: search } },
+                { description: { contains: search } },
             ];
         }
 
