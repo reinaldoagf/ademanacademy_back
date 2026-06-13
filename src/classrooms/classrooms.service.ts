@@ -71,12 +71,28 @@ export class ClassroomsService {
                 where,
                 skip,
                 take: limit,
+                include: {
+                    groups: {
+                        include: {
+                            schedules: {
+                                include: {
+                                    group: true,
+                                },
+                            },
+                        },
+                    },
+                    schedules: {
+                        include: {
+                            group: true,
+                        },
+                    }
+                },
+                orderBy: { name: 'asc' },
                 /* include: {
                     _count: {
                         select: { groups: true } // Cuenta cuántos grupos usan este salón
                     }
                 }, */
-                orderBy: { name: 'asc' },
             }),
         ]);
 

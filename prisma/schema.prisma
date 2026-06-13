@@ -32,6 +32,7 @@ model User {
   paymentOrders PaymentOrder[]
   orders        Order[]
   transactions  Transaction[]
+  groups        Group[]
 
   @@map("users")
 }
@@ -158,6 +159,45 @@ model Transaction {
   @@map("transactions")
 }
 
+model WeeklySchedule {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Almacena el objeto WeeklySchedule completo (Dias y sus bloques de horas)
+  // Ej: { "lunes": [{ "id": "...", "startTime": "14:30", "endTime": "16:00", "label": "Salsa Casino" }] }
+  schedule Json    @default("{\"lunes\": [], \"martes\": [], \"miércoles\": [], \"jueves\": [], \"viernes\": [], \"sábado\": [], \"domingo\": []}")
+  // Relación con el Grupo
+  group    Group?  @relation(fields: [groupId], references: [id])
+  groupId  String?
+
+  // Relación con el Salón de clases (Para saber qué salón está ocupado en este horario)
+  classroom   Classroom? @relation(fields: [classroomId], references: [id])
+  classroomId String?
+
+  @@map("schedules")
+}
+
+model Group {
+  id                 String           @id @default(uuid())
+  name               String           @unique
+  style              String?
+  usedSlots          Int              @default(1)
+  totalNumberOfSlots Int              @default(1)
+  category           GroupCategory    @default(baby)
+  instructorId       String?          @db.VarChar(36)
+  instructor         User?            @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  classroomId        String?
+  classroom          Classroom?       @relation(fields: [classroomId], references: [id])
+  // Relación inversa: Un salón puede albergar múltiples grupos
+  schedules          WeeklySchedule[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("groups")
+}
+
 model Classroom {
   id          String          @id @default(uuid())
   address     String          @db.Text
@@ -170,12 +210,21 @@ model Classroom {
   updatedAt   DateTime        @updatedAt
 
   // Relación inversa: Un salón puede albergar múltiples grupos
-  // groups      Group[]
+  groups    Group[]
+  // Relación inversa añadida: Un salón puede tener muchos horarios registrados
+  schedules WeeklySchedule[]
 
   @@map("classrooms")
 }
 
 // ==================== ENUMS CORREGIDOS Y SEPARADOS ====================
+
+enum GroupCategory {
+  baby      @map("Baby")
+  childrens @map("Infantil")
+  youth     @map("Juvenil")
+  adult     @map("Adulto")
+}
 
 enum ConceptType {
   monthly_payment @map("Mensualidad")
