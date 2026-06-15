@@ -28,7 +28,7 @@ async function main() {
             name: 'Carlos Administrador',
             email: 'admin@academia.com',
             phone: '+584141112233',
-            password: 'password_hasheado_aqui', // Recuerda hashear en producción
+            password: '12345678', // Recuerda hashear en producción
             isAdmin: true,
             profileOnboarding: true,
         },
@@ -40,8 +40,9 @@ async function main() {
             name: 'María Instructora',
             email: 'maria.instructor@academia.com',
             phone: '+584249998877',
-            password: 'password_hasheado_aqui',
+            password: '12345678',
             isAdmin: false,
+            isAnInstructor: true,
             profileOnboarding: true,
         },
     });
@@ -52,7 +53,7 @@ async function main() {
             name: 'Juan Representante',
             email: 'juan.rep@gmail.com',
             phone: '+584125554433',
-            password: 'password_hasheado_aqui',
+            password: '12345678',
             isAdmin: false,
             profileOnboarding: true,
             profileType: ProfileType.representative,
