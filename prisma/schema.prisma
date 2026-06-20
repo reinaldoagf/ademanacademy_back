@@ -151,6 +151,7 @@ model Transaction {
   // Datos de auditoría bancaria (Opcionales pero recomendados para Transferencias/Pago Móvil)
   referenceNumber String? @db.VarChar(100)
   bankName        String? @db.VarChar(100)
+  receiptPath     String? @db.VarChar(255)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

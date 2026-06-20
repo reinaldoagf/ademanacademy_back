@@ -145,7 +145,10 @@ export class UsersService {
     return await this.prismaClient.count();
   }
 
-  async completeOnboarding(userId: string, dto: CompleteOnboardingDto) {
+  async completeOnboarding(userId: string, dto: any, file?: Express.Multer.File) {
+    // 1. Validaciones previas de usuario...
+
+    const receiptPath = file ? file.filename : null;
     const user = await this.prismaClient.findUnique({ where: { id: userId } });
 
     if (!user) {
@@ -207,6 +210,7 @@ export class UsersService {
                   status: 'pending', // Queda 'pending' para auditoría manual del administrador
                   referenceNumber: dto.payment.reference || null,
                   bankName: dto.payment.bankName || null,
+                  receiptPath: receiptPath
                 }
               });
             }
@@ -249,6 +253,7 @@ export class UsersService {
                 status: 'pending', // Queda 'pending' para auditoría manual del administrador
                 referenceNumber: dto.payment.reference || null,
                 bankName: dto.payment.bankName || null,
+                receiptPath: receiptPath
               }
             });
           }
