@@ -146,7 +146,6 @@ export class UsersService {
   }
 
   async completeOnboarding(userId: string, dto: CompleteOnboardingDto) {
-    // 1. Validar que el usuario exista y no haya completado el onboarding previamente
     const user = await this.prismaClient.findUnique({ where: { id: userId } });
 
     if (!user) {
@@ -157,89 +156,116 @@ export class UsersService {
       throw new BadRequestException('El proceso de onboarding ya fue completado para esta cuenta.');
     }
 
+    console.log({ dto })
+
     try {
-      // 2. Ejecutar transacciones robustas en Prisma
       return await this.prisma.$transaction(async (tx) => {
 
-        // Operación A: Actualizar el estatus del usuario y su rol en la plataforma
+        // Operación A: Actualizar estatus del usuario
         const updatedUser = await tx.user.update({
           where: { id: userId },
           data: {
-            profileType: dto.profileType, // 'student' | 'representative' Mapeado desde el enum del DTO
+            profileType: dto.profileType,
             profileOnboarding: true,
-            // 🎯 NUEVO: Guardamos la ocupación únicamente si el rol seleccionado es REPRESENTATIVE
-            occupation: dto.profileType === ProfileType.REPRESENTATIVE ? dto.representativeOccupation : undefined,
+            occupation: dto.profileType === 'representative' ? dto.representativeOccupation : undefined,
           },
           select: { id: true, name: true, email: true, phone: true, profileType: true, profileOnboarding: true, occupation: true }
         });
 
-        // Operación B: Si es REPRESENTATIVE, insertar la lista de alumnos bajo su tutoría
-        if (dto.profileType === ProfileType.REPRESENTATIVE && dto.representedStudents) {
-
-          // Mapeamos los estudiantes adaptando strings a fechas nativas de JS requeridas por Prisma
+        // Operación B: Si es REPRESENTATIVE, insertar estudiantes
+        if (dto.profileType === 'representative' && dto.representedStudents) {
           const studentsData = dto.representedStudents.map((student) => ({
             firstName: student.firstName,
             lastName: student.lastName,
-            dni: student.dni || null, // 🎯 Guardamos nulo si viene vacío para evitar colisiones
-            birthDate: new Date(student.birthDate), // 🎯 Formateo nativo DateTime
+            dni: student.dni || null,
+            birthDate: new Date(student.birthDate),
             kinship: student.kinship,
-            userId: userId, // Relación FK al usuario (Representante)
-
-            // 🎯 NUEVOS CAMPOS DEL ALUMNO MAPEADOS AL MODELO DE BASE DE DATOS
+            userId: userId,
             address: student.address,
             phone: student.phone || null,
             shirtSize: student.shirtSize,
             hasExperience: student.hasExperience,
-            group: student.group,
             medicalObservations: student.medicalObservations || null,
           }));
 
-          // Creamos todos los registros en lote
-          await tx.student.createMany({
-            data: studentsData,
-          });
+          for (const element of studentsData) {
+            const student = await tx.student.create({
+              data: element
+            });
+
+            // 🎯 Operación D: Flujo e inserción de la información de Pago (Matrícula)
+            if (dto.payment) {
+
+              // 2. Crear el registro de la transacción enviada por el usuario
+              await tx.transaction.create({
+                data: {
+                  userId: userId,
+                  studentId: student.id,
+                  concept: 'tuition',
+                  amount: dto.payment.amount / studentsData.length,
+                  method: 'bank_transfer', // Define un valor por defecto o extiéndelo en tu enum
+                  status: 'pending', // Queda 'pending' para auditoría manual del administrador
+                  referenceNumber: dto.payment.reference || null,
+                  bankName: dto.payment.bankName || null,
+                }
+              });
+            }
+
+          }
+
+
         }
 
-        // Operación C: Si es STUDENT autónomo, creamos su registro espejo en la tabla de alumnos
-        if (dto.profileType === ProfileType.STUDENT) {
-          // Desestructuramos del nombre del usuario para crear su perfil técnico inicial de alumno
+        // Operación C: Si es STUDENT autónomo
+        if (dto.profileType === 'student') {
           const nameParts = user.name.split(' ');
           const firstName = nameParts[0] || 'Por definir';
           const lastName = nameParts.slice(1).join(' ') || 'Por definir';
 
-          await tx.student.create({
+          const newStudent = await tx.student.create({
             data: {
               firstName,
               lastName,
               dni: user.dni,
-              birthDate: new Date(), // Se asume que completará sus datos biológicos en su configuración de perfil posterior
+              birthDate: new Date(),
               kinship: 'other',
-              userId: userId, // El estudiante se apunta a sí mismo
-
-              // 🎯 VALORES POR DEFECTO REQUERIDOS para que no rompa la restricción de campos obligatorios en Prisma
+              userId: userId,
               address: 'Dirección por definir',
               phone: user.phone || null,
               shirtSize: 'M',
               hasExperience: false,
-              group: 'adulto', // Se asume adulto por defecto en registro directo o se puede dejar configurable
               medicalObservations: null,
             }
           });
+          if (dto.payment) {
+
+            await tx.transaction.create({
+              data: {
+                userId: userId,
+                studentId: newStudent.id,
+                concept: 'tuition',
+                amount: dto.payment.amount,
+                method: 'bank_transfer', // Define un valor por defecto o extiéndelo en tu enum
+                status: 'pending', // Queda 'pending' para auditoría manual del administrador
+                referenceNumber: dto.payment.reference || null,
+                bankName: dto.payment.bankName || null,
+              }
+            });
+          }
+
         }
 
         return {
-          message: 'Onboarding completado con éxito.',
+          message: 'Onboarding y reporte de pago procesados con éxito.',
           user: updatedUser,
         };
       });
 
     } catch (error: any) {
-      console.log({ error })
-      // Control de errores de restricción única de Prisma (ej: DNI repetido)
+      console.error({ error });
       if (error.code === 'P2002') {
-        throw new BadRequestException('El DNI de uno de los estudiantes ya se encuentra registrado en el sistema.');
+        throw new BadRequestException('El DNI de uno de los estudiantes ya se encuentra registrado.');
       }
-
       throw new InternalServerErrorException('Error en el servidor al procesar el onboarding.');
     }
   }

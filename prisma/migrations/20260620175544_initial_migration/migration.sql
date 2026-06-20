@@ -7,6 +7,7 @@ CREATE TABLE `users` (
     `phone` VARCHAR(180) NOT NULL,
     `password` VARCHAR(255) NULL,
     `isAdmin` BOOLEAN NOT NULL DEFAULT false,
+    `isAnInstructor` BOOLEAN NOT NULL DEFAULT false,
     `profileOnboarding` BOOLEAN NOT NULL DEFAULT false,
     `profileType` ENUM('Representante', 'Alumno') NULL,
     `occupation` VARCHAR(150) NULL,
@@ -32,7 +33,7 @@ CREATE TABLE `students` (
     `phone` VARCHAR(40) NULL,
     `shirtSize` VARCHAR(10) NOT NULL,
     `hasExperience` BOOLEAN NOT NULL DEFAULT false,
-    `group` VARCHAR(50) NOT NULL,
+    `groupId` VARCHAR(191) NULL,
     `userId` VARCHAR(36) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
@@ -86,7 +87,7 @@ CREATE TABLE `transactions` (
     `id` VARCHAR(191) NOT NULL,
     `userId` VARCHAR(36) NOT NULL,
     `studentId` VARCHAR(36) NULL,
-    `paymentOrderId` VARCHAR(255) NOT NULL,
+    `paymentOrderId` VARCHAR(255) NULL,
     `concept` ENUM('Mensualidad', 'Matrícula', 'Vestuario', 'Entradas Gala') NOT NULL,
     `amount` DECIMAL(10, 2) NOT NULL,
     `method` ENUM('Transferencia', 'Tarjeta', 'Efectivo', 'Pago Móvil') NOT NULL,
@@ -143,6 +144,9 @@ CREATE TABLE `classrooms` (
     UNIQUE INDEX `classrooms_name_key`(`name`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- AddForeignKey
+ALTER TABLE `students` ADD CONSTRAINT `students_groupId_fkey` FOREIGN KEY (`groupId`) REFERENCES `groups`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `students` ADD CONSTRAINT `students_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

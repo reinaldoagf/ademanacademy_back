@@ -1,6 +1,7 @@
 // prisma/seed.ts
 import { GroupCategory, ProfileType, Kinship, ClassroomType, ClassroomStatus } from '@prisma/client';
 import { PrismaService } from '../src/prisma/prisma.service'; // 🎯 1. Importa tu propio servicio
+import * as bcrypt from 'bcrypt';
 
 // 🎯 2. Instanciamos TU servicio en lugar del PrismaClient genérico
 // Al hacer esto, se ejecutará automáticamente el constructor que creaste con el adaptador de MariaDB
@@ -22,13 +23,15 @@ async function main() {
     // ==========================================
     // 2. CREACIÓN DE USUARIOS (Administradores / Instructores)
     // ==========================================
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash('12345678', salt);
     const admin = await prisma.user.create({
         data: {
             dni: 'V-12345678',
             name: 'Carlos Administrador',
             email: 'admin@academia.com',
             phone: '+584141112233',
-            password: '12345678', // Recuerda hashear en producción
+            password: hashedPassword, // Recuerda hashear en producción
             isAdmin: true,
             profileOnboarding: true,
         },
@@ -40,7 +43,7 @@ async function main() {
             name: 'María Instructora',
             email: 'maria.instructor@academia.com',
             phone: '+584249998877',
-            password: '12345678',
+            password: hashedPassword,
             isAdmin: false,
             isAnInstructor: true,
             profileOnboarding: true,
@@ -53,7 +56,7 @@ async function main() {
             name: 'Juan Representante',
             email: 'juan.rep@gmail.com',
             phone: '+584125554433',
-            password: '12345678',
+            password: hashedPassword,
             isAdmin: false,
             profileOnboarding: true,
             profileType: ProfileType.representative,
@@ -76,7 +79,6 @@ async function main() {
             address: 'Alta Vista, Puerto Ordaz, Bolívar',
             shirtSize: '10',
             hasExperience: false,
-            group: 'baby_dance',
             userId: representative.id, // Enlazado a su representante
         },
     });

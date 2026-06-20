@@ -39,7 +39,6 @@ export class UsersController {
     return this.usersService.remove(id);
   }
   @Post('complete-onboarding')
-  @UseGuards(JwtAuthGuard) // 🛡️ Asegura que solo usuarios firmados entren
   async completeOnboarding(
     @CurrentUser() user: any, // 👈 El decorador extrae el user automáticamente
     @Body() completeOnboardingDto: CompleteOnboardingDto,

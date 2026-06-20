@@ -1,5 +1,5 @@
 // src/users/dto/complete-onboarding.dto.ts
-import { IsEnum, IsNotEmpty, IsString, IsArray, ValidateNested, IsOptional, IsDateString, IsBoolean } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsString, IsArray, ValidateNested, IsOptional, IsDateString, IsBoolean, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Kinship } from '@prisma/client';
 
@@ -53,11 +53,20 @@ export class RepresentedStudentDto {
     @IsOptional()
     medicalObservations?: string;
 
-    @IsString()
-    @IsNotEmpty({ message: 'El grupo a inscribir al alumno es obligatorio.' })
-    group: string;
 }
+export class PaymentDto {
+    @IsOptional()
+    @IsString()
+    bankName?: string;
 
+    @IsOptional()
+    @IsString()
+    reference?: string;
+
+    @IsNotEmpty()
+    @IsNumber()
+    amount: number;
+}
 export class CompleteOnboardingDto {
     @IsEnum(ProfileType, { message: 'El rol seleccionado no es válido.' })
     @IsNotEmpty()
@@ -73,4 +82,9 @@ export class CompleteOnboardingDto {
     @ValidateNested({ each: true })
     @Type(() => RepresentedStudentDto)
     representedStudents?: RepresentedStudentDto[];
+
+    @IsOptional()
+    @ValidateNested()
+    @Type(() => PaymentDto)
+    payment?: PaymentDto;
 }

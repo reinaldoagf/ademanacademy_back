@@ -50,16 +50,14 @@ model Student {
   medicalObservations String?  @db.Text
 
   // 🎯 NUEVOS CAMPOS DEL ALUMNO
-  address       String  @db.Text
-  phone         String? @db.VarChar(40) // Opcional
-  shirtSize     String  @db.VarChar(10) // Ej: "12", "M"
-  hasExperience Boolean @default(false)
-  group         String  @db.VarChar(50) // Ej: "baby_dance", "infantil"
-
-  // 💡 CORRECCIÓN: Volvemos opcional el objeto relacional y su llave foránea
-  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId String? @db.VarChar(36) // Ahora acepta NULL en MySQL si el Admin registra al estudiante directamente
-
+  address       String         @db.Text
+  phone         String?        @db.VarChar(40) // Opcional
+  shirtSize     String         @db.VarChar(10) // Ej: "12", "M"
+  hasExperience Boolean        @default(false)
+  group         Group?         @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId       String?
+  user          User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String?        @db.VarChar(36) // Ahora acepta NULL en MySQL si el Admin registra al estudiante directamente
   transactions  Transaction[]
   paymentOrders PaymentOrder[]
   orderItems    OrderItem[]
@@ -142,8 +140,8 @@ model Transaction {
   student   Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   // 🔗 Conexión con la Orden de Pago: Toda transacción debe saldar una deuda (Orden de Pago)
-  paymentOrderId String       @db.VarChar(255)
-  paymentOrder   PaymentOrder @relation(fields: [paymentOrderId], references: [id], onDelete: Cascade)
+  paymentOrderId String?       @db.VarChar(255)
+  paymentOrder   PaymentOrder? @relation(fields: [paymentOrderId], references: [id], onDelete: Cascade)
 
   concept ConceptType
   amount  Decimal           @db.Decimal(10, 2)
@@ -193,8 +191,9 @@ model Group {
   // Relación inversa: Un salón puede albergar múltiples grupos
   schedules          WeeklySchedule[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  students  Student[]
 
   @@map("groups")
 }

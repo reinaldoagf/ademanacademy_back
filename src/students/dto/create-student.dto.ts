@@ -47,10 +47,6 @@ export class CreateStudentDto {
     @IsNotEmpty()
     hasExperience: boolean;
 
-    @IsString()
-    @IsNotEmpty()
-    group: string;
-
     @IsUUID()
     @IsOptional() // 💡 Opcional en el payload
     userId?: string;
