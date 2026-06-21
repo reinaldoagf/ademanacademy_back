@@ -3,6 +3,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } f
 import { TransactionsService } from './transactions.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
+import { GetTransactionsFilterDto } from './dto/get-transactions-filter.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('transactions')
@@ -17,13 +18,9 @@ export class TransactionsController {
 
     @Get()
     async findAll(
-        @Query('page') page?: string,
-        @Query('limit') limit?: string,
-        @Query('search') search?: string,
+        @Query() filters: GetTransactionsFilterDto
     ) {
-        const pageNum = page ? parseInt(page, 10) : 1;
-        const limitNum = limit ? parseInt(limit, 10) : 10;
-        return this.transactionsService.findAll(pageNum, limitNum, search);
+        return this.transactionsService.findAll(filters);
     }
 
     @Get(':id')
@@ -39,5 +36,13 @@ export class TransactionsController {
     @Delete(':id')
     async remove(@Param('id') id: string) {
         return this.transactionsService.remove(id);
+    }
+
+    @Patch(':id/approve')
+    async approve(
+        @Param('id') id: string,
+        @Body() body: { groupId?: string }
+    ) {
+        return this.transactionsService.approve(id, body.groupId);
     }
 }

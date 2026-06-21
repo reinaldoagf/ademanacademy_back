@@ -4,6 +4,8 @@ dotenv.config(); //
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { join } from 'path';
+import * as express from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -15,6 +17,7 @@ async function bootstrap() {
       transform: true, // Transforma automáticamente los payloads a los tipos de los DTOs
     }),
   );
+  app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();

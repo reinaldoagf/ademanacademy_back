@@ -1,11 +1,12 @@
 // src/transactions/transactions.service.ts
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
+import { GetTransactionsFilterDto } from './dto/get-transactions-filter.dto';
 import { ConceptType, PaymentMethod } from '@prisma/client';
 
-// Diccionario para los métodos de pago
+/* // Diccionario para los métodos de pago
 export const PaymentMethodLabel: Record<PaymentMethod, string> = {
     [PaymentMethod.bank_transfer]: 'Transferencia',
     [PaymentMethod.credit_or_debit_card]: 'Tarjeta',
@@ -19,7 +20,7 @@ export const ConceptTypeLabel: Record<ConceptType, string> = {
     [ConceptType.tuition]: 'Matrícula',
     [ConceptType.locker_room]: 'Vestuario',
     [ConceptType.ticket]: 'Entradas Gala',
-};
+}; */
 @Injectable()
 export class TransactionsService {
     constructor(private readonly prisma: PrismaService) { }
@@ -41,12 +42,18 @@ export class TransactionsService {
     }
 
     // 🔍 READ ALL (Con paginación y Filtro de búsqueda por Alumno)
-    async findAll(page: number = 1, limit: number = 10, search?: string) {
+    async findAll(filters: GetTransactionsFilterDto) {
+        const { page = 1, limit = 10, search, concept } = filters;
         const skip = (page - 1) * limit;
 
-        // Clausura de búsqueda condicional
-        const whereCondition = search
-            ? {
+        const where: any = {};
+        if (concept) {
+            where.concept = concept;
+        }
+
+        if (search) {
+            // Clausura de búsqueda condicional
+            where.OR = {
                 user: {
                     OR: [
                         { name: { contains: search, mode: 'insensitive' as const } },
@@ -61,12 +68,12 @@ export class TransactionsService {
                         { dni: { contains: search, mode: 'insensitive' as const } },
                     ],
                 },
-            }
-            : {};
+            };
+        }
 
         const [transactions, totalItems] = await Promise.all([
             this.prisma.transaction.findMany({
-                where: whereCondition,
+                where,
                 skip,
                 take: limit,
                 orderBy: { createdAt: 'desc' }, // Transacciones más recientes primero
@@ -77,7 +84,7 @@ export class TransactionsService {
                     student: true
                 },
             }),
-            this.prisma.transaction.count({ where: whereCondition }),
+            this.prisma.transaction.count({ where }),
         ]);
 
         const totalPages = Math.ceil(totalItems / limit);
@@ -86,13 +93,14 @@ export class TransactionsService {
         // Adaptamos la respuesta para que encaje perfectamente con la UI genérica
         return {
             data: transactions.map(tx => ({
-                id: `TX-${tx.id.substring(0, 4).toUpperCase()}`, // Máscara estética parecida a tu mock (TX-901)
+                id: tx.id, // Máscara estética parecida a tu mock (TX-901)
                 realId: tx.id,
                 student: tx.student,
                 user: tx.user,
-                concept: ConceptTypeLabel[tx.concept],
+                concept: tx.concept,
                 amount: Number(tx.amount),
-                method: PaymentMethodLabel[tx.method],
+                method: tx.method,
+                receiptPath: tx.receiptPath,
                 createdAt: tx.createdAt.toISOString().split('T')[0],
                 status: tx.status,
             })),
@@ -131,5 +139,62 @@ export class TransactionsService {
         await this.findOne(id); // Lanza 404 si no existe
         await this.prisma.transaction.delete({ where: { id } });
         return { message: `Transacción eliminada con éxito.` };
+    }
+
+    async approve(transactionId: string, groupId?: string) {
+        // 1. Verificar que la transacción exista
+        const transaction = await this.prisma.transaction.findUnique({
+            where: { id: transactionId },
+        });
+
+        if (!transaction) {
+            throw new NotFoundException('La transacción especificada no existe.');
+        }
+
+        if (transaction.status === 'approved') {
+            throw new BadRequestException('Esta transacción ya ha sido aprobada previamente.');
+        }
+
+        // 2. Si el concepto es matrícula (tuition), obligamos a que venga un groupId
+        if (transaction.concept === 'tuition' && !groupId) {
+            throw new BadRequestException('Para aprobar una matrícula debes asignar un grupo académico.');
+        }
+
+        try {
+            // Executamos en una transacción de base de datos
+            return await this.prisma.$transaction(async (tx) => {
+
+                // Paso A: Actualizar el estado de la Transacción a aprobado
+                const updatedTransaction = await tx.transaction.update({
+                    where: { id: transactionId },
+                    data: { status: 'approved' },
+                });
+
+                // Paso B: Actualizar la Orden de Pago relacionada (si existe relación en tu esquema)
+                /* if (transaction.paymentOrderId) {
+                    await tx.paymentOrder.update({
+                        where: { id: transaction.paymentOrderId },
+                        data: { status: 'approved' },
+                    });
+                } */
+
+                // Paso C: Si es Matrícula, inscribimos al estudiante en el grupo asignado
+                if (transaction.concept === 'tuition' && groupId && transaction.studentId) {
+                    await tx.student.update({
+                        where: { id: transaction.studentId },
+                        data: { groupId: groupId }, // Asignamos el id del grupo elegido en el modal
+                    });
+                }
+
+                return {
+                    message: 'Transacción aprobada con éxito y estudiante matriculado.',
+                    transaction: updatedTransaction,
+                };
+            });
+        } catch (error: any) {
+            throw new BadRequestException(
+                error.message || 'Ocurrió un error inesperado al procesar la aprobación del pago.'
+            );
+        }
     }
 }

@@ -4,6 +4,7 @@ import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { GetStudentsFilterDto } from './dto/get-students-filter.dto';
 import { Kinship } from '@prisma/client';
+import { group } from 'console';
 
 // Diccionario para los conceptos (por si también quieres traducirlos)
 export const KinshipLabel: Record<Kinship, string> = {
@@ -84,7 +85,8 @@ export class StudentsService {
                 include: {
                     user: {
                         select: { id: true, name: true, email: true }
-                    }
+                    },
+                    group: true
                 }
             }),
             this.client.count({ where })
