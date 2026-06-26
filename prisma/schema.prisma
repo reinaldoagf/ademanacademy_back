@@ -34,6 +34,7 @@ model User {
   orders        Order[]
   transactions  Transaction[]
   groups        Group[]
+  registrations Registration[]
 
   @@map("users")
 }
@@ -62,8 +63,9 @@ model Student {
   paymentOrders PaymentOrder[]
   orderItems    OrderItem[]
 
-  createdAt DateTime @default(now()) @map("createdAt")
-  updatedAt DateTime @updatedAt @map("updatedAt")
+  createdAt     DateTime       @default(now()) @map("createdAt")
+  updatedAt     DateTime       @updatedAt @map("updatedAt")
+  registrations Registration[]
 
   @@map("students")
 }
@@ -192,9 +194,10 @@ model Group {
   // Relación inversa: Un salón puede albergar múltiples grupos
   schedules          WeeklySchedule[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  students  Student[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  students      Student[]
+  registrations Registration[]
 
   @@map("groups")
 }
@@ -216,6 +219,21 @@ model Classroom {
   schedules WeeklySchedule[]
 
   @@map("classrooms")
+}
+
+model Registration {
+  id        String             @id @default(uuid())
+  status    RegistrationStatus @default(pending)
+  userId    String?            @db.VarChar(36)
+  user      User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentId String?            @db.VarChar(36)
+  student   Student?           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  groupId   String?
+  group     Group?             @relation(fields: [groupId], references: [id])
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@map("registrations")
 }
 
 // ==================== ENUMS CORREGIDOS Y SEPARADOS ====================
@@ -288,4 +306,10 @@ enum ClassroomType {
 enum ClassroomStatus {
   active      @map("Activo")
   maintenance @map("Mantenimiento")
+}
+
+enum RegistrationStatus {
+  approved @map("Aprobado")
+  pending  @map("Pendiente")
+  refused  @map("Rechazado")
 }

@@ -4,23 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { GetTransactionsFilterDto } from './dto/get-transactions-filter.dto';
-import { ConceptType, PaymentMethod } from '@prisma/client';
 
-/* // Diccionario para los métodos de pago
-export const PaymentMethodLabel: Record<PaymentMethod, string> = {
-    [PaymentMethod.bank_transfer]: 'Transferencia',
-    [PaymentMethod.credit_or_debit_card]: 'Tarjeta',
-    [PaymentMethod.cash]: 'Efectivo',
-    [PaymentMethod.mobile_payment]: 'Pago Móvil',
-};
-
-// Diccionario para los conceptos (por si también quieres traducirlos)
-export const ConceptTypeLabel: Record<ConceptType, string> = {
-    [ConceptType.monthly_payment]: 'Mensualidad',
-    [ConceptType.tuition]: 'Matrícula',
-    [ConceptType.locker_room]: 'Vestuario',
-    [ConceptType.ticket]: 'Entradas Gala',
-}; */
 @Injectable()
 export class TransactionsService {
     constructor(private readonly prisma: PrismaService) { }
@@ -180,9 +164,33 @@ export class TransactionsService {
 
                 // Paso C: Si es Matrícula, inscribimos al estudiante en el grupo asignado
                 if (transaction.concept === 'tuition' && groupId && transaction.studentId) {
-                    await tx.student.update({
+                    const group = await this.prisma.group.findUnique({
+                        where: { id: groupId },
+                        include: {
+                            students: true
+                        }
+                    });
+
+                    if (!group) {
+                        throw new NotFoundException('El grupo especificada no existe.');
+                    }
+
+                    if (group.totalNumberOfSlots == group.students.length) {
+                        throw new NotFoundException('Grupo sin cupos disponibles.');
+                    }
+
+                    const student = await tx.student.update({
                         where: { id: transaction.studentId },
-                        data: { groupId: groupId }, // Asignamos el id del grupo elegido en el modal
+                        data: { groupId: group.id }, // Asignamos el id del grupo elegido en el modal
+                    });
+                    if (!student) {
+                        throw new NotFoundException('El estudiante no existe.');
+                    }
+                    await tx.registration.updateMany({
+                        where: { studentId: student.id, status: 'pending' },
+                        data: {
+                            status: 'approved', groupId: group.id
+                        }
                     });
                 }
 

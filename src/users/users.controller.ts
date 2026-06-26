@@ -70,7 +70,6 @@ export class UsersController {
     @Body() body: any,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    console.log({ file })
     const userId = user?.sub;
 
     const profileType = body.profileType;

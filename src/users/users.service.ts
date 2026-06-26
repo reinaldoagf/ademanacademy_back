@@ -213,59 +213,65 @@ export class UsersService {
                   receiptPath: receiptPath
                 }
               });
+
+              await tx.registration.create({
+                data: {
+                  userId: userId,
+                  studentId: student.id,
+                }
+              });
+
             }
+
 
           }
 
+          // Operación C: Si es STUDENT autónomo
+          if (dto.profileType === 'student') {
+            const nameParts = user.name.split(' ');
+            const firstName = nameParts[0] || 'Por definir';
+            const lastName = nameParts.slice(1).join(' ') || 'Por definir';
 
-        }
-
-        // Operación C: Si es STUDENT autónomo
-        if (dto.profileType === 'student') {
-          const nameParts = user.name.split(' ');
-          const firstName = nameParts[0] || 'Por definir';
-          const lastName = nameParts.slice(1).join(' ') || 'Por definir';
-
-          const newStudent = await tx.student.create({
-            data: {
-              firstName,
-              lastName,
-              dni: user.dni,
-              birthDate: new Date(),
-              kinship: 'other',
-              userId: userId,
-              address: 'Dirección por definir',
-              phone: user.phone || null,
-              shirtSize: 'M',
-              hasExperience: false,
-              medicalObservations: null,
-            }
-          });
-          if (dto.payment) {
-
-            await tx.transaction.create({
+            const newStudent = await tx.student.create({
               data: {
+                firstName,
+                lastName,
+                dni: user.dni,
+                birthDate: new Date(),
+                kinship: 'other',
                 userId: userId,
-                studentId: newStudent.id,
-                concept: 'tuition',
-                amount: dto.payment.amount,
-                method: 'bank_transfer', // Define un valor por defecto o extiéndelo en tu enum
-                status: 'pending', // Queda 'pending' para auditoría manual del administrador
-                referenceNumber: dto.payment.reference || null,
-                bankName: dto.payment.bankName || null,
-                receiptPath: receiptPath
+                address: 'Dirección por definir',
+                phone: user.phone || null,
+                shirtSize: 'M',
+                hasExperience: false,
+                medicalObservations: null,
               }
             });
+            if (dto.payment) {
+
+              await tx.transaction.create({
+                data: {
+                  userId: userId,
+                  studentId: newStudent.id,
+                  concept: 'tuition',
+                  amount: dto.payment.amount,
+                  method: 'bank_transfer', // Define un valor por defecto o extiéndelo en tu enum
+                  status: 'pending', // Queda 'pending' para auditoría manual del administrador
+                  referenceNumber: dto.payment.reference || null,
+                  bankName: dto.payment.bankName || null,
+                  receiptPath: receiptPath
+                }
+              });
+            }
+
           }
 
+          return {
+            message: 'Onboarding y reporte de pago procesados con éxito.',
+            user: updatedUser,
+          };
         }
-
-        return {
-          message: 'Onboarding y reporte de pago procesados con éxito.',
-          user: updatedUser,
-        };
       });
-
     } catch (error: any) {
       console.error({ error });
       if (error.code === 'P2002') {
