@@ -9,6 +9,7 @@ import { TransactionsModule } from './transactions/transactions.module';
 import { ClassroomsModule } from './classrooms/classrooms.module';
 import { GroupsModule } from './groups/groups.module';
 import { InstructorsModule } from './instructors/instructors.module';
+import { RegistrationsModule } from './registrations/registrations.module';
 
 @Module({
   imports: [
@@ -23,7 +24,8 @@ import { InstructorsModule } from './instructors/instructors.module';
     TransactionsModule,
     ClassroomsModule,
     GroupsModule,
-    InstructorsModule
+    InstructorsModule,
+    RegistrationsModule
   ],
 })
 export class AppModule { }

@@ -159,8 +159,6 @@ export class UsersService {
       throw new BadRequestException('El proceso de onboarding ya fue completado para esta cuenta.');
     }
 
-    console.log({ dto })
-
     try {
       return await this.prisma.$transaction(async (tx) => {
 
