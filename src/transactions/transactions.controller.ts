@@ -1,6 +1,7 @@
 // src/transactions/transactions.controller.ts
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { GetTransactionsFilterDto } from './dto/get-transactions-filter.dto';
@@ -21,6 +22,15 @@ export class TransactionsController {
         @Query() filters: GetTransactionsFilterDto
     ) {
         return this.transactionsService.findAll(filters);
+    }
+
+    @Get('/my-operations')
+    async myOperations(
+        @CurrentUser() user: any,
+        @Query() filters: GetTransactionsFilterDto
+    ) {
+        const userId = user?.sub;
+        return this.transactionsService.myOperations(userId, filters);
     }
 
     @Get(':id')

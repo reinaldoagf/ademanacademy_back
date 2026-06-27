@@ -5,9 +5,12 @@ import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { GetTransactionsFilterDto } from './dto/get-transactions-filter.dto';
 
+const CONDITION = []
+
 @Injectable()
 export class TransactionsService {
     constructor(private readonly prisma: PrismaService) { }
+
 
     // ➕ CREATE
     async create(createTransactionDto: CreateTransactionDto) {
@@ -25,47 +28,87 @@ export class TransactionsService {
         });
     }
 
-    // 🔍 READ ALL (Con paginación y Filtro de búsqueda por Alumno)
-    async findAll(filters: GetTransactionsFilterDto) {
-        const { page = 1, limit = 10, search, concept } = filters;
-        const skip = (page - 1) * limit;
 
+    // 🔍 READ ALL (Con paginación y Filtro de búsqueda por Alumno)
+    // 🚀 MÉTODO PÚBLICO 1: Listado general de administración
+    async findAll(filters: GetTransactionsFilterDto) {
+        const { page = 1, limit = 10 } = filters;
+        const where = this.buildWhereClause(filters);
+
+        return this.executePaginatedTransactions(where, page, limit);
+    }
+
+    // 🚀 MÉTODO PÚBLICO 2: Operaciones del usuario logueado
+    async myOperations(userId: string, filters: GetTransactionsFilterDto) {
+        const { page = 1, limit = 10 } = filters;
+        // Reutilizamos el constructor del filtro pasando el userId de manera opcional
+        const where = this.buildWhereClause(filters, userId);
+
+        return this.executePaginatedTransactions(where, page, limit);
+    }
+
+    // ==========================================
+    // 🛠️ MÉTODOS PRIVADOS AUXILIARES (REUTILIZABLES)
+    // ==========================================
+
+    /**
+     * Construye dinámicamente el objeto 'where' de Prisma según los filtros enviados
+     */
+    private buildWhereClause(filters: GetTransactionsFilterDto, userId?: string): any {
+        const { concept, search } = filters;
         const where: any = {};
+
+        if (userId) {
+            where.userId = userId;
+        }
+
         if (concept) {
             where.concept = concept;
         }
 
         if (search) {
-            // Clausura de búsqueda condicional
-            where.OR = {
-                user: {
-                    OR: [
-                        { name: { contains: search, mode: 'insensitive' as const } },
-                        { email: { contains: search, mode: 'insensitive' as const } },
-                        { dni: { contains: search, mode: 'insensitive' as const } },
-                    ],
+            where.OR = [
+                {
+                    user: {
+                        OR: [
+                            { name: { contains: search } },
+                            { email: { contains: search } },
+                            { dni: { contains: search } },
+                        ],
+                    },
                 },
-                student: {
-                    OR: [
-                        { firstName: { contains: search, mode: 'insensitive' as const } },
-                        { lastName: { contains: search, mode: 'insensitive' as const } },
-                        { dni: { contains: search, mode: 'insensitive' as const } },
-                    ],
+                {
+                    student: {
+                        OR: [
+                            { firstName: { contains: search } },
+                            { lastName: { contains: search } },
+                            { dni: { contains: search } },
+                        ],
+                    },
                 },
-            };
+            ];
         }
+
+        return where;
+    }
+
+    /**
+     * Encapsula la consulta a la base de datos, paginación y mapeo de los datos hacia la UI
+     */
+    private async executePaginatedTransactions(where: any, page: number, limit: number) {
+        const skip = (page - 1) * limit;
 
         const [transactions, totalItems] = await Promise.all([
             this.prisma.transaction.findMany({
                 where,
                 skip,
                 take: limit,
-                orderBy: { createdAt: 'desc' }, // Transacciones más recientes primero
+                orderBy: { createdAt: 'desc' },
                 include: {
                     user: {
                         select: { name: true, email: true, dni: true, phone: true },
                     },
-                    student: true
+                    student: true,
                 },
             }),
             this.prisma.transaction.count({ where }),
@@ -73,11 +116,9 @@ export class TransactionsService {
 
         const totalPages = Math.ceil(totalItems / limit);
 
-
-        // Adaptamos la respuesta para que encaje perfectamente con la UI genérica
         return {
             data: transactions.map(tx => ({
-                id: tx.id, // Máscara estética parecida a tu mock (TX-901)
+                id: tx.id,
                 realId: tx.id,
                 student: tx.student,
                 user: tx.user,
@@ -89,13 +130,14 @@ export class TransactionsService {
                 status: tx.status,
             })),
             meta: {
-                currentPage: page,
+                currentPage: Number(page),
                 totalPages,
                 totalItems,
-                itemsPerPage: limit,
+                itemsPerPage: Number(limit),
             },
         };
     }
+
 
     // 🔍 READ ONE
     async findOne(id: string) {
