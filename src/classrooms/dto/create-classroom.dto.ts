@@ -1,4 +1,6 @@
-import { IsString, IsNotEmpty, IsInt, IsEnum, IsOptional, Min } from 'class-validator';
+// /src/classrooms/dto/create-classroom.dto.ts
+
+import { IsString, IsNotEmpty, IsInt, IsEnum, IsOptional, IsArray, Min } from 'class-validator';
 import { ClassroomType, ClassroomStatus } from '@prisma/client';
 
 export class CreateClassroomDto {

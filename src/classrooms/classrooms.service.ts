@@ -1,3 +1,5 @@
+// /src/classrooms/classrooms.service.ts
+
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { ClassroomType, ClassroomStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service'; // Ajusta la ruta según tu proyecto
@@ -31,8 +33,8 @@ export class ClassroomsService {
 
             return {
                 ...data,
-                type: ClassroomTypeLabel[data.type],
-                status: ClassroomStatusLabel[data.status]
+                type: data.type, // ClassroomTypeLabel[data.type],
+                status: data.status, // ClassroomStatusLabel[data.status]
             };
         } catch (error: any) {
             // Error P2002 es la restricción única de Prisma (Unique constraint)
@@ -106,7 +108,7 @@ export class ClassroomsService {
                 totalPages,
                 currentPage: page,
             },
-            data: data.map(e => ({ ...e, type: ClassroomTypeLabel[e.type], status: ClassroomStatusLabel[e.status] })),
+            data,
         };
     }
 
@@ -126,19 +128,52 @@ export class ClassroomsService {
 
     // ✏️ UPDATE
     async update(id: string, updateClassroomDto: UpdateClassroomDto) {
-        // Verificar existencia previa
+        // 1. Verificar existencia previa
         await this.findOne(id);
 
+        // 2. Limpieza estricta de datos del Payload
+        const {
+            groups,
+            schedules, // Los aislamos por completo de 'cleanData'
+            createdAt,
+            updatedAt,
+            id: dtoId,
+            ...cleanData
+        } = updateClassroomDto as any;
+
         try {
-            const data = await this.prisma.classroom.update({
-                where: { id },
-                data: updateClassroomDto,
-            })
+            // 🌟 SOLUCIÓN: Ejecutamos todo dentro de una transacción atómica
+            const result = await this.prisma.$transaction(async (tx) => {
+
+                // Fase A: Actualizar los datos propios del salón (name, maxCapacity, etc.)
+                const updatedClassroom = await tx.classroom.update({
+                    where: { id },
+                    data: cleanData,
+                });
+
+                // Fase B: Si vienen horarios modificados, actualizamos sus JSONs uno por uno
+                if (Array.isArray(schedules)) {
+                    for (const item of schedules) {
+                        await tx.weeklySchedule.update({
+                            where: { id: item.id },
+                            data: {
+                                // Guardamos el JSON con los días modificado directamente
+                                schedule: item.schedule
+                            },
+                        });
+                    }
+                }
+
+                return updatedClassroom;
+            });
+
+            // 4. Retornar el objeto con la estructura esperada
             return {
-                ...data,
-                type: ClassroomTypeLabel[data.type],
-                status: ClassroomStatusLabel[data.status]
+                ...result,
+                type: result.type,
+                status: result.status
             };
+
         } catch (error: any) {
             if (error.code === 'P2002') {
                 throw new ConflictException('El nombre ingresado ya está siendo usado por otro salón.');
@@ -146,7 +181,6 @@ export class ClassroomsService {
             throw error;
         }
     }
-
     // ❌ DELETE
     async remove(id: string) {
         await this.findOne(id);
