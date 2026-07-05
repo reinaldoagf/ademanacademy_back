@@ -50,4 +50,8 @@ export class CreateStudentDto {
     @IsUUID()
     @IsOptional() // 💡 Opcional en el payload
     userId?: string;
+
+    @IsUUID()
+    @IsOptional() // 💡 Opcional en el payload
+    groupId?: string;
 }

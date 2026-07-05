@@ -7,14 +7,14 @@ import { Kinship } from '@prisma/client';
 import { group } from 'console';
 
 // Diccionario para los conceptos (por si también quieres traducirlos)
-export const KinshipLabel: Record<Kinship, string> = {
+/* export const KinshipLabel: Record<Kinship, string> = {
     [Kinship.son]: 'Hijo',
     [Kinship.daughter]: 'Hija',
     [Kinship.nephew]: 'Sobrino',
     [Kinship.niece]: 'Sobrina',
     [Kinship.tutored]: 'Tutorado',
     [Kinship.other]: 'Otro',
-};
+}; */
 @Injectable()
 export class StudentsService {
 
@@ -95,7 +95,7 @@ export class StudentsService {
         const totalPages = Math.ceil(totalItems / limit);
 
         return {
-            data: data.map(e => ({ ...e, kinship: KinshipLabel[e.kinship] })),
+            data: data,
             meta: {
                 totalItems,
                 itemCount: data.length,
@@ -198,6 +198,12 @@ export class StudentsService {
                 ...updateStudentDto,
                 birthDate: updateStudentDto.birthDate ? new Date(updateStudentDto.birthDate) : undefined,
             },
+            include: {
+                user: {
+                    select: { id: true, name: true, email: true }
+                },
+                group: true
+            }
         });
     }
 
