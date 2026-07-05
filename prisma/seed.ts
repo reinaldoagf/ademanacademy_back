@@ -119,7 +119,6 @@ async function main() {
         data: {
             name: 'Baby Dance - Nivel 1',
             style: 'Iniciación al Ritmo',
-            usedSlots: 1,
             totalNumberOfSlots: 15,
             category: GroupCategory.baby,
             instructorId: instructor1.id, // Vinculado a María
@@ -131,7 +130,6 @@ async function main() {
         data: {
             name: 'Hip Hop Juvenil',
             style: 'Urban Dance',
-            usedSlots: 0,
             totalNumberOfSlots: 20,
             category: GroupCategory.youth,
             instructorId: instructor1.id,

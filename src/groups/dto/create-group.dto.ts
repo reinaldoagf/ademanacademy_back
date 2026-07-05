@@ -21,10 +21,6 @@ export class CreateGroupDto {
     @Min(1, { message: 'El grupo debe tener al menos 1 cupo disponible.' })
     totalNumberOfSlots: number;
 
-    @IsNumber()
-    @IsOptional()
-    usedSlots?: number = 0;
-
     @IsString()
     @IsNotEmpty({ message: 'Debes asignar un salón de clases válido.' })
     classroomId: string;

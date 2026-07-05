@@ -7,7 +7,7 @@ import { CreateGroupDto } from './dto/create-group.dto';
 export class GroupsService {
     constructor(private readonly prisma: PrismaService) { }
     async create(createGroupDto: CreateGroupDto) {
-        const { classroomId, instructorId, name, style, category, totalNumberOfSlots, usedSlots } = createGroupDto;
+        const { classroomId, instructorId, name, style, category, totalNumberOfSlots } = createGroupDto;
 
         // 1. Validaciones de existencia
         const classroomExists = await this.prisma.classroom.findUnique({ where: { id: classroomId } });
@@ -27,7 +27,6 @@ export class GroupsService {
                 style: style || null,
                 category, // Ahora machea perfectamente al ser el enum de Prisma
                 totalNumberOfSlots,
-                usedSlots: usedSlots || 0,
 
                 // 🌟 CORRECCIÓN CRÍTICA: Inicializa la relación Uno a Muchos
                 schedules: {
@@ -50,6 +49,7 @@ export class GroupsService {
             include: {
                 classroom: true,
                 instructor: true,
+                students: true,
                 schedules: true, // Incluye la grilla en la respuesta de retorno si lo necesitas
             },
         });
@@ -82,7 +82,8 @@ export class GroupsService {
                 take: limit,
                 orderBy: { name: 'asc' },
                 include: {
-                    classroom: true
+                    classroom: true,
+                    students: true,
                 }
             }),
         ]);

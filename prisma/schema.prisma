@@ -184,7 +184,6 @@ model Group {
   id                 String           @id @default(uuid())
   name               String           @unique
   style              String?
-  usedSlots          Int              @default(1)
   totalNumberOfSlots Int              @default(1)
   category           GroupCategory    @default(baby)
   instructorId       String?          @db.VarChar(36)
