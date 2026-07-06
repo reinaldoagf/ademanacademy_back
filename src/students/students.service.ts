@@ -18,27 +18,17 @@ import { group } from 'console';
 @Injectable()
 export class StudentsService {
 
-    constructor(
-        @Inject(PrismaService) private readonly prismaService: PrismaService
-    ) { }
+    constructor(private readonly prisma: PrismaService) { }
 
-    // Usamos el helper dinámico con el tipado corregido
-    private get client(): any {
-        return (
-            this.prismaService['student'] ||
-            this.prismaService['Student'] ||
-            (this.prismaService as any).student ||
-            (this.prismaService as any).Student
-        );
-    }
+
 
     /**
      * Crea un nuevo estudiante validando la unicidad del DNI
      */
     async create(createStudentDto: CreateStudentDto): Promise<any> {
-        // 🎯 Ahora usamos "this.client" en lugar de "this.prismaClient"
         if (createStudentDto.dni) {
-            const existingStudent = await this.client.findUnique({
+            // 🌟 CAMBIADO: findUnique ➡️ findFirst
+            const existingStudent = await this.prisma.student.findFirst({
                 where: { dni: createStudentDto.dni },
             });
 
@@ -47,11 +37,17 @@ export class StudentsService {
             }
         }
 
-        return await this.client.create({
+        return await this.prisma.student.create({
             data: {
                 ...createStudentDto,
                 birthDate: new Date(createStudentDto.birthDate),
             },
+            include: {
+                user: {
+                    select: { id: true, name: true, email: true }
+                },
+                group: true
+            }
         });
     }
 
@@ -77,7 +73,7 @@ export class StudentsService {
         }
 
         const [data, totalItems] = await Promise.all([
-            this.client.findMany({
+            this.prisma.student.findMany({
                 where,
                 skip,
                 take: limit,
@@ -89,7 +85,7 @@ export class StudentsService {
                     group: true
                 }
             }),
-            this.client.count({ where })
+            this.prisma.student.count({ where })
         ]);
 
         const totalPages = Math.ceil(totalItems / limit);
@@ -134,7 +130,7 @@ export class StudentsService {
 
         // 3. Consultas paralelas optimizadas
         const [data, totalItems] = await Promise.all([
-            this.client.findMany({
+            this.prisma.student.findMany({
                 where,
                 skip,
                 take: limit,
@@ -145,7 +141,7 @@ export class StudentsService {
                     }
                 }
             }),
-            this.client.count({ where })
+            this.prisma.student.count({ where })
         ]);
 
         const totalPages = Math.ceil(totalItems / limit);
@@ -166,7 +162,7 @@ export class StudentsService {
      * Busca un estudiante por su ID único.
      */
     async findOne(id: string): Promise<any> {
-        const student = await this.client.findUnique({
+        const student = await this.prisma.student.findUnique({
             where: { id },
             include: { user: true }
         });
@@ -184,7 +180,7 @@ export class StudentsService {
         await this.findOne(id);
 
         if (updateStudentDto.dni) {
-            const existingDni = await this.client.findFirst({
+            const existingDni = await this.prisma.student.findFirst({
                 where: { dni: updateStudentDto.dni, NOT: { id } },
             });
             if (existingDni) {
@@ -192,7 +188,7 @@ export class StudentsService {
             }
         }
 
-        return await this.client.update({
+        return await this.prisma.student.update({
             where: { id },
             data: {
                 ...updateStudentDto,
@@ -213,7 +209,7 @@ export class StudentsService {
     async remove(id: string): Promise<{ message: string }> {
         await this.findOne(id);
 
-        await this.client.delete({
+        await this.prisma.student.delete({
             where: { id },
         });
 
@@ -224,6 +220,6 @@ export class StudentsService {
      * Cuenta el total de estudiantes registrados
      */
     async countAll(): Promise<number> {
-        return await this.client.count();
+        return await this.prisma.student.count();
     }
 }
