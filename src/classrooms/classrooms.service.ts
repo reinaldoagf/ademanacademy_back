@@ -8,7 +8,7 @@ import { UpdateClassroomDto } from './dto/update-classroom.dto';
 import { GetClassroomsFilterDto } from './dto/get-classrooms-filter.dto'
 
 // Diccionario para los conceptos (por si también quieres traducirlos)
-export const ClassroomTypeLabel: Record<ClassroomType, string> = {
+/* export const ClassroomTypeLabel: Record<ClassroomType, string> = {
     [ClassroomType.mirrors]: 'Espejos',
     [ClassroomType.urban]: 'Urbano',
     [ClassroomType.free]: 'Libre',
@@ -19,7 +19,7 @@ export const ClassroomStatusLabel: Record<ClassroomStatus, string> = {
     [ClassroomStatus.active]: 'Activo',
     [ClassroomStatus.maintenance]: 'Mantenimiento'
 };
-
+ */
 @Injectable()
 export class ClassroomsService {
     constructor(private readonly prisma: PrismaService) { }
