@@ -90,7 +90,7 @@ export class ClassroomsService {
                         },
                     }
                 },
-                orderBy: { name: 'asc' },
+                orderBy: { createdAt: 'desc' },
                 /* include: {
                     _count: {
                         select: { groups: true } // Cuenta cuántos grupos usan este salón

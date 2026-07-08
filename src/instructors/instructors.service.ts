@@ -29,8 +29,7 @@ export class InstructorsService {
                 where,
                 skip,
                 take: limit,
-                orderBy: { name: 'asc' },
-
+                orderBy: { createdAt: 'desc' },
             }),
         ]);
 

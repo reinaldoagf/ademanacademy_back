@@ -81,7 +81,7 @@ export class GroupsService {
                 where,
                 skip,
                 take: limit,
-                orderBy: { name: 'asc' },
+                orderBy: { createdAt: 'desc' },
                 include: {
                     classroom: true,
                     instructor: true,
