@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Body, UsePipes, Param, Delete, Query, UseGuards, ValidationPipe, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Body, UsePipes, Param, Delete, Query, UseGuards, ValidationPipe, HttpCode, HttpStatus } from '@nestjs/common';
 import { GroupsService } from './groups.service';
 import { GetGroupsFilterDto } from './dto/get-groups-filter.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateGroupDto } from '@/groups/dto/create-group.dto';
+import { UpdateGroupDto } from './dto/update-group.dto';
 
 @Controller('groups')
 @UseGuards(JwtAuthGuard) // 🛡️ Protege la gestión de infraestructura
@@ -24,6 +25,11 @@ export class GroupsController {
     @Get(':id')
     async findOne(@Param('id') id: string) {
         return this.groupsService.findOne(id);
+    }
+
+    @Patch(':id')
+    async update(@Param('id') id: string, @Body() updateClassroomDto: UpdateGroupDto) {
+        return this.groupsService.update(id, updateClassroomDto);
     }
 
     @Delete(':id')

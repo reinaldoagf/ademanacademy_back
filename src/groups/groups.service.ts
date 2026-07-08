@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service'; // Ajusta la ruta según tu proyecto
 import { GetGroupsFilterDto } from './dto/get-groups-filter.dto';
 import { CreateGroupDto } from './dto/create-group.dto';
+import { UpdateGroupDto } from './dto/update-group.dto';
 
 @Injectable()
 export class GroupsService {
@@ -83,7 +84,9 @@ export class GroupsService {
                 orderBy: { name: 'asc' },
                 include: {
                     classroom: true,
+                    instructor: true,
                     students: true,
+                    schedules: true,
                 }
             }),
         ]);
@@ -116,6 +119,83 @@ export class GroupsService {
         return group;
     }
 
+    // ✏️ UPDATE
+    async update(id: string, updateGroupDto: UpdateGroupDto) {
+        const { classroomId, instructorId, name, style, category, totalNumberOfSlots } = updateGroupDto;
+
+        // 1. Validar que el grupo a actualizar exista
+        const currentGroup = await this.prisma.group.findUnique({
+            where: { id },
+            include: { schedules: true }
+        });
+        if (!currentGroup) throw new NotFoundException(`El grupo con ID "${id}" no existe.`);
+
+        // Determinar cuál salón se usará para validar las capacidades
+        // (el nuevo si viene en el DTO, o el que ya tiene el grupo asignado)
+        let targetClassroom: any = null;
+        const finalClassroomId = classroomId || currentGroup.classroomId;
+
+        if (finalClassroomId) {
+            targetClassroom = await this.prisma.classroom.findUnique({
+                where: { id: finalClassroomId }, include: {
+                    groups: true
+                }
+            });
+            if (!targetClassroom) throw new NotFoundException(`El salón especificado no existe.`);
+        }
+
+        // 2. Validaciones si se modifica el instructor
+        if (instructorId) {
+            const instructorExists = await this.prisma.user.findUnique({ where: { id: instructorId } });
+            if (!instructorExists) throw new NotFoundException(`El instructor especificado no existe.`);
+        }
+
+        // 3. Validaciones de capacidades de cupos vs. el salón destino
+        const finalSlots = totalNumberOfSlots !== undefined ? totalNumberOfSlots : currentGroup.totalNumberOfSlots;
+        if (targetClassroom && finalSlots > targetClassroom.maxCapacity) {
+            throw new BadRequestException(`Los cupos (${finalSlots}) superan la capacidad máxima del salón (${targetClassroom.maxCapacity}).`);
+        }
+
+        // 4. Actualización del Grupo
+        return await this.prisma.group.update({
+            where: { id },
+            data: {
+                // Valores directos (actualiza solo si se envían en el DTO)
+                ...(name && { name }),
+                ...(category && { category }),
+                ...(totalNumberOfSlots !== undefined && { totalNumberOfSlots }),
+                // Campos opcionales que pueden venir explícitamente nulos
+                style: style !== undefined ? style : currentGroup.style,
+
+                // Relación con Classroom
+                ...(classroomId && {
+                    classroom: {
+                        connect: { id: classroomId }
+                    },
+                    // 🌟 CRÍTICO: Si el salón del grupo cambia, actualizamos el salón de sus horarios asociados
+                    schedules: {
+                        updateMany: {
+                            where: { groupId: id },
+                            data: { classroomId: classroomId }
+                        }
+                    }
+                }),
+
+                // Relación con Instructor
+                ...(instructorId && {
+                    instructor: {
+                        connect: { id: instructorId }
+                    }
+                })
+            },
+            include: {
+                classroom: true,
+                instructor: true,
+                students: true,
+                schedules: true,
+            }
+        });
+    }
 
     // ❌ DELETE
     async remove(id: string) {
