@@ -73,7 +73,7 @@ CREATE TABLE `payment_orders` (
     `orderId` VARCHAR(255) NULL,
     `concept` ENUM('Mensualidad', 'Matrícula', 'Vestuario', 'Entradas Gala') NOT NULL,
     `amount` DECIMAL(10, 2) NOT NULL,
-    `dueDate` DATE NOT NULL,
+    `dueDate` DATE NULL,
     `status` ENUM('Pendiente', 'Pagada', 'Vencida', 'Anulada') NOT NULL DEFAULT 'Pendiente',
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,

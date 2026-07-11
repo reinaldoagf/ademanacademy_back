@@ -119,7 +119,7 @@ model PaymentOrder {
 
   concept ConceptType
   amount  Decimal            @db.Decimal(10, 2)
-  dueDate DateTime           @db.Date
+  dueDate DateTime?          @db.Date
   status  PaymentOrderStatus @default(pending) // Estado del dinero
 
   createdAt DateTime @default(now())
