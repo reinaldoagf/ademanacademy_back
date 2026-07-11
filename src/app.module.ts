@@ -11,6 +11,7 @@ import { GroupsModule } from './groups/groups.module';
 import { InstructorsModule } from './instructors/instructors.module';
 import { RegistrationsModule } from './registrations/registrations.module';
 import { SchedulesModule } from './schedules/schedules.module';
+import { PaymentOrdersModule } from './payment-orders/payment-orders.module';
 
 @Module({
   imports: [
@@ -27,7 +28,8 @@ import { SchedulesModule } from './schedules/schedules.module';
     GroupsModule,
     InstructorsModule,
     RegistrationsModule,
-    SchedulesModule
+    SchedulesModule,
+    PaymentOrdersModule
   ],
 })
 export class AppModule { }
