@@ -246,10 +246,11 @@ model Costume {
 
   // Guardar el inventario por tallas en JSON sigue siendo válido si es informativo, 
   // pero lo ideal para asignaciones exactas es registrar qué talla se lleva el alumno en la tabla intermedia.
-  availableSizes Json @default("[]")
-
+  availableSizes Json             @default("[]")
+  // 🎯 RELACIÓN NUEVA: Galería de imágenes guardada como un array JSON de strings
+  images         Json             @default("[]")
   // 🎯 RELACIÓN NUEVA: Alumnos a los que se ha asignado este vestuario
-  assignments StudentCostume[]
+  assignments    StudentCostume[]
 
   createdAt DateTime @default(now()) @map("createdAt")
   updatedAt DateTime @updatedAt @map("updatedAt")

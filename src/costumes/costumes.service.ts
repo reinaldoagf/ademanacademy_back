@@ -10,19 +10,39 @@ import { AssignCostumeDto, UpdateAssignmentStatusDto } from './dto/assign-costum
 export class CostumesService {
     constructor(private readonly prisma: PrismaService) { }
 
-    async create(createCostumeDto: CreateCostumeDto) {
-        const existing = await this.prisma.costume.findUnique({
-            where: { name: createCostumeDto.name },
-        });
-        if (existing) {
-            throw new ConflictException(`El vestuario con nombre "${createCostumeDto.name}" ya existe.`);
+    async create(data: any) {
+        // 1. Asegúrate de que 'availableSizes' sea un objeto/array de JS real, NO un string
+        let sizes = data.availableSizes;
+        if (typeof sizes === 'string') {
+            try {
+                sizes = JSON.parse(sizes);
+            } catch (e) {
+                sizes = []; // Fallback seguro
+            }
         }
 
-        const { availableSizes, ...data } = createCostumeDto;
+        // 2. Asegúrate de que 'images' sea un array de JS real, NO un string JSON
+        let imagesPaths = data.images;
+        if (typeof imagesPaths === 'string') {
+            try {
+                imagesPaths = JSON.parse(imagesPaths);
+            } catch (e) {
+                imagesPaths = []; // Fallback seguro
+            }
+        }
+
+        // 3. Al guardar con Prisma, pásale los objetos de JS directamente
         return this.prisma.costume.create({
             data: {
-                ...data,
-                availableSizes: availableSizes ? JSON.stringify(availableSizes) : '[]',
+                name: data.name,
+                beat: data.beat,
+                category: data.category,
+                status: data.status,
+
+                // 🎯 AQUÍ ESTÁ EL TRUCO: Pasamos arrays de JS directamente. 
+                // Prisma se encargará de guardarlos como JSON de forma nativa en la BD.
+                availableSizes: sizes,
+                images: imagesPaths,
             },
         });
     }
@@ -61,6 +81,7 @@ export class CostumesService {
         const parsedData = data.map(item => ({
             ...item,
             availableSizes: typeof item.availableSizes === 'string' ? JSON.parse(item.availableSizes) : item.availableSizes,
+            images: typeof item.images === 'string' ? JSON.parse(item.images) : item.images,
         }));
 
         return {
