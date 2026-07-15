@@ -1,5 +1,7 @@
 // /src/costumes/costumes.service.ts
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import * as fs from 'fs';
+import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCostumeDto } from './dto/create-costume.dto';
 import { UpdateCostumeDto } from './dto/update-costume.dto';
@@ -113,14 +115,58 @@ export class CostumesService {
         };
     }
 
-    async update(id: string, updateCostumeDto: UpdateCostumeDto) {
-        await this.findOne(id);
-        const { availableSizes, ...data } = updateCostumeDto;
+    async update(id: string, updateData: any) {
+        // 1. Obtener el registro actual
+        const currentCostume = await this.findOne(id);
+        if (!currentCostume) {
+            throw new NotFoundException(`Vestuario con ID ${id} no encontrado`);
+        }
 
+        const { availableSizes, existingImages = [], newImages = [], ...data } = updateData;
+
+        // 2. Parsear las imágenes actuales que están guardadas en la Base de Datos
+        let currentDBImages: string[] = [];
+        try {
+            if (typeof currentCostume.images === 'string') {
+                currentDBImages = JSON.parse(currentCostume.images);
+            } else if (Array.isArray(currentCostume.images)) {
+                currentDBImages = currentCostume.images as string[];
+            }
+        } catch (e) {
+            console.error("Error parseando imágenes de la BD:", e);
+        }
+
+        // 3. Determinar cuáles imágenes fueron eliminadas en el frontend
+        // Las que existían en BD pero ya no están en las 'existingImages' enviadas
+        const imagesToDelete = currentDBImages.filter(
+            (img) => !existingImages.includes(img)
+        );
+
+        // 4. Eliminar físicamente los archivos descartados del servidor
+        for (const relativePath of imagesToDelete) {
+            // El path relativo suele ser '/uploads/costumes/archivo.jpg'
+            // Le quitamos la barra inicial si es necesario para resolverlo correctamente desde la raíz
+            const cleanPath = relativePath.startsWith('/') ? relativePath.substring(1) : relativePath;
+            const absolutePath = path.resolve(process.cwd(), cleanPath);
+
+            fs.unlink(absolutePath, (err) => {
+                if (err) {
+                    console.error(`No se pudo eliminar el archivo físico: ${absolutePath}`, err);
+                } else {
+                    console.log(`Archivo físico eliminado con éxito: ${absolutePath}`);
+                }
+            });
+        }
+
+        // 5. Unificar las imágenes conservadas con las nuevas subidas
+        const updatedImagesList = [...existingImages, ...newImages];
+
+        // 6. Actualizar en la base de datos
         return this.prisma.costume.update({
             where: { id },
             data: {
                 ...data,
+                images: JSON.stringify(updatedImagesList),
                 ...(availableSizes && { availableSizes: JSON.stringify(availableSizes) }),
             },
         });

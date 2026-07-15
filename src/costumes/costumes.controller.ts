@@ -68,10 +68,63 @@ export class CostumesController {
     }
 
     @Patch(':id')
-    async update(@Param('id') id: string, @Body() updateCostumeDto: UpdateCostumeDto) {
-        return this.costumesService.update(id, updateCostumeDto);
-    }
+    @UseInterceptors(
+        FilesInterceptor('images', 10, {
+            storage: diskStorage({
+                destination: './uploads/costumes',
+                filename: (req, file, callback) => {
+                    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+                    const ext = extname(file.originalname);
+                    callback(null, `costume-${uniqueSuffix}${ext}`);
+                },
+            }),
+            fileFilter: (req, file, callback) => {
+                if (!file.mimetype.match(/\/(jpg|jpeg|png|webp)$/)) {
+                    return callback(new Error('Solo se permiten archivos de imagen (jpg, png, webp)'), false);
+                }
+                callback(null, true);
+            },
+        }),
+    )
+    async update(
+        @Param('id') id: string,
+        @UploadedFiles() files: Express.Multer.File[],
+        @Body() updateCostumeDto: any
+    ) {
+        const newFilePaths = files?.map(file => `/uploads/costumes/${file.filename}`) || [];
 
+        // Parse de availableSizes idéntico al del create
+        if (updateCostumeDto.availableSizes) {
+            try {
+                if (typeof updateCostumeDto.availableSizes === 'string') {
+                    updateCostumeDto.availableSizes = JSON.parse(updateCostumeDto.availableSizes);
+                }
+            } catch (e) {
+                throw new BadRequestException('El formato de las tallas (availableSizes) es inválido.');
+            }
+        }
+
+        // Parse de existingImages proveniente del frontend
+        let existingImages: string[] = [];
+        if (updateCostumeDto.existingImages) {
+            try {
+                if (typeof updateCostumeDto.existingImages === 'string') {
+                    existingImages = JSON.parse(updateCostumeDto.existingImages);
+                } else if (Array.isArray(updateCostumeDto.existingImages)) {
+                    existingImages = updateCostumeDto.existingImages;
+                }
+            } catch (e) {
+                throw new BadRequestException('El formato de las imágenes existentes es inválido.');
+            }
+        }
+
+        // Pasamos todo al servicio
+        return this.costumesService.update(id, {
+            ...updateCostumeDto,
+            newImages: newFilePaths,
+            existingImages,
+        });
+    }
     @Delete(':id')
     async remove(@Param('id') id: string) {
         return this.costumesService.remove(id);
