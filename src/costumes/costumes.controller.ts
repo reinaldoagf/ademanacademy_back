@@ -1,8 +1,7 @@
 // src/costumes/costumes.controller.ts
 import { BadRequestException, Controller, Get, Post, Body, UseInterceptors, UploadedFiles, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
 import { CostumesService } from './costumes.service';
-import { CreateCostumeDto } from './dto/create-costume.dto';
-import { UpdateCostumeDto } from './dto/update-costume.dto';
+import { CleanupOnErrorInterceptor } from './cleanup-on-error.interceptor';
 import { GetCostumesFilterDto } from './dto/get-costumes-filter.dto';
 import { AssignCostumeDto, UpdateAssignmentStatusDto } from './dto/assign-costume.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -33,6 +32,7 @@ export class CostumesController {
                 callback(null, true);
             },
         }),
+        CleanupOnErrorInterceptor // 👈 🎯 SE AGREGA AQUÍ
     )
     async create(
         @UploadedFiles() files: Express.Multer.File[],
@@ -60,6 +60,11 @@ export class CostumesController {
     @Get()
     async findAll(@Query() filters: GetCostumesFilterDto) {
         return this.costumesService.findAll(filters);
+    }
+
+    @Get('count-by-status')
+    async getCountByStatus() {
+        return this.costumesService.getCountByStatus();
     }
 
     @Get(':id')
@@ -146,4 +151,5 @@ export class CostumesController {
     ) {
         return this.costumesService.updateAssignmentStatus(assignmentId, updateAssignmentStatusDto);
     }
+
 }

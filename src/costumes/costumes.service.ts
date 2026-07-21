@@ -3,8 +3,8 @@ import { Injectable, NotFoundException, ConflictException } from '@nestjs/common
 import * as fs from 'fs';
 import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateCostumeDto } from './dto/create-costume.dto';
-import { UpdateCostumeDto } from './dto/update-costume.dto';
+import { Prisma } from '@prisma/client';
+import { LockerRoomStatus } from '@prisma/client';
 import { GetCostumesFilterDto } from './dto/get-costumes-filter.dto';
 import { AssignCostumeDto, UpdateAssignmentStatusDto } from './dto/assign-costume.dto';
 
@@ -34,21 +34,27 @@ export class CostumesService {
         }
 
         // 3. Al guardar con Prisma, pásale los objetos de JS directamente
-        return this.prisma.costume.create({
-            data: {
-                name: data.name,
-                beat: data.beat,
-                category: data.category,
-                status: data.status,
+        try {
+            return await this.prisma.costume.create({
+                data: {
+                    name: data.name,
+                    beat: data.beat,
+                    category: data.category,
+                    status: data.status,
+                    availableSizes: sizes,
+                    images: imagesPaths,
+                },
+            });
+        } catch (error) {
 
-                // 🎯 AQUÍ ESTÁ EL TRUCO: Pasamos arrays de JS directamente. 
-                // Prisma se encargará de guardarlos como JSON de forma nativa en la BD.
-                availableSizes: sizes,
-                images: imagesPaths,
-            },
-        });
+            // Manejo específico del error de duplicado de Prisma (P2002 = Unique constraint failed)
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+                throw new ConflictException(`Ya existe un vestuario con el nombre "${data.name}".`);
+            }
+
+            throw error;
+        }
     }
-
     async findAll(filters: GetCostumesFilterDto) {
         const { page = 1, limit = 10, search, category, status } = filters;
         const skip = (page - 1) * limit;
@@ -256,5 +262,39 @@ export class CostumesService {
                 ...(dto.status !== 'assigned' && { returnedAt: new Date() }),
             },
         });
+    }
+
+    /**
+   * Obtiene la cantidad de vestuarios agrupados por estado.
+   * Retorna una estructura con el total general y el detalle por cada status.
+   */
+    async getCountByStatus() {
+        // 1. Agrupamiento directamente desde la base de datos con Prisma
+        const countsByStatus = await this.prisma.costume.groupBy({
+            by: ['status'],
+            _count: {
+                status: true,
+            },
+        });
+
+        // 2. Mapeamos la respuesta inicial en un objeto base con valores en 0
+        const statusMap = Object.values(LockerRoomStatus).reduce((acc, status) => {
+            acc[status] = 0;
+            return acc;
+        }, {} as Record<LockerRoomStatus, number>);
+
+        let total = 0;
+
+        // 3. Rellenamos con los conteos reales obtenidos
+        countsByStatus.forEach((group) => {
+            const count = group._count.status;
+            statusMap[group.status] = count;
+            total += count;
+        });
+
+        return {
+            total,
+            byStatus: statusMap,
+        };
     }
 }
