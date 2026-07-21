@@ -173,10 +173,54 @@ export class CostumesService {
     }
 
     async remove(id: string) {
-        await this.findOne(id);
-        return this.prisma.costume.delete({ where: { id } });
-    }
+        // 1. Buscar el vestuario para obtener las rutas de sus imágenes
+        const costume = await this.findOne(id); // o this.costumeRepository.findOne({ where: { id } }) según tu ORM
 
+        if (!costume) {
+            throw new NotFoundException(`El vestuario con ID "${id}" no existe.`);
+        }
+        const rawJsonArray = costume.images as unknown as string[];
+        // 2. Eliminar las imágenes físicas del servidor si existen
+        if (rawJsonArray && Array.isArray(rawJsonArray) && rawJsonArray.length) {
+
+            const images: string[] = Array.isArray(rawJsonArray)
+                ? rawJsonArray.filter((item): item is string => typeof item === 'string')
+                : [];
+
+            this.deletePhysicalFiles(images);
+        }
+
+        // 3. Eliminar el registro de la base de datos
+        await this.prisma.costume.delete({ where: { id } }); // Adapta según Mongoose / TypeORM / Prisma
+
+        return {
+            message: 'Vestuario e imágenes asociadas eliminados correctamente.',
+            id,
+        };
+    }
+    /**
+       * Helper privado para eliminar archivos físicamente del disco de forma segura
+       */
+    private deletePhysicalFiles(filePaths: string[]) {
+        filePaths.forEach((relativeUrlPath) => {
+            if (!relativeUrlPath) return;
+
+            // Convertimos la URL relativa (/uploads/costumes/costume-123.jpg) en ruta absoluta del sistema
+            // .replace(/^\//, '') remueve la barra inicial para evitar inconsistencias en path.join
+            const normalizedPath = relativeUrlPath.replace(/^\//, '');
+            const fullPath = path.join(process.cwd(), normalizedPath);
+
+            // Verificamos si el archivo existe antes de intentar borrarlo
+            if (fs.existsSync(fullPath)) {
+                try {
+                    fs.unlinkSync(fullPath);
+                } catch (error) {
+                    // Logueamos el error sin detener el proceso principal de borrado en BD
+                    console.error(`Error al eliminar la imagen en ${fullPath}:`, error);
+                }
+            }
+        });
+    }
     // 🎯 ASIGNAR VESTUARIO A UN ALUMNO
     async assignToStudent(costumeId: string, assignDto: AssignCostumeDto) {
         // Validar existencia de entidades
