@@ -13,6 +13,7 @@ import { RegistrationsModule } from './registrations/registrations.module';
 import { SchedulesModule } from './schedules/schedules.module';
 import { PaymentOrdersModule } from './payment-orders/payment-orders.module';
 import { CostumesModule } from './costumes/costumes.module';
+import { SettingsModule } from './settings/settings.module';
 
 @Module({
   imports: [
@@ -31,7 +32,8 @@ import { CostumesModule } from './costumes/costumes.module';
     RegistrationsModule,
     SchedulesModule,
     PaymentOrdersModule,
-    CostumesModule
+    CostumesModule,
+    SettingsModule
   ],
 })
 export class AppModule { }
