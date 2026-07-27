@@ -181,16 +181,31 @@ model WeeklySchedule {
   @@map("schedules")
 }
 
+model GroupCategory {
+  id         String   @id @default(uuid())
+  name       String   @unique
+  minimumAge Int      @default(1)
+  maximumAge Int      @default(1)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relación inversa: Un salón puede albergar múltiples grupos
+  groups Group[]
+
+  @@map("group-categories")
+}
+
 model Group {
   id                 String           @id @default(uuid())
   name               String           @unique
   style              String?
   totalNumberOfSlots Int              @default(1)
-  category           GroupCategory    @default(baby)
   instructorId       String?          @db.VarChar(36)
   instructor         User?            @relation(fields: [instructorId], references: [id], onDelete: Cascade)
   classroomId        String?
   classroom          Classroom?       @relation(fields: [classroomId], references: [id])
+  categoryId         String?
+  category           GroupCategory?   @relation(fields: [categoryId], references: [id])
   // Relación inversa: Un salón puede albergar múltiples grupos
   schedules          WeeklySchedule[]
 
@@ -298,12 +313,14 @@ model Setting {
 
 // ==================== ENUMS CORREGIDOS Y SEPARADOS ====================
 
-enum GroupCategory {
-  baby      @map("Baby")
-  childrens @map("Infantil")
-  youth     @map("Juvenil")
-  adult     @map("Adulto")
-}
+/**
+ * enum GroupCategory {
+ * baby      @map("Baby")
+ * childrens @map("Infantil")
+ * youth     @map("Juvenil")
+ * adult     @map("Adulto")
+ * }
+ */
 
 enum ConceptType {
   monthly_payment @map("Mensualidad")

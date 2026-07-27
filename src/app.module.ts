@@ -14,6 +14,7 @@ import { SchedulesModule } from './schedules/schedules.module';
 import { PaymentOrdersModule } from './payment-orders/payment-orders.module';
 import { CostumesModule } from './costumes/costumes.module';
 import { SettingsModule } from './settings/settings.module';
+import { GroupCategoriesModule } from './group-categories/group-categories.module';
 
 @Module({
   imports: [
@@ -33,7 +34,8 @@ import { SettingsModule } from './settings/settings.module';
     SchedulesModule,
     PaymentOrdersModule,
     CostumesModule,
-    SettingsModule
+    SettingsModule,
+    GroupCategoriesModule,
   ],
 })
 export class AppModule { }

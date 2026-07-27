@@ -1,7 +1,7 @@
-import { IsOptional, IsString, IsInt, Min, IsEnum } from 'class-validator';
+import { IsOptional, IsString, IsInt, Min } from 'class-validator';
 import { Transform } from 'class-transformer';
 
-export class GetGroupsFilterDto {
+export class GetGroupCategoriesFilterDto {
     @IsOptional()
     @IsInt()
     @Transform(({ value }) => parseInt(value, 10))
@@ -17,4 +17,5 @@ export class GetGroupsFilterDto {
     @IsOptional()
     @IsString()
     search?: string; // Búsqueda global por Nombre, Apellido o DNI
+
 }

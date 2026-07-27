@@ -111,7 +111,25 @@ async function main() {
     });
 
     console.log('🏢 Salones de clase creados.');
+    const categoryBaby = await prisma.groupCategory.upsert({
+        where: { name: 'Baby' },
+        update: {},
+        create: {
+            name: 'Baby',
+            minimumAge: 3,
+            maximumAge: 5,
+        },
+    });
 
+    const categoryYouth = await prisma.groupCategory.upsert({
+        where: { name: 'Youth' },
+        update: {},
+        create: {
+            name: 'Youth',
+            minimumAge: 12,
+            maximumAge: 17,
+        },
+    });
     // ==========================================
     // 5. CREACIÓN DE GRUPOS (Groups)
     // ==========================================
@@ -120,7 +138,7 @@ async function main() {
             name: 'Baby Dance - Nivel 1',
             style: 'Iniciación al Ritmo',
             totalNumberOfSlots: 15,
-            category: GroupCategory.baby,
+            categoryId: categoryBaby.id,
             instructorId: instructor1.id, // Vinculado a María
             classroomId: classroomMirrors.id, // Vinculado al Salón de Espejos
         },
@@ -131,7 +149,7 @@ async function main() {
             name: 'Hip Hop Juvenil',
             style: 'Urban Dance',
             totalNumberOfSlots: 20,
-            category: GroupCategory.youth,
+            categoryId: categoryYouth.id,
             instructorId: instructor1.id,
             classroomId: classroomUrban.id,
         },

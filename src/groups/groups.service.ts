@@ -8,7 +8,7 @@ import { UpdateGroupDto } from './dto/update-group.dto';
 export class GroupsService {
     constructor(private readonly prisma: PrismaService) { }
     async create(createGroupDto: CreateGroupDto) {
-        const { classroomId, instructorId, name, style, category, totalNumberOfSlots } = createGroupDto;
+        const { classroomId, instructorId, name, style, categoryId, totalNumberOfSlots } = createGroupDto;
 
         // 1. Validaciones de existencia
         const classroomExists = await this.prisma.classroom.findUnique({ where: { id: classroomId } });
@@ -26,7 +26,6 @@ export class GroupsService {
             data: {
                 name,
                 style: style || null,
-                category, // Ahora machea perfectamente al ser el enum de Prisma
                 totalNumberOfSlots,
 
                 // 🌟 CORRECCIÓN CRÍTICA: Inicializa la relación Uno a Muchos
@@ -40,6 +39,9 @@ export class GroupsService {
                 },
 
                 // Conexiones de llaves foráneas a nivel estructural
+                category: {
+                    connect: { id: categoryId },
+                },
                 classroom: {
                     connect: { id: classroomId },
                 },
@@ -57,15 +59,11 @@ export class GroupsService {
     }
     // 🔍 READ ALL (Con paginación y filtro por nombre del salón o tipo)
     async findAll(filters: GetGroupsFilterDto) {
-        const { page = 1, limit = 10, search, category } = filters;
+        const { page = 1, limit = 10, search } = filters;
         const skip = (page - 1) * limit;
 
         // Construcción de condiciones dinámicas de búsqueda
         const where: any = {};
-
-        if (category) {
-            where.category = category;
-        }
 
         if (search) {
             where.OR = [
@@ -121,7 +119,7 @@ export class GroupsService {
 
     // ✏️ UPDATE
     async update(id: string, updateGroupDto: UpdateGroupDto) {
-        const { classroomId, instructorId, name, style, category, totalNumberOfSlots } = updateGroupDto;
+        const { classroomId, instructorId, name, style, categoryId, totalNumberOfSlots } = updateGroupDto;
 
         // 1. Validar que el grupo a actualizar exista
         const currentGroup = await this.prisma.group.findUnique({
@@ -144,6 +142,7 @@ export class GroupsService {
             if (!targetClassroom) throw new NotFoundException(`El salón especificado no existe.`);
         }
 
+
         // 2. Validaciones si se modifica el instructor
         if (instructorId) {
             const instructorExists = await this.prisma.user.findUnique({ where: { id: instructorId } });
@@ -162,7 +161,6 @@ export class GroupsService {
             data: {
                 // Valores directos (actualiza solo si se envían en el DTO)
                 ...(name && { name }),
-                ...(category && { category }),
                 ...(totalNumberOfSlots !== undefined && { totalNumberOfSlots }),
                 // Campos opcionales que pueden venir explícitamente nulos
                 style: style !== undefined ? style : currentGroup.style,
@@ -181,6 +179,12 @@ export class GroupsService {
                     }
                 }),
 
+                // Relación con Instructor
+                ...(categoryId && {
+                    category: {
+                        connect: { id: categoryId }
+                    }
+                }),
                 // Relación con Instructor
                 ...(instructorId && {
                     instructor: {
