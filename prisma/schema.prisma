@@ -198,7 +198,6 @@ model GroupCategory {
 model Group {
   id                 String           @id @default(uuid())
   name               String           @unique
-  style              String?
   totalNumberOfSlots Int              @default(1)
   instructorId       String?          @db.VarChar(36)
   instructor         User?            @relation(fields: [instructorId], references: [id], onDelete: Cascade)

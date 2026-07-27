@@ -136,7 +136,6 @@ async function main() {
     const groupBabyDance = await prisma.group.create({
         data: {
             name: 'Baby Dance - Nivel 1',
-            style: 'Iniciación al Ritmo',
             totalNumberOfSlots: 15,
             categoryId: categoryBaby.id,
             instructorId: instructor1.id, // Vinculado a María
@@ -147,7 +146,6 @@ async function main() {
     const groupUrbanYouth = await prisma.group.create({
         data: {
             name: 'Hip Hop Juvenil',
-            style: 'Urban Dance',
             totalNumberOfSlots: 20,
             categoryId: categoryYouth.id,
             instructorId: instructor1.id,

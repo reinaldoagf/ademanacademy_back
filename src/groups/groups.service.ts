@@ -8,7 +8,7 @@ import { UpdateGroupDto } from './dto/update-group.dto';
 export class GroupsService {
     constructor(private readonly prisma: PrismaService) { }
     async create(createGroupDto: CreateGroupDto) {
-        const { classroomId, instructorId, name, style, categoryId, totalNumberOfSlots } = createGroupDto;
+        const { classroomId, instructorId, name, categoryId, totalNumberOfSlots } = createGroupDto;
 
         // 1. Validaciones de existencia
         const classroomExists = await this.prisma.classroom.findUnique({ where: { id: classroomId } });
@@ -25,7 +25,6 @@ export class GroupsService {
         return await this.prisma.group.create({
             data: {
                 name,
-                style: style || null,
                 totalNumberOfSlots,
 
                 // 🌟 CORRECCIÓN CRÍTICA: Inicializa la relación Uno a Muchos
@@ -50,6 +49,7 @@ export class GroupsService {
                 },
             },
             include: {
+                category: true,
                 classroom: true,
                 instructor: true,
                 students: true,
@@ -68,7 +68,6 @@ export class GroupsService {
         if (search) {
             where.OR = [
                 { name: { contains: search } },
-                { style: { contains: search } },
             ];
         }
 
@@ -119,7 +118,7 @@ export class GroupsService {
 
     // ✏️ UPDATE
     async update(id: string, updateGroupDto: UpdateGroupDto) {
-        const { classroomId, instructorId, name, style, categoryId, totalNumberOfSlots } = updateGroupDto;
+        const { classroomId, instructorId, name, categoryId, totalNumberOfSlots } = updateGroupDto;
 
         // 1. Validar que el grupo a actualizar exista
         const currentGroup = await this.prisma.group.findUnique({
@@ -162,8 +161,6 @@ export class GroupsService {
                 // Valores directos (actualiza solo si se envían en el DTO)
                 ...(name && { name }),
                 ...(totalNumberOfSlots !== undefined && { totalNumberOfSlots }),
-                // Campos opcionales que pueden venir explícitamente nulos
-                style: style !== undefined ? style : currentGroup.style,
 
                 // Relación con Classroom
                 ...(classroomId && {

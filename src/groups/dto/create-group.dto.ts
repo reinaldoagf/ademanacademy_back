@@ -9,10 +9,6 @@ export class CreateGroupDto {
     @IsNotEmpty({ message: 'El nombre del grupo es obligatorio.' })
     name: string;
 
-    @IsString()
-    @IsOptional()
-    style?: string;
-
     @IsNumber({}, { message: 'El número total de cupos debe ser un número.' })
     @Min(1, { message: 'El grupo debe tener al menos 1 cupo disponible.' })
     totalNumberOfSlots: number;
