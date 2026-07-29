@@ -7,7 +7,6 @@ CREATE TABLE `users` (
     `phone` VARCHAR(180) NOT NULL,
     `password` VARCHAR(255) NULL,
     `isAdmin` BOOLEAN NOT NULL DEFAULT false,
-    `isAnInstructor` BOOLEAN NOT NULL DEFAULT false,
     `profileOnboarding` BOOLEAN NOT NULL DEFAULT false,
     `profileType` ENUM('Representante', 'Alumno') NULL,
     `occupation` VARCHAR(150) NULL,
@@ -17,6 +16,28 @@ CREATE TABLE `users` (
     UNIQUE INDEX `users_dni_key`(`dni`),
     UNIQUE INDEX `users_email_key`(`email`),
     UNIQUE INDEX `users_phone_key`(`phone`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `employees` (
+    `id` VARCHAR(191) NOT NULL,
+    `dni` VARCHAR(30) NULL,
+    `firstName` VARCHAR(150) NOT NULL,
+    `lastName` VARCHAR(150) NOT NULL,
+    `birthDate` DATE NOT NULL,
+    `typeOfContract` ENUM('Fijo', 'Por Hora', 'Por proyecto') NOT NULL DEFAULT 'Fijo',
+    `medicalObservations` TEXT NULL,
+    `address` TEXT NOT NULL,
+    `phone` VARCHAR(40) NULL,
+    `hoursTaughtMonth` INTEGER NOT NULL DEFAULT 1,
+    `hourlyRate` DECIMAL(10, 2) NOT NULL,
+    `bonus` DECIMAL(10, 2) NOT NULL,
+    `payrollStatus` ENUM('Pendiente', 'Pagado') NOT NULL DEFAULT 'Pendiente',
+    `userId` VARCHAR(36) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -114,16 +135,29 @@ CREATE TABLE `schedules` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
+CREATE TABLE `group-categories` (
+    `id` VARCHAR(191) NOT NULL,
+    `name` VARCHAR(191) NOT NULL,
+    `minimumAge` INTEGER NOT NULL DEFAULT 1,
+    `maximumAge` INTEGER NOT NULL DEFAULT 1,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    UNIQUE INDEX `group-categories_name_key`(`name`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
 CREATE TABLE `groups` (
     `id` VARCHAR(191) NOT NULL,
     `name` VARCHAR(191) NOT NULL,
-    `style` VARCHAR(191) NULL,
     `totalNumberOfSlots` INTEGER NOT NULL DEFAULT 1,
-    `category` ENUM('Baby', 'Infantil', 'Juvenil', 'Adulto') NOT NULL DEFAULT 'Baby',
     `instructorId` VARCHAR(36) NULL,
     `classroomId` VARCHAR(191) NULL,
+    `categoryId` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
+    `userId` VARCHAR(191) NULL,
 
     UNIQUE INDEX `groups_name_key`(`name`),
     PRIMARY KEY (`id`)
@@ -190,6 +224,22 @@ CREATE TABLE `student_costumes` (
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- CreateTable
+CREATE TABLE `settings` (
+    `id` VARCHAR(191) NOT NULL,
+    `key` VARCHAR(30) NOT NULL,
+    `value` TEXT NOT NULL,
+    `active` BOOLEAN NOT NULL DEFAULT true,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    UNIQUE INDEX `settings_key_key`(`key`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- AddForeignKey
+ALTER TABLE `employees` ADD CONSTRAINT `employees_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
 -- AddForeignKey
 ALTER TABLE `students` ADD CONSTRAINT `students_groupId_fkey` FOREIGN KEY (`groupId`) REFERENCES `groups`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -230,10 +280,16 @@ ALTER TABLE `schedules` ADD CONSTRAINT `schedules_groupId_fkey` FOREIGN KEY (`gr
 ALTER TABLE `schedules` ADD CONSTRAINT `schedules_classroomId_fkey` FOREIGN KEY (`classroomId`) REFERENCES `classrooms`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `groups` ADD CONSTRAINT `groups_instructorId_fkey` FOREIGN KEY (`instructorId`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `groups` ADD CONSTRAINT `groups_instructorId_fkey` FOREIGN KEY (`instructorId`) REFERENCES `employees`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `groups` ADD CONSTRAINT `groups_classroomId_fkey` FOREIGN KEY (`classroomId`) REFERENCES `classrooms`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `groups` ADD CONSTRAINT `groups_categoryId_fkey` FOREIGN KEY (`categoryId`) REFERENCES `group-categories`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `groups` ADD CONSTRAINT `groups_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `registrations` ADD CONSTRAINT `registrations_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

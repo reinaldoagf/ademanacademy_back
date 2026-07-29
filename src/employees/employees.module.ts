@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { InstructorsService } from './instructors.service';
-import { InstructorsController } from './instructors.controller';
+import { EmployeesService } from './employees.service';
+import { EmployeesController } from './employees.controller';
 
 @Module({
     imports: [ // Nos permite leer el JWT_SECRET de las variables de entorno
@@ -15,8 +15,8 @@ import { InstructorsController } from './instructors.controller';
             }),
         })
     ],
-    controllers: [InstructorsController],
-    providers: [InstructorsService],
-    exports: [JwtModule, InstructorsService]
+    controllers: [EmployeesController],
+    providers: [EmployeesService],
+    exports: [JwtModule, EmployeesService]
 })
-export class InstructorsModule { }
+export class EmployeesModule { }

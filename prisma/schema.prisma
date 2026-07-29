@@ -20,7 +20,6 @@ model User {
   phone             String       @unique @db.VarChar(180)
   password          String?      @db.VarChar(255)
   isAdmin           Boolean      @default(false)
-  isAnInstructor    Boolean      @default(false)
   profileOnboarding Boolean      @default(false)
   profileType       ProfileType?
   // 🎯 NUEVO: Ocupación exclusiva para cuando el usuario actúa como Representante
@@ -35,8 +34,34 @@ model User {
   transactions  Transaction[]
   groups        Group[]
   registrations Registration[]
+  employees     Employee[]
 
   @@map("users")
+}
+
+// 💡 MODELO: REPRESENTADOS
+model Employee {
+  id                  String         @id @default(uuid())
+  dni                 String?        @db.VarChar(30)
+  firstName           String         @db.VarChar(150)
+  lastName            String         @db.VarChar(150)
+  birthDate           DateTime       @db.Date
+  typeOfContract      TypeOfContract @default(fixed)
+  medicalObservations String?        @db.Text
+  address             String         @db.Text
+  phone               String?        @db.VarChar(40) // Opcional
+  hoursTaughtMonth    Int            @default(1)
+  hourlyRate          Decimal        @db.Decimal(10, 2)
+  bonus               Decimal        @db.Decimal(10, 2)
+  payrollStatus       PayrollStatus  @default(pending)
+  user                User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId              String?        @db.VarChar(36) // Ahora acepta NULL en MySQL si el Admin registra al estudiante directamente
+  groups              Group[]
+
+  createdAt DateTime @default(now()) @map("createdAt")
+  updatedAt DateTime @updatedAt @map("updatedAt")
+
+  @@map("employees")
 }
 
 // 💡 MODELO: REPRESENTADOS
@@ -200,7 +225,7 @@ model Group {
   name               String           @unique
   totalNumberOfSlots Int              @default(1)
   instructorId       String?          @db.VarChar(36)
-  instructor         User?            @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  instructor         Employee?        @relation(fields: [instructorId], references: [id], onDelete: Cascade)
   classroomId        String?
   classroom          Classroom?       @relation(fields: [classroomId], references: [id])
   categoryId         String?
@@ -212,6 +237,8 @@ model Group {
   updatedAt     DateTime       @updatedAt
   students      Student[]
   registrations Registration[]
+  user          User?          @relation(fields: [userId], references: [id])
+  userId        String?
 
   @@map("groups")
 }
@@ -410,4 +437,15 @@ enum RegistrationStatus {
   approved @map("Aprobado")
   pending  @map("Pendiente")
   refused  @map("Rechazado")
+}
+
+enum TypeOfContract {
+  fixed      @map("Fijo")
+  per_hour   @map("Por Hora")
+  by_project @map("Por proyecto")
+}
+
+enum PayrollStatus {
+  pending @map("Pendiente")
+  paid    @map("Pagado")
 }

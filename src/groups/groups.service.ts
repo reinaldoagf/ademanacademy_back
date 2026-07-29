@@ -14,7 +14,7 @@ export class GroupsService {
         const classroomExists = await this.prisma.classroom.findUnique({ where: { id: classroomId } });
         if (!classroomExists) throw new NotFoundException(`El salón no existe.`);
 
-        const instructorExists = await this.prisma.user.findUnique({ where: { id: instructorId } });
+        const instructorExists = await this.prisma.employee.findUnique({ where: { id: instructorId } });
         if (!instructorExists) throw new NotFoundException(`El instructor no existe.`);
 
         if (totalNumberOfSlots > classroomExists.maxCapacity) {
@@ -144,7 +144,7 @@ export class GroupsService {
 
         // 2. Validaciones si se modifica el instructor
         if (instructorId) {
-            const instructorExists = await this.prisma.user.findUnique({ where: { id: instructorId } });
+            const instructorExists = await this.prisma.employee.findUnique({ where: { id: instructorId } });
             if (!instructorExists) throw new NotFoundException(`El instructor especificado no existe.`);
         }
 

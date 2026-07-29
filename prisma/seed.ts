@@ -1,5 +1,5 @@
 // prisma/seed.ts
-import { GroupCategory, ProfileType, Kinship, ClassroomType, ClassroomStatus } from '@prisma/client';
+import { ProfileType, Kinship, ClassroomType, ClassroomStatus, TypeOfContract, PayrollStatus } from '@prisma/client';
 import { PrismaService } from '../src/prisma/prisma.service'; // 🎯 1. Importa tu propio servicio
 import * as bcrypt from 'bcrypt';
 
@@ -17,6 +17,7 @@ async function main() {
     await prisma.classroom.deleteMany();
     await prisma.student.deleteMany();
     await prisma.user.deleteMany();
+    await prisma.employee.deleteMany();
 
     console.log('🧹 Tablas limpiadas correctamente.');
 
@@ -37,18 +38,74 @@ async function main() {
         },
     });
 
-    const instructor1 = await prisma.user.create({
-        data: {
-            dni: 'V-87654321',
-            name: 'María Instructora',
-            email: 'maria.instructor@academia.com',
-            phone: '+584249998877',
-            password: hashedPassword,
-            isAdmin: false,
-            isAnInstructor: true,
-            profileOnboarding: true,
+    // Opcional: Eliminar empleados existentes para evitar duplicados
+
+    const employeesData = [
+        {
+            dni: 'V-18456789',
+            firstName: 'Carlos',
+            lastName: 'Mendoza',
+            birthDate: new Date('1990-05-15'),
+            typeOfContract: TypeOfContract.fixed, // Ajusta según tus valores de Enum
+            medicalObservations: 'Alergico a la penicilina',
+            address: 'Av. Las Américas, Res. El Sol, Apto 4B, Guayana',
+            phone: '+58 414 1234567',
+            hoursTaughtMonth: 40,
+            hourlyRate: 15.50,
+            bonus: 50.00,
+            payrollStatus: PayrollStatus.pending,
         },
-    });
+        {
+            dni: 'V-20123456',
+            firstName: 'María',
+            lastName: 'Rodríguez',
+            birthDate: new Date('1995-10-22'),
+            typeOfContract: TypeOfContract.fixed,
+            medicalObservations: null,
+            address: 'Calle Los Olivos, Casa #12, Puerto Ordaz',
+            phone: '+58 424 9876543',
+            hoursTaughtMonth: 32,
+            hourlyRate: 18.00,
+            bonus: 75.50,
+            payrollStatus: PayrollStatus.pending,
+        },
+        {
+            dni: 'V-23555888',
+            firstName: 'Alejandro',
+            lastName: 'Gómez',
+            birthDate: new Date('1988-03-08'),
+            typeOfContract: TypeOfContract.fixed,
+            medicalObservations: 'Usual control de hipertensión ligera',
+            address: 'Sector Castillito, Carrera Aripao #45',
+            phone: null, // Campo opcional
+            hoursTaughtMonth: 20,
+            hourlyRate: 12.00,
+            bonus: 30.00,
+            payrollStatus: PayrollStatus.pending,
+        },
+        {
+            dni: 'V-15999000',
+            firstName: 'Ana',
+            lastName: 'Martínez',
+            birthDate: new Date('1985-12-01'),
+            typeOfContract: TypeOfContract.fixed,
+            medicalObservations: null,
+            address: 'Urbanización Alta Vista, Torres del Core8',
+            phone: '+58 412 5551234',
+            hoursTaughtMonth: 50,
+            hourlyRate: 20.00,
+            bonus: 100.00,
+            payrollStatus: PayrollStatus.pending,
+        },
+    ];
+
+    // Insertar cada empleado en la base de datos
+    for (const employee of employeesData) {
+        const createdEmployee = await prisma.employee.create({
+            data: employee,
+        });
+        console.log(`✅ Empleado creado: ${createdEmployee.firstName} ${createdEmployee.lastName} (${createdEmployee.id})`);
+    }
 
     const representative = await prisma.user.create({
         data: {
@@ -130,70 +187,77 @@ async function main() {
             maximumAge: 17,
         },
     });
-    // ==========================================
-    // 5. CREACIÓN DE GRUPOS (Groups)
-    // ==========================================
-    const groupBabyDance = await prisma.group.create({
-        data: {
-            name: 'Baby Dance - Nivel 1',
-            totalNumberOfSlots: 15,
-            categoryId: categoryBaby.id,
-            instructorId: instructor1.id, // Vinculado a María
-            classroomId: classroomMirrors.id, // Vinculado al Salón de Espejos
-        },
-    });
 
-    const groupUrbanYouth = await prisma.group.create({
-        data: {
-            name: 'Hip Hop Juvenil',
-            totalNumberOfSlots: 20,
-            categoryId: categoryYouth.id,
-            instructorId: instructor1.id,
-            classroomId: classroomUrban.id,
-        },
-    });
+    const skip = Math.floor(Math.random() * 1);
+    const instructor1 = await prisma.employee.findFirst({ skip: skip });
+    if (instructor1) {
+        // ==========================================
+        // 5. CREACIÓN DE GRUPOS (Groups)
+        // ==========================================
+        const groupBabyDance = await prisma.group.create({
+            data: {
+                name: 'Baby Dance - Nivel 1',
+                totalNumberOfSlots: 15,
+                categoryId: categoryBaby.id,
+                instructorId: instructor1.id, // Vinculado a María
+                classroomId: classroomMirrors.id, // Vinculado al Salón de Espejos
+            },
+        });
 
-    console.log('🕺 Grupos de danza creados.');
+        const groupUrbanYouth = await prisma.group.create({
+            data: {
+                name: 'Hip Hop Juvenil',
+                totalNumberOfSlots: 20,
+                categoryId: categoryYouth.id,
+                instructorId: instructor1.id,
+                classroomId: classroomUrban.id,
+            },
+        });
 
-    // ==========================================
-    // 6. CREACIÓN DE HORARIOS SEMANALES (WeeklySchedule)
-    // ==========================================
-    // Estructuramos el JSON tal cual lo solicita tu frontend y el default del modelo
-    const scheduleDataBaby = {
-        lunes: [{ id: 'b1', startTime: '15:00', endTime: '16:30', label: 'Técnica' }],
-        martes: [],
-        miércoles: [{ id: 'b2', startTime: '15:00', endTime: '16:30', label: 'Coreografía' }],
-        jueves: [],
-        viernes: [],
-        sábado: [],
-        domingo: [],
-    };
 
-    const scheduleDataUrban = {
-        lunes: [],
-        martes: [{ id: 'u1', startTime: '17:00', endTime: '18:30', label: 'Breaking Basics' }],
-        miércoles: [],
-        jueves: [{ id: 'u2', startTime: '17:00', endTime: '18:30', label: 'Crew Practice' }],
-        viernes: [],
-        sábado: [{ id: 'u3', startTime: '10:00', endTime: '12:00', label: 'Ensayo Intensivo' }],
-        domingo: [],
-    };
+        console.log('🕺 Grupos de danza creados.');
 
-    await prisma.weeklySchedule.create({
-        data: {
-            schedule: scheduleDataBaby,
-            groupId: groupBabyDance.id,
-            classroomId: classroomMirrors.id,
-        },
-    });
+        // ==========================================
+        // 6. CREACIÓN DE HORARIOS SEMANALES (WeeklySchedule)
+        // ==========================================
+        // Estructuramos el JSON tal cual lo solicita tu frontend y el default del modelo
+        const scheduleDataBaby = {
+            lunes: [{ id: 'b1', startTime: '15:00', endTime: '16:30', label: 'Técnica' }],
+            martes: [],
+            miércoles: [{ id: 'b2', startTime: '15:00', endTime: '16:30', label: 'Coreografía' }],
+            jueves: [],
+            viernes: [],
+            sábado: [],
+            domingo: [],
+        };
 
-    await prisma.weeklySchedule.create({
-        data: {
-            schedule: scheduleDataUrban,
-            groupId: groupUrbanYouth.id,
-            classroomId: classroomUrban.id,
-        },
-    });
+        const scheduleDataUrban = {
+            lunes: [],
+            martes: [{ id: 'u1', startTime: '17:00', endTime: '18:30', label: 'Breaking Basics' }],
+            miércoles: [],
+            jueves: [{ id: 'u2', startTime: '17:00', endTime: '18:30', label: 'Crew Practice' }],
+            viernes: [],
+            sábado: [{ id: 'u3', startTime: '10:00', endTime: '12:00', label: 'Ensayo Intensivo' }],
+            domingo: [],
+        };
+
+        await prisma.weeklySchedule.create({
+            data: {
+                schedule: scheduleDataBaby,
+                groupId: groupBabyDance.id,
+                classroomId: classroomMirrors.id,
+            },
+        });
+
+        await prisma.weeklySchedule.create({
+            data: {
+                schedule: scheduleDataUrban,
+                groupId: groupUrbanYouth.id,
+                classroomId: classroomUrban.id,
+            },
+        });
+
+    }
 
     console.log('📅 Horarios semanales inyectados.');
     console.log('🏁 ¡Seeding completado con éxito!');

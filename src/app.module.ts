@@ -8,13 +8,13 @@ import { StudentsModule } from './students/students.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { ClassroomsModule } from './classrooms/classrooms.module';
 import { GroupsModule } from './groups/groups.module';
-import { InstructorsModule } from './instructors/instructors.module';
 import { RegistrationsModule } from './registrations/registrations.module';
 import { SchedulesModule } from './schedules/schedules.module';
 import { PaymentOrdersModule } from './payment-orders/payment-orders.module';
 import { CostumesModule } from './costumes/costumes.module';
 import { SettingsModule } from './settings/settings.module';
 import { GroupCategoriesModule } from './group-categories/group-categories.module';
+import { EmployeesModule } from './employees/employees.module';
 
 @Module({
   imports: [
@@ -29,13 +29,13 @@ import { GroupCategoriesModule } from './group-categories/group-categories.modul
     TransactionsModule,
     ClassroomsModule,
     GroupsModule,
-    InstructorsModule,
     RegistrationsModule,
     SchedulesModule,
     PaymentOrdersModule,
     CostumesModule,
     SettingsModule,
     GroupCategoriesModule,
+    EmployeesModule,
   ],
 })
 export class AppModule { }
