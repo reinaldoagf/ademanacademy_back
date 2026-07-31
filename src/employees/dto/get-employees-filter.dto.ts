@@ -1,6 +1,6 @@
 import { IsOptional, IsString, IsEnum, IsInt, Min, IsUUID } from 'class-validator';
 import { Type } from 'class-transformer';
-import { TypeOfContract, PayrollStatus } from '@prisma/client';
+import { TypeOfContract, PayrollStatus, TypeOfEmployee } from '@prisma/client';
 
 export class GetEmployeesFilterDto {
     @IsOptional()
@@ -24,6 +24,12 @@ export class GetEmployeesFilterDto {
         message: `typeOfContract debe ser un valor válido: ${Object.values(TypeOfContract).join(', ')}`,
     })
     typeOfContract?: TypeOfContract;
+
+    @IsOptional()
+    @IsEnum(TypeOfEmployee, {
+        message: `TypeOfEmployee debe ser un valor válido: ${Object.values(TypeOfEmployee).join(', ')}`,
+    })
+    typeOfEmployee?: TypeOfEmployee;
 
     @IsOptional()
     @IsEnum(PayrollStatus, {

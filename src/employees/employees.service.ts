@@ -5,7 +5,7 @@ import {
     BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service'; // Ajusta la ruta a tu PrismaService
-import { Prisma, PayrollStatus, TypeOfContract } from '@prisma/client';
+import { Prisma, PayrollStatus, TypeOfContract, TypeOfEmployee } from '@prisma/client';
 
 // DTOs sugeridos para tipado
 export interface GetEmployeesFilterDto {
@@ -13,6 +13,7 @@ export interface GetEmployeesFilterDto {
     limit?: number;
     search?: string;
     typeOfContract?: TypeOfContract;
+    typeOfEmployee?: TypeOfEmployee;
     payrollStatus?: PayrollStatus;
     groupId?: string;
 }
@@ -37,6 +38,7 @@ export class EmployeesService {
                     lastName: data.lastName,
                     birthDate,
                     typeOfContract: data.typeOfContract,
+                    typeOfEmployee: data.typeOfEmployee,
                     medicalObservations: data.medicalObservations,
                     address: data.address,
                     phone: data.phone,
@@ -86,6 +88,7 @@ export class EmployeesService {
             limit = 10,
             search,
             typeOfContract,
+            typeOfEmployee,
             payrollStatus,
             groupId,
         } = filters;
@@ -94,6 +97,7 @@ export class EmployeesService {
         const where: Prisma.EmployeeWhereInput = {};
 
         if (typeOfContract) where.typeOfContract = typeOfContract;
+        if (typeOfEmployee) where.typeOfEmployee = typeOfEmployee;
         if (payrollStatus) where.payrollStatus = payrollStatus;
 
         // Filtro si pertenece a un grupo específico
@@ -110,6 +114,7 @@ export class EmployeesService {
                 { lastName: { contains: search } },
                 { dni: { contains: search } },
                 { phone: { contains: search } },
+                { user: { name: { contains: search } } },
             ];
         }
 
@@ -122,7 +127,7 @@ export class EmployeesService {
                 orderBy: { createdAt: 'desc' },
                 include: {
                     user: {
-                        select: { id: true, email: true },
+                        select: { id: true, email: true, name: true },
                     },
                     groups: true,
                 },

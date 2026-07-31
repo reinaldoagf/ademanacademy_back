@@ -47,6 +47,7 @@ model Employee {
   lastName            String         @db.VarChar(150)
   birthDate           DateTime       @db.Date
   typeOfContract      TypeOfContract @default(fixed)
+  typeOfEmployee      TypeOfEmployee @default(administrative)
   medicalObservations String?        @db.Text
   address             String         @db.Text
   phone               String?        @db.VarChar(40) // Opcional
@@ -443,6 +444,12 @@ enum TypeOfContract {
   fixed      @map("Fijo")
   per_hour   @map("Por Hora")
   by_project @map("Por proyecto")
+}
+
+enum TypeOfEmployee {
+  administrative @map("Personal Administrativo y de Gestión")
+  teaching       @map("Personal Docente y Artístico")
+  support        @map("Personal de Soporte y Operaciones")
 }
 
 enum PayrollStatus {
