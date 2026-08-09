@@ -1,5 +1,5 @@
 // /src/costumes/dto/create-costume.dto.ts
-import { IsString, IsOptional, IsEnum, IsArray, ValidateNested, IsInt, Min } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsInt, Min, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
 import { LockerRoomCategory, LockerRoomStatus } from '@prisma/client';
 
@@ -18,6 +18,12 @@ export class CreateCostumeDto {
     @IsString()
     name: string;
 
+    @IsNumber({ maxDecimalPlaces: 2 }, { message: 'El precio debe ser un número válido con máximo 2 decimales' })
+    @Min(0, { message: 'El precio no puede ser negativo' })
+    @Type(() => Number)
+    @IsOptional()
+    price?: number;
+
     @IsString()
     @IsOptional()
     beat?: string;
@@ -30,9 +36,7 @@ export class CreateCostumeDto {
     @IsOptional()
     status?: LockerRoomStatus;
 
-    @IsArray()
-    @ValidateNested({ each: true })
-    @Type(() => SizeStockDto)
+    @IsString()
     @IsOptional()
-    availableSizes?: SizeStockDto[];
+    images?: string;
 }

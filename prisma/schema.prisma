@@ -284,15 +284,16 @@ model Costume {
   name     String             @unique @db.VarChar(150)
   beat     String?            @db.VarChar(100) // Ritmo / Temática del baile
   category LockerRoomCategory @default(baby)
-  status   LockerRoomStatus   @default(pending_preparation)
+  status   LockerRoomStatus   @default(payment_pending)
+  price    Decimal            @db.Decimal(10, 2) // Precio unitario al momento de la compra
 
   // Guardar el inventario por tallas en JSON sigue siendo válido si es informativo, 
   // pero lo ideal para asignaciones exactas es registrar qué talla se lleva el alumno en la tabla intermedia.
-  availableSizes Json             @default("[]")
+  // availableSizes Json             @default("[]")
   // 🎯 RELACIÓN NUEVA: Galería de imágenes guardada como un array JSON de strings
-  images         Json             @default("[]")
+  images      Json             @default("[]")
   // 🎯 RELACIÓN NUEVA: Alumnos a los que se ha asignado este vestuario
-  assignments    StudentCostume[]
+  assignments StudentCostume[]
 
   createdAt DateTime @default(now()) @map("createdAt")
   updatedAt DateTime @updatedAt @map("updatedAt")
@@ -388,10 +389,10 @@ enum TransactionStatus {
 
 // 🎯 Estados específicos para la entrega física de vestuarios
 enum LockerRoomStatus {
-  pending_preparation // En confección / Preparación
-  available // Listo para usar / En stock
-  maintenance // En lavandería / Reparación
-  retired // Fuera de servicio
+  payment_pending @map("Pendiente por pago")
+  making          @map("Confeccionando")
+  available       @map("Disponible")
+  retired         @map("Retirado")
 }
 
 enum AssignmentStatus {

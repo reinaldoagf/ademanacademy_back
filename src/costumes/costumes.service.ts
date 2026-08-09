@@ -5,6 +5,7 @@ import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { LockerRoomStatus } from '@prisma/client';
+import { CreateCostumeDto } from './dto/create-costume.dto';
 import { GetCostumesFilterDto } from './dto/get-costumes-filter.dto';
 import { AssignCostumeDto, UpdateAssignmentStatusDto } from './dto/assign-costume.dto';
 
@@ -12,44 +13,51 @@ import { AssignCostumeDto, UpdateAssignmentStatusDto } from './dto/assign-costum
 export class CostumesService {
     constructor(private readonly prisma: PrismaService) { }
 
-    async create(data: any) {
+    async create(createCostumeDto: CreateCostumeDto) {
         // 1. Asegúrate de que 'availableSizes' sea un objeto/array de JS real, NO un string
-        let sizes = data.availableSizes;
+        /* let sizes = data.availableSizes;
         if (typeof sizes === 'string') {
             try {
                 sizes = JSON.parse(sizes);
             } catch (e) {
                 sizes = []; // Fallback seguro
             }
-        }
+        } */
 
         // 2. Asegúrate de que 'images' sea un array de JS real, NO un string JSON
-        let imagesPaths = data.images;
-        if (typeof imagesPaths === 'string') {
+        let imagesPaths: string[] = [];
+
+        const rawImages = createCostumeDto.images;
+
+        if (Array.isArray(rawImages)) {
+            imagesPaths = rawImages;
+        } else if (typeof rawImages === 'string') {
             try {
-                imagesPaths = JSON.parse(imagesPaths);
+                const parsed = JSON.parse(rawImages);
+                imagesPaths = Array.isArray(parsed) ? parsed : [];
             } catch (e) {
-                imagesPaths = []; // Fallback seguro
+                imagesPaths = []; // Fallback seguro si falla el JSON.parse
             }
         }
 
         // 3. Al guardar con Prisma, pásale los objetos de JS directamente
         try {
+            // availableSizes: sizes,
             return await this.prisma.costume.create({
                 data: {
-                    name: data.name,
-                    beat: data.beat,
-                    category: data.category,
-                    status: data.status,
-                    availableSizes: sizes,
+                    name: createCostumeDto.name,
+                    beat: createCostumeDto.beat,
+                    category: createCostumeDto.category,
+                    status: createCostumeDto.status,
                     images: imagesPaths,
+                    price: createCostumeDto.price ?? 0,
                 },
             });
         } catch (error) {
 
             // Manejo específico del error de duplicado de Prisma (P2002 = Unique constraint failed)
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-                throw new ConflictException(`Ya existe un vestuario con el nombre "${data.name}".`);
+                throw new ConflictException(`Ya existe un vestuario con el nombre "${createCostumeDto.name}".`);
             }
 
             throw error;
@@ -86,9 +94,13 @@ export class CostumesService {
         ]);
 
         // Rehidratar el JSON de tallas para el Front-end
-        const parsedData = data.map(item => ({
+        /* const parsedData = data.map(item => ({
             ...item,
             availableSizes: typeof item.availableSizes === 'string' ? JSON.parse(item.availableSizes) : item.availableSizes,
+            images: typeof item.images === 'string' ? JSON.parse(item.images) : item.images,
+        })); */
+        const parsedData = data.map(item => ({
+            ...item,
             images: typeof item.images === 'string' ? JSON.parse(item.images) : item.images,
         }));
 
@@ -114,11 +126,11 @@ export class CostumesService {
             }
         });
         if (!costume) throw new NotFoundException('Vestuario no encontrado.');
-
-        return {
+        return costume;
+        /* return {
             ...costume,
             availableSizes: typeof costume.availableSizes === 'string' ? JSON.parse(costume.availableSizes) : costume.availableSizes,
-        };
+        }; */
     }
 
     async update(id: string, updateData: any) {
@@ -168,12 +180,12 @@ export class CostumesService {
         const updatedImagesList = [...existingImages, ...newImages];
 
         // 6. Actualizar en la base de datos
+        // ...(availableSizes && { availableSizes: JSON.stringify(availableSizes) }),
         return this.prisma.costume.update({
             where: { id },
             data: {
                 ...data,
                 images: JSON.stringify(updatedImagesList),
-                ...(availableSizes && { availableSizes: JSON.stringify(availableSizes) }),
             },
         });
     }

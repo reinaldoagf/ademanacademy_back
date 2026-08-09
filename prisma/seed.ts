@@ -18,6 +18,7 @@ async function main() {
     await prisma.student.deleteMany();
     await prisma.user.deleteMany();
     await prisma.employee.deleteMany();
+    await prisma.setting.deleteMany();
 
     console.log('🧹 Tablas limpiadas correctamente.');
 
@@ -258,6 +259,14 @@ async function main() {
         });
 
     }
+    await prisma.setting.create({
+        data: {
+            key: 'usage_policies',
+            value: 'Políticas de uso',
+            active: true
+        },
+    });
+
 
     console.log('📅 Horarios semanales inyectados.');
     console.log('🏁 ¡Seeding completado con éxito!');
