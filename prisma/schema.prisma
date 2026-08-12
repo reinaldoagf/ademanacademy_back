@@ -90,9 +90,10 @@ model Student {
   orderItems         OrderItem[]
   costumeAssignments StudentCostume[]
 
-  createdAt     DateTime       @default(now()) @map("createdAt")
-  updatedAt     DateTime       @updatedAt @map("updatedAt")
-  registrations Registration[]
+  createdAt       DateTime         @default(now()) @map("createdAt")
+  updatedAt       DateTime         @updatedAt @map("updatedAt")
+  registrations   Registration[]
+  studentUniforms StudentUniform[]
 
   @@map("students")
 }
@@ -278,6 +279,21 @@ model Registration {
   @@map("registrations")
 }
 
+model Uniform {
+  id          String             @id @default(uuid())
+  name        String             @unique @db.VarChar(150)
+  category    LockerRoomCategory @default(baby)
+  status      LockerRoomStatus   @default(payment_pending)
+  price       Decimal            @db.Decimal(10, 2) // Precio unitario al momento de la compra 
+  images      Json               @default("[]")
+  // 🎯 RELACIÓN NUEVA: Alumnos a los que se ha asignado este vestuario
+  assignments StudentUniform[]
+  createdAt   DateTime           @default(now()) @map("createdAt")
+  updatedAt   DateTime           @updatedAt @map("updatedAt")
+
+  @@map("uniforms")
+}
+
 // 👗 MODELO DE VESTUARIO (Optimizado)
 model Costume {
   id       String             @id @default(uuid())
@@ -291,14 +307,43 @@ model Costume {
   // pero lo ideal para asignaciones exactas es registrar qué talla se lleva el alumno en la tabla intermedia.
   // availableSizes Json             @default("[]")
   // 🎯 RELACIÓN NUEVA: Galería de imágenes guardada como un array JSON de strings
-  images      Json             @default("[]")
+  images          Json             @default("[]")
   // 🎯 RELACIÓN NUEVA: Alumnos a los que se ha asignado este vestuario
-  assignments StudentCostume[]
+  studentCostumes StudentCostume[]
+  studentUniforms StudentUniform[]
 
   createdAt DateTime @default(now()) @map("createdAt")
   updatedAt DateTime @updatedAt @map("updatedAt")
 
   @@map("costumes")
+}
+
+model StudentUniform {
+  id String @id @default(uuid())
+
+  // Relación con el Estudiante
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  // Relación con el Vestuario
+  uniformId String
+  uniform   Uniform @relation(fields: [uniformId], references: [id], onDelete: Cascade)
+
+  // Datos específicos de la asignación
+  assignedSize String           @db.VarChar(10) // La talla exacta que se le entregó (ej: "M", "12")
+  status       AssignmentStatus @default(assigned)
+  observations String?          @db.Text // Ej: "Se entrega con detalles en encaje", "Falta tiara"
+
+  // Fechas de control
+  assignedAt DateTime  @default(now()) // Cuándo se le dio
+  returnedAt DateTime? // Cuándo lo devolvió (si aplica)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  costume   Costume? @relation(fields: [costumeId], references: [id])
+  costumeId String?
+
+  @@map("student_uniforms")
 }
 
 // 🤝 TABLA INTERMEDIA: Registro exacto de Asignaciones de Vestuarios

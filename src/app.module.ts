@@ -12,6 +12,7 @@ import { RegistrationsModule } from './registrations/registrations.module';
 import { SchedulesModule } from './schedules/schedules.module';
 import { PaymentOrdersModule } from './payment-orders/payment-orders.module';
 import { CostumesModule } from './costumes/costumes.module';
+import { UniformsModule } from './uniforms/uniforms.module';
 import { SettingsModule } from './settings/settings.module';
 import { GroupCategoriesModule } from './group-categories/group-categories.module';
 import { EmployeesModule } from './employees/employees.module';
@@ -33,6 +34,7 @@ import { EmployeesModule } from './employees/employees.module';
     SchedulesModule,
     PaymentOrdersModule,
     CostumesModule,
+    UniformsModule,
     SettingsModule,
     GroupCategoriesModule,
     EmployeesModule,
