@@ -15,14 +15,14 @@ export class UniformsService {
 
     async create(createUniformDto: CreateUniformDto) {
         // 1. Asegúrate de que 'availableSizes' sea un objeto/array de JS real, NO un string
-        /* let sizes = data.availableSizes;
+        let sizes = createUniformDto.availableSizes;
         if (typeof sizes === 'string') {
             try {
                 sizes = JSON.parse(sizes);
             } catch (e) {
                 sizes = []; // Fallback seguro
             }
-        } */
+        }
 
         // 2. Asegúrate de que 'images' sea un array de JS real, NO un string JSON
         let imagesPaths: string[] = [];
@@ -42,7 +42,6 @@ export class UniformsService {
 
         // 3. Al guardar con Prisma, pásale los objetos de JS directamente
         try {
-            // availableSizes: sizes,
             return await this.prisma.uniform.create({
                 data: {
                     name: createUniformDto.name,
@@ -50,6 +49,7 @@ export class UniformsService {
                     status: createUniformDto.status,
                     images: imagesPaths,
                     price: createUniformDto.price ?? 0,
+                    availableSizes: createUniformDto.availableSizes as unknown as Prisma.InputJsonValue,
                 },
             });
         } catch (error) {
@@ -73,7 +73,6 @@ export class UniformsService {
         if (search) {
             where.OR = [
                 { name: { contains: search } },
-                { beat: { contains: search } },
             ];
         }
 
@@ -93,13 +92,9 @@ export class UniformsService {
         ]);
 
         // Rehidratar el JSON de tallas para el Front-end
-        /* const parsedData = data.map(item => ({
-            ...item,
-            availableSizes: typeof item.availableSizes === 'string' ? JSON.parse(item.availableSizes) : item.availableSizes,
-            images: typeof item.images === 'string' ? JSON.parse(item.images) : item.images,
-        })); */
         const parsedData = data.map(item => ({
             ...item,
+            availableSizes: typeof item.availableSizes === 'string' ? JSON.parse(item.availableSizes) : item.availableSizes,
             images: typeof item.images === 'string' ? JSON.parse(item.images) : item.images,
         }));
 
@@ -121,15 +116,14 @@ export class UniformsService {
             include: {
                 assignments: {
                     include: { student: true }
-                }
+                },
             }
         });
         if (!uniform) throw new NotFoundException('Vestuario no encontrado.');
-        return uniform;
-        /* return {
+        return {
             ...uniform,
             availableSizes: typeof uniform.availableSizes === 'string' ? JSON.parse(uniform.availableSizes) : uniform.availableSizes,
-        }; */
+        };
     }
 
     async update(id: string, updateData: any) {
@@ -179,11 +173,12 @@ export class UniformsService {
         const updatedImagesList = [...existingImages, ...newImages];
 
         // 6. Actualizar en la base de datos
-        // ...(availableSizes && { availableSizes: JSON.stringify(availableSizes) }),
+        // 
         return this.prisma.uniform.update({
             where: { id },
             data: {
                 ...data,
+                ...(availableSizes && { availableSizes: JSON.stringify(availableSizes) }),
                 images: JSON.stringify(updatedImagesList),
             },
         });

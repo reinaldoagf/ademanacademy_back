@@ -280,42 +280,21 @@ model Registration {
 }
 
 model Uniform {
-  id          String             @id @default(uuid())
-  name        String             @unique @db.VarChar(150)
-  category    LockerRoomCategory @default(baby)
-  status      LockerRoomStatus   @default(payment_pending)
-  price       Decimal            @db.Decimal(10, 2) // Precio unitario al momento de la compra 
-  images      Json               @default("[]")
-  // 🎯 RELACIÓN NUEVA: Alumnos a los que se ha asignado este vestuario
-  assignments StudentUniform[]
-  createdAt   DateTime           @default(now()) @map("createdAt")
-  updatedAt   DateTime           @updatedAt @map("updatedAt")
-
-  @@map("uniforms")
-}
-
-// 👗 MODELO DE VESTUARIO (Optimizado)
-model Costume {
-  id       String             @id @default(uuid())
-  name     String             @unique @db.VarChar(150)
-  beat     String?            @db.VarChar(100) // Ritmo / Temática del baile
-  category LockerRoomCategory @default(baby)
-  status   LockerRoomStatus   @default(payment_pending)
-  price    Decimal            @db.Decimal(10, 2) // Precio unitario al momento de la compra
-
+  id             String             @id @default(uuid())
+  name           String             @unique @db.VarChar(150)
+  category       LockerRoomCategory @default(baby)
+  status         LockerRoomStatus   @default(payment_pending)
+  price          Decimal            @db.Decimal(10, 2) // Precio unitario al momento de la compra 
   // Guardar el inventario por tallas en JSON sigue siendo válido si es informativo, 
   // pero lo ideal para asignaciones exactas es registrar qué talla se lleva el alumno en la tabla intermedia.
-  // availableSizes Json             @default("[]")
-  // 🎯 RELACIÓN NUEVA: Galería de imágenes guardada como un array JSON de strings
-  images          Json             @default("[]")
+  availableSizes Json               @default("[]")
+  images         Json               @default("[]")
   // 🎯 RELACIÓN NUEVA: Alumnos a los que se ha asignado este vestuario
-  studentCostumes StudentCostume[]
-  studentUniforms StudentUniform[]
+  assignments    StudentUniform[]
+  createdAt      DateTime           @default(now()) @map("createdAt")
+  updatedAt      DateTime           @updatedAt @map("updatedAt")
 
-  createdAt DateTime @default(now()) @map("createdAt")
-  updatedAt DateTime @updatedAt @map("updatedAt")
-
-  @@map("costumes")
+  @@map("uniforms")
 }
 
 model StudentUniform {
@@ -344,6 +323,27 @@ model StudentUniform {
   costumeId String?
 
   @@map("student_uniforms")
+}
+
+// 👗 MODELO DE VESTUARIO (Optimizado)
+model Costume {
+  id       String             @id @default(uuid())
+  name     String             @unique @db.VarChar(150)
+  beat     String?            @db.VarChar(100) // Ritmo / Temática del baile
+  category LockerRoomCategory @default(baby)
+  status   LockerRoomStatus   @default(payment_pending)
+  price    Decimal            @db.Decimal(10, 2) // Precio unitario al momento de la compra
+
+  // 🎯 RELACIÓN NUEVA: Galería de imágenes guardada como un array JSON de strings
+  images      Json             @default("[]")
+  // 🎯 RELACIÓN NUEVA: Alumnos a los que se ha asignado este vestuario
+  assignments StudentCostume[]
+
+  createdAt       DateTime         @default(now()) @map("createdAt")
+  updatedAt       DateTime         @updatedAt @map("updatedAt")
+  studentUniforms StudentUniform[]
+
+  @@map("costumes")
 }
 
 // 🤝 TABLA INTERMEDIA: Registro exacto de Asignaciones de Vestuarios

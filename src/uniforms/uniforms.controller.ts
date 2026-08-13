@@ -41,7 +41,7 @@ export class UniformsController {
         const filePaths = files?.map(file => `/uploads/uniforms/${file.filename}`) || [];
 
         // Parse seguro contra fallos silenciosos de JSON
-        /* if (createUniformDto.availableSizes) {
+        if (createUniformDto.availableSizes) {
             try {
                 if (typeof createUniformDto.availableSizes === 'string') {
                     createUniformDto.availableSizes = JSON.parse(createUniformDto.availableSizes);
@@ -49,7 +49,7 @@ export class UniformsController {
             } catch (e) {
                 throw new BadRequestException('El formato de las tallas (availableSizes) es inválido.');
             }
-        } */
+        }
 
         return this.uniformsService.create({
             ...createUniformDto,

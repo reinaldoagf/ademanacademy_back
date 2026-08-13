@@ -1,5 +1,5 @@
 // /src/uniforms/dto/create-uniform.dto.ts
-import { IsString, IsOptional, IsEnum, IsInt, Min, IsNumber } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsArray, ValidateNested, IsInt, Min, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
 import { LockerRoomCategory, LockerRoomStatus } from '@prisma/client';
 
@@ -39,4 +39,10 @@ export class CreateUniformDto {
     @IsString()
     @IsOptional()
     images?: string;
+
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => SizeStockDto)
+    @IsOptional()
+    availableSizes?: SizeStockDto[];
 }
