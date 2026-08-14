@@ -6,6 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { LockerRoomStatus } from '@prisma/client';
 import { CreateUniformDto } from './dto/create-uniform.dto';
+import { UpdateUniformDto } from './dto/update-uniform.dto';
 import { GetUniformsFilterDto } from './dto/get-uniforms-filter.dto';
 import { AssignUniformDto, UpdateAssignmentStatusDto } from './dto/assign-uniform.dto';
 
@@ -126,7 +127,7 @@ export class UniformsService {
         };
     }
 
-    async update(id: string, updateData: any) {
+    async update(id: string, updateData: UpdateUniformDto) {
         // 1. Obtener el registro actual
         const currentUniform = await this.findOne(id);
         if (!currentUniform) {

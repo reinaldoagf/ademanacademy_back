@@ -45,4 +45,17 @@ export class CreateUniformDto {
     @Type(() => SizeStockDto)
     @IsOptional()
     availableSizes?: SizeStockDto[];
+
+    // 🌟 Agrega la propiedad para las imágenes existentes
+    @IsOptional()
+    @IsArray({ message: 'existingImages debe ser un arreglo' })
+    @IsString({ each: true, message: 'Cada imagen existente debe ser una cadena de texto' })
+    existingImages?: string[];
+
+
+    // 🌟 Agrega la propiedad para las imágenes existentes
+    @IsOptional()
+    @IsArray({ message: 'newImages debe ser un arreglo' })
+    @IsString({ each: true, message: 'Cada imagen nueva debe ser una cadena de texto' })
+    newImages?: string[];
 }
