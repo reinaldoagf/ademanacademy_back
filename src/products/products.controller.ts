@@ -11,7 +11,8 @@ import {
     DefaultValuePipe,
     UseGuards,
     UseInterceptors,
-    UploadedFiles
+    UploadedFiles,
+    BadRequestException
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { ProductsService } from './products.service';
@@ -66,8 +67,21 @@ export class ProductsController {
         @Query('categoryId') categoryId?: string,
         @Query('isActive') isActive?: string,
     ) {
-        const activeBool = isActive !== undefined ? isActive === 'true' : undefined;
-        return this.productsService.findAll({ page, limit, search, categoryId, isActive: activeBool });
+        let activeBool: boolean | undefined = undefined;
+
+        if (isActive === 'true') {
+            activeBool = true;
+        } else if (isActive === 'false') {
+            activeBool = false;
+        }
+
+        return this.productsService.findAll({
+            page,
+            limit,
+            search,
+            categoryId,
+            isActive: activeBool
+        });
     }
 
     @Get('low-stock')
@@ -81,8 +95,47 @@ export class ProductsController {
     }
 
     @Patch(':id')
-    update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
-        return this.productsService.update(id, updateProductDto);
+    @UseInterceptors(
+        FilesInterceptor('images', 10, {
+            storage: diskStorage({
+                destination: './uploads/products',
+                filename: (req, file, callback) => {
+                    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+                    const ext = extname(file.originalname);
+                    callback(null, `product-${uniqueSuffix}${ext}`);
+                },
+            }),
+            fileFilter: (req, file, callback) => {
+                if (!file.mimetype.match(/\/(jpg|jpeg|png|webp)$/)) {
+                    return callback(new Error('Solo se permiten archivos de imagen (jpg, png, webp)'), false);
+                }
+                callback(null, true);
+            },
+        }),
+    )
+    async update(
+        @Param('id') id: string,
+        @UploadedFiles() files: Express.Multer.File[],
+        @Body() updateProductDto: any, // o UpdateProductDto incluyendo existingImages
+    ) {
+        const newFilePaths = files?.map(file => `/uploads/products/${file.filename}`) || [];
+
+        // Parse de existingImages proveniente del FormData
+        let existingImages: string[] = [];
+        if (updateProductDto.existingImages) {
+            try {
+                if (typeof updateProductDto.existingImages === 'string') {
+                    existingImages = JSON.parse(updateProductDto.existingImages);
+                } else if (Array.isArray(updateProductDto.existingImages)) {
+                    existingImages = updateProductDto.existingImages;
+                }
+            } catch (e) {
+                throw new BadRequestException('El formato de las imágenes existentes es inválido.');
+            }
+        }
+
+        // Pasamos los datos al servicio
+        return this.productsService.update(id, updateProductDto, existingImages, newFilePaths);
     }
 
     @Delete(':id')

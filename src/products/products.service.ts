@@ -60,6 +60,7 @@ export class ProductsService {
             where.categoryId = categoryId;
         }
 
+        // Solo filtra por estado si es un booleano definido
         if (typeof isActive === 'boolean') {
             where.isActive = isActive;
         }
@@ -103,33 +104,123 @@ export class ProductsService {
         return product;
     }
 
-    async update(id: string, updateProductDto: UpdateProductDto) {
-        await this.findOne(id); // Verifica si existe
+    async update(
+        id: string,
+        updateProductDto: any,
+        existingImages: string[] = [],
+        newFilePaths: string[] = [],
+    ) {
+        // 1. Obtener el producto actual de la base de datos
+        const currentProduct = await this.prisma.product.findUnique({
+            where: { id },
+        });
 
-        if (updateProductDto.name) {
+        if (!currentProduct) {
+            throw new NotFoundException(`El producto con ID "${id}" no existe.`);
+        }
+
+        // 2. Validar nombre duplicado si se intenta cambiar
+        if (updateProductDto.name && updateProductDto.name !== currentProduct.name) {
             const existingName = await this.prisma.product.findFirst({
                 where: {
                     name: updateProductDto.name,
-                    NOT: { id }
+                    NOT: { id },
                 },
             });
 
             if (existingName) {
-                throw new ConflictException(`Ya existe otro producto con el nombre "${updateProductDto.name}".`);
+                throw new ConflictException(
+                    `Ya existe otro producto con el nombre "${updateProductDto.name}".`,
+                );
             }
         }
 
-        const { images, ...data } = updateProductDto;
+        // 3. Normalizar URLs de existingImages a rutas relativas (ej. /uploads/products/...)
+        const cleanExistingImages = existingImages.map((imgUrl) => {
+            try {
+                if (imgUrl.startsWith('http://') || imgUrl.startsWith('https://')) {
+                    const parsedUrl = new URL(imgUrl);
+                    return parsedUrl.pathname;
+                }
+            } catch (e) {
+                // En caso de que no sea una URL válida, se deja tal cual
+            }
+            return imgUrl;
+        });
 
+        // 4. Extraer el listado de imágenes actuales en BD
+        let currentDbImages: string[] = [];
+        if (typeof currentProduct.images === 'string') {
+            try {
+                currentDbImages = JSON.parse(currentProduct.images);
+            } catch (e) {
+                currentDbImages = [];
+            }
+        } else if (Array.isArray(currentProduct.images)) {
+            currentDbImages = currentProduct.images as unknown as string[];
+        }
+
+        // 5. Identificar y eliminar físicamente las imágenes borradas por el usuario
+        const imagesToDelete = currentDbImages.filter(
+            (dbImg) => !cleanExistingImages.includes(dbImg),
+        );
+
+        if (imagesToDelete.length > 0) {
+            this.deletePhysicalFiles(imagesToDelete);
+        }
+
+        // 6. Fusionar las imágenes que se mantienen con las nuevas subidas
+        const finalImages = [...cleanExistingImages, ...newFilePaths];
+
+        // 7. Desestructurar para omitir campos auxiliares de imágenes del DTO
+        const { existingImages: _, images: __, ...data } = updateProductDto;
+
+        // Convertir tipos numéricos y booleanos si vienen desde FormData
+        const formattedData = {
+            ...data,
+            ...(data.cost !== undefined && { cost: Number(data.cost) }),
+            ...(data.salePrice !== undefined && { salePrice: Number(data.salePrice) }),
+            ...(data.currentStock !== undefined && { currentStock: Number(data.currentStock) }),
+            ...(data.minimumStockAlert !== undefined && {
+                minimumStockAlert: Number(data.minimumStockAlert),
+            }),
+            ...(data.isActive !== undefined && {
+                isActive: String(data.isActive) === 'true' || data.isActive === true,
+            }),
+        };
+
+        // 8. Actualizar en la BD
         return this.prisma.product.update({
             where: { id },
             data: {
-                ...data,
-                ...(images && { images: images as unknown as Prisma.InputJsonValue }),
+                ...formattedData,
+                images: finalImages as unknown as Prisma.InputJsonValue,
             },
             include: {
                 category: true,
             },
+        });
+    }
+
+    /**
+     * Elimina archivos del servidor físico
+     */
+    private deletePhysicalFiles(imagePaths: string[]) {
+        imagePaths.forEach((imagePath) => {
+            try {
+                if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+                    return;
+                }
+
+                const cleanPath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath;
+                const fullPath = path.resolve(process.cwd(), cleanPath);
+
+                if (fs.existsSync(fullPath)) {
+                    fs.unlinkSync(fullPath);
+                }
+            } catch (error) {
+                console.error(`Error al eliminar archivo físico: ${imagePath}`, error);
+            }
         });
     }
 
@@ -174,33 +265,6 @@ export class ProductsService {
         };
     }
 
-
-    /**
-   * Método auxiliar para borrar físicamente los archivos del sistema
-   */
-    private deletePhysicalFiles(imagePaths: string[]) {
-        imagePaths.forEach((imagePath) => {
-            try {
-                // Omite URLs externas (http/https)
-                if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-                    return;
-                }
-
-                // Limpia la barra inicial si existe
-                const cleanPath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath;
-
-                // Construye la ruta absoluta en el sistema de archivos
-                const fullPath = path.resolve(process.cwd(), cleanPath);
-
-                // Verifica la existencia y elimina
-                if (fs.existsSync(fullPath)) {
-                    fs.unlinkSync(fullPath);
-                }
-            } catch (error) {
-                console.error(`Error al eliminar el archivo físico: ${imagePath}`, error);
-            }
-        });
-    }
 
     // Método útil para alertas de stock mínimo en el Dashboard de la academia
     async getLowStockAlerts() {
