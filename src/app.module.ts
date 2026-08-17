@@ -16,6 +16,7 @@ import { UniformsModule } from './uniforms/uniforms.module';
 import { SettingsModule } from './settings/settings.module';
 import { GroupCategoriesModule } from './group-categories/group-categories.module';
 import { EmployeesModule } from './employees/employees.module';
+import { ProductsModule } from './products/products.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { EmployeesModule } from './employees/employees.module';
     SettingsModule,
     GroupCategoriesModule,
     EmployeesModule,
+    ProductsModule
   ],
 })
 export class AppModule { }

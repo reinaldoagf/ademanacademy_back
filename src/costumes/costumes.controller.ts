@@ -40,17 +40,6 @@ export class CostumesController {
     ) {
         const filePaths = files?.map(file => `/uploads/costumes/${file.filename}`) || [];
 
-        // Parse seguro contra fallos silenciosos de JSON
-        /* if (createCostumeDto.availableSizes) {
-            try {
-                if (typeof createCostumeDto.availableSizes === 'string') {
-                    createCostumeDto.availableSizes = JSON.parse(createCostumeDto.availableSizes);
-                }
-            } catch (e) {
-                throw new BadRequestException('El formato de las tallas (availableSizes) es inválido.');
-            }
-        } */
-
         return this.costumesService.create({
             ...createCostumeDto,
             images: filePaths, // Pasamos el array limpio al servicio
