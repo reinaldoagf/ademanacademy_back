@@ -11,6 +11,12 @@ import { Prisma } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
 
+export interface ProductMetricsResponse {
+    inventoryValue: number;
+    lowStockProducts: number;
+    outOfStockProducts: number;
+}
+
 @Injectable()
 export class ProductsService {
     constructor(private readonly prisma: PrismaService) { }
@@ -279,5 +285,39 @@ export class ProductsService {
                 category: true,
             },
         });
+    }
+
+    async getProductMetrics(): Promise<ProductMetricsResponse> {
+        const [inventoryValueResult, lowStockResult, outOfStockProducts] = await Promise.all([
+            // 1. Capital en Almacén
+            this.prisma.$queryRaw<Array<{ total: number | null }>>`
+                SELECT SUM(cost * currentStock) as total
+                FROM products
+                WHERE isActive = true
+            `,
+
+            // 2. Por Agotarse (0 < currentStock <= minimumStockAlert)
+            this.prisma.$queryRaw<Array<{ count: number | bigint }>>`
+                SELECT COUNT(*) as count
+                FROM products
+                WHERE isActive = true
+                    AND currentStock > 0
+                    AND currentStock <= minimumStockAlert
+            `,
+
+            // 3. Agotados Totalmente
+            this.prisma.product.count({
+                where: {
+                    isActive: true,
+                    currentStock: 0,
+                },
+            }),
+        ]);
+
+        return {
+            inventoryValue: Number(inventoryValueResult[0]?.total ?? 0),
+            lowStockProducts: Number(lowStockResult[0]?.count ?? 0),
+            outOfStockProducts,
+        };
     }
 }

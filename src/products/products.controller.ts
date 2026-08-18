@@ -84,6 +84,11 @@ export class ProductsController {
         });
     }
 
+    @Get('metrics')
+    getProductMetrics() {
+        return this.productsService.getProductMetrics();
+    }
+
     @Get('low-stock')
     getLowStockAlerts() {
         return this.productsService.getLowStockAlerts();
