@@ -416,6 +416,87 @@ model Setting {
   @@map("settings")
 }
 
+model Supplier {
+  id    String  @id @default(uuid())
+  name  String
+  dni   String  @unique
+  email String?
+  phone String?
+
+  // Relación con sus Cuentas por Pagar
+  payables AccountPayable[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ==========================================
+// CUENTAS POR PAGAR (Facturas/Deudas de la empresa)
+// ==========================================
+model AccountPayable {
+  id            String    @id @default(uuid())
+  // Relación con Proveedor
+  supplierId    String?
+  supplier      Supplier? @relation(fields: [supplierId], references: [id])
+  // Información de la factura / proveedor
+  supplierName  String // Nombre de la empresa o proveedor
+  supplierDni   String? // RIF / DNI / NIT del proveedor
+  invoiceNumber String? // Número de factura o nota de venta de origen
+  concept       String // Concepto/Descripción (ej: "Compra de uniformes", "Alquiler")
+
+  // Importes
+  amountTotal     Float // Monto total de la deuda
+  amountPaid      Float @default(0) // Suma total abonada hasta el momento
+  amountRemaining Float // Monto restante por pagar (amountTotal - amountPaid)
+
+  // Fechas clave
+  issueDate DateTime @default(now()) // Fecha de emisión / registro
+  dueDate   DateTime // Fecha límite / vencimiento del pago
+
+  // Estado
+  status PayableStatus @default(pending)
+  notes  String? // Observaciones o notas adicionales
+
+  // Historial de abonos/pagos realizados
+  payments PayablePayment[]
+
+  // Auditoría
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([dueDate])
+  @@map("account_payables")
+}
+
+// ==========================================
+// ABONOS / PAGOS REALIZADOS A UNA CXP
+// ==========================================
+model PayablePayment {
+  id String @id @default(uuid())
+
+  // Relación con la Cuenta por Pagar
+  accountPayableId String
+  accountPayable   AccountPayable @relation(fields: [accountPayableId], references: [id], onDelete: Cascade)
+
+  // Datos de la transacción
+  amount          Float // Monto del abono/pago realizado
+  paymentDate     DateTime      @default(now()) // Fecha en que se hizo el pago
+  method          PaymentMethod @default(mobile_payment)
+  referenceNumber String? // Número de referencia / depósito / transferencia
+
+  // Comprobante o soporte
+  receiptUrl String? // Enlace al archivo/imagen del comprobante
+
+  notes String? // Comentario sobre el abono
+
+  // Auditoría
+  createdAt DateTime @default(now())
+
+  @@index([accountPayableId])
+  @@map("payable_payments")
+}
+
 // ==================== ENUMS CORREGIDOS Y SEPARADOS ====================
 
 /**
@@ -439,6 +520,8 @@ enum PaymentMethod {
   credit_or_debit_card @map("Tarjeta")
   cash                 @map("Efectivo")
   mobile_payment       @map("Pago Móvil")
+  check                @map("Cheque")
+  other                @map("Otro")
 }
 
 // 🎯 Estados específicos para la entrega física de productos
@@ -533,4 +616,12 @@ enum TypeOfEmployee {
 enum PayrollStatus {
   pending @map("Pendiente")
   paid    @map("Pagado")
+}
+
+// Estado de la cuenta por pagar
+enum PayableStatus {
+  pending   @map("Pendiente")
+  partial   @map("Pagado parcialmente")
+  paid      @map("Pagado")
+  cancelled @map("Anulada / Cancelada")
 }

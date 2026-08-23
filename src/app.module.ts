@@ -18,6 +18,7 @@ import { GroupCategoriesModule } from './group-categories/group-categories.modul
 import { EmployeesModule } from './employees/employees.module';
 import { ProductsModule } from './products/products.module';
 import { ProductCategoriesModule } from './product-categories/product-categories.module';
+import { AccountsPayableModule } from './accounts-payable/accounts-payable.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { ProductCategoriesModule } from './product-categories/product-categories
     EmployeesModule,
     ProductsModule,
     ProductCategoriesModule,
+    AccountsPayableModule
   ],
 })
 export class AppModule { }
