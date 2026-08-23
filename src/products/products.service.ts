@@ -71,7 +71,7 @@ export class ProductsService {
             where.isActive = isActive;
         }
 
-        const [total, data] = await Promise.all([
+        const [totalItems, data] = await Promise.all([
             this.prisma.product.count({ where }),
             this.prisma.product.findMany({
                 where,
@@ -87,10 +87,11 @@ export class ProductsService {
         return {
             data,
             meta: {
-                total,
-                page,
-                limit,
-                totalPages: Math.ceil(total / limit),
+                totalItems,
+                itemCount: data.length,
+                itemsPerPage: limit,
+                totalPages: Math.ceil(totalItems / limit),
+                currentPage: page,
             },
         };
     }
