@@ -17,6 +17,7 @@ import { SettingsModule } from './settings/settings.module';
 import { GroupCategoriesModule } from './group-categories/group-categories.module';
 import { EmployeesModule } from './employees/employees.module';
 import { ProductsModule } from './products/products.module';
+import { ProductCategoriesModule } from './product-categories/product-categories.module';
 
 @Module({
   imports: [
@@ -39,7 +40,8 @@ import { ProductsModule } from './products/products.module';
     SettingsModule,
     GroupCategoriesModule,
     EmployeesModule,
-    ProductsModule
+    ProductsModule,
+    ProductCategoriesModule,
   ],
 })
 export class AppModule { }
