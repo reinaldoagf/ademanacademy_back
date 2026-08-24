@@ -13,28 +13,31 @@ datasource db {
 
 // 💡 MODELO: USUARIOS
 model User {
-  id                String       @id @default(uuid())
-  dni               String       @unique @db.VarChar(30) // 💡 Añadido DNI único
-  name              String       @db.VarChar(150)
-  email             String       @unique @db.VarChar(180)
-  phone             String       @unique @db.VarChar(180)
-  password          String?      @db.VarChar(255)
-  isAdmin           Boolean      @default(false)
-  profileOnboarding Boolean      @default(false)
+  id                String         @id @default(uuid())
+  dni               String         @unique @db.VarChar(30) // 💡 Añadido DNI único
+  name              String         @db.VarChar(150)
+  email             String         @unique @db.VarChar(180)
+  phone             String         @unique @db.VarChar(180)
+  password          String?        @db.VarChar(255)
+  isAdmin           Boolean        @default(false)
+  profileOnboarding Boolean        @default(false)
   profileType       ProfileType?
   // 🎯 NUEVO: Ocupación exclusiva para cuando el usuario actúa como Representante
-  occupation        String?      @db.VarChar(150)
-  createdAt         DateTime     @default(now()) @map("createdAt")
-  updatedAt         DateTime     @updatedAt @map("updatedAt")
-
+  occupation        String?        @db.VarChar(150) // 🔴 CORRECCIÓN: 1-a-1 Opcional (Agregado @unique y eliminado arreglos)
+  // 🔑 Relación 1:1 - Lado que guarda la FK (Foreign Key)
+  // Se requiere @unique para que no se repita el mismo empleado en varios usuarios
+  // Lado inverso de la relación 1:1
+  employee          Employee?
   // Relación inversa: Un usuario puede tener muchos representados
-  student       Student[]
-  paymentOrders PaymentOrder[]
-  orders        Order[]
-  transactions  Transaction[]
-  groups        Group[]
-  registrations Registration[]
-  employees     Employee[]
+  student           Student[]
+  paymentOrders     PaymentOrder[]
+  orders            Order[]
+  transactions      Transaction[]
+  groups            Group[]
+  registrations     Registration[]
+
+  createdAt DateTime @default(now()) @map("createdAt")
+  updatedAt DateTime @updatedAt @map("updatedAt")
 
   @@map("users")
 }
@@ -55,9 +58,11 @@ model Employee {
   hourlyRate          Decimal        @db.Decimal(10, 2)
   bonus               Decimal        @db.Decimal(10, 2)
   payrollStatus       PayrollStatus  @default(pending)
-  user                User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId              String?        @db.VarChar(36) // Ahora acepta NULL en MySQL si el Admin registra al estudiante directamente
-  groups              Group[]
+  // Lado que guarda la FK
+  userId              String?        @unique @db.VarChar(36)
+  user                User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  groups Group[]
 
   createdAt DateTime @default(now()) @map("createdAt")
   updatedAt DateTime @updatedAt @map("updatedAt")
