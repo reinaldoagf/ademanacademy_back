@@ -19,6 +19,7 @@ import { EmployeesModule } from './employees/employees.module';
 import { ProductsModule } from './products/products.module';
 import { ProductCategoriesModule } from './product-categories/product-categories.module';
 import { AccountsPayableModule } from './accounts-payable/accounts-payable.module';
+import { OrdersModule } from './orders/orders.module';
 
 @Module({
   imports: [
@@ -43,7 +44,8 @@ import { AccountsPayableModule } from './accounts-payable/accounts-payable.modul
     EmployeesModule,
     ProductsModule,
     ProductCategoriesModule,
-    AccountsPayableModule
+    AccountsPayableModule,
+    OrdersModule
   ],
 })
 export class AppModule { }

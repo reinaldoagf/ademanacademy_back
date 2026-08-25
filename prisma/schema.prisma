@@ -124,11 +124,11 @@ model OrderItem {
   orderId String @db.VarChar(255)
   order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
-  studentId String?     @db.VarChar(36)
-  student   Student?    @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  concept   ConceptType // Mensualidad/Matrícula no aplican aquí, pero Vestuario y Entradas sí.
-  quantity  Int         @default(1)
-  price     Decimal     @db.Decimal(10, 2) // Precio unitario al momento de la compra
+  studentId String?              @db.VarChar(36)
+  student   Student?             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  concept   OrderItemConceptType // Mensualidad/Matrícula no aplican aquí, pero Vestuario y Entradas sí.
+  quantity  Int                  @default(1)
+  price     Decimal              @db.Decimal(10, 2) // Precio unitario al momento de la compra
 
   @@map("order_items")
 }
@@ -518,6 +518,12 @@ enum ConceptType {
   tuition         @map("Matrícula")
   locker_room     @map("Vestuario")
   ticket          @map("Entradas Gala")
+}
+
+enum OrderItemConceptType {
+  locker_room @map("Vestuario")
+  uniform     @map("Uniforme")
+  ticket      @map("Entradas Gala")
 }
 
 enum PaymentMethod {
