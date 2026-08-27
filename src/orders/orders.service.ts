@@ -1,4 +1,6 @@
+// /src/orders/orders.service.ts
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { OrderItemConceptType, ConceptType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
@@ -11,13 +13,53 @@ export class OrdersService {
     async create(createOrderDto: CreateOrderDto) {
         const { userId, items, status } = createOrderDto;
 
-        // Calcular monto total a partir de los ítems
+        // 1. Calcular monto total
         const totalAmount = items.reduce((acc, item) => {
-            return acc + item.price * item.quantity;
+            return acc + Number(item.price) * Number(item.quantity);
         }, 0);
 
         return await this.prisma.$transaction(async (tx) => {
-            // 1. Crear la Orden con sus OrderItems
+            // 2. Verificar y descontar el stock de los productos
+            for (const item of items) {
+                // Solo verificamos stock para los ítems que sean de concepto "product"
+                if (item.concept === 'product') {
+                    // A. Obtener el producto actual dentro de la transacción
+                    const product = await tx.product.findUnique({
+                        where: { id: item.elementId },
+                    });
+
+                    if (!product) {
+                        throw new NotFoundException(
+                            `El producto "${item.description || item.conceptLabel || item.elementId}" no existe.`,
+                        );
+                    }
+
+                    if (!product.isActive) {
+                        throw new BadRequestException(
+                            `El producto "${product.name}" ya no se encuentra activo.`,
+                        );
+                    }
+
+                    // B. Verificar disponibilidad suficiente
+                    if (product.currentStock < item.quantity) {
+                        throw new BadRequestException(
+                            `Stock insuficiente para "${product.name}". Disponible: ${product.currentStock}, Solicitado: ${item.quantity}`,
+                        );
+                    }
+
+                    // C. Decrementar el stock de forma atómica
+                    await tx.product.update({
+                        where: { id: item.elementId },
+                        data: {
+                            currentStock: {
+                                decrement: item.quantity,
+                            },
+                        },
+                    });
+                }
+            }
+
+            // 3. Crear la Orden con sus OrderItems
             const order = await tx.order.create({
                 data: {
                     userId,
@@ -25,10 +67,11 @@ export class OrdersService {
                     ...(status && { status }),
                     items: {
                         create: items.map((item) => ({
-                            concept: item.concept,
+                            concept: item.concept as unknown as OrderItemConceptType,
                             quantity: item.quantity,
                             price: item.price,
-                            studentId: item.studentId ?? null,
+                            description: item.description,
+                            ...(item.studentId ? { studentId: item.studentId } : {}),
                         })),
                     },
                 },
@@ -39,12 +82,15 @@ export class OrdersService {
                 },
             });
 
-            // 2. Crear automáticamente la PaymentOrder (relación 1-a-1)
+            // 4. Determinar concepto principal para PaymentOrder
+            const primaryConcept = items[0]?.concept as unknown as ConceptType;
+
+            // 5. Crear automáticamente la PaymentOrder
             const paymentOrder = await tx.paymentOrder.create({
                 data: {
                     userId,
                     orderId: order.id,
-                    concept: items[0].concept, // Se asigna el concepto principal
+                    concept: primaryConcept,
                     amount: totalAmount,
                     status: 'pending',
                 },

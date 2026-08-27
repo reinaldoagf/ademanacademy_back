@@ -4,11 +4,23 @@ import { ConceptType } from '@prisma/client';
 export class CreateOrderItemDto {
     @IsOptional()
     @IsString()
+    elementId?: string;
+
+    @IsOptional()
+    @IsString()
     studentId?: string;
 
     @IsNotEmpty({ message: 'El concepto es obligatorio' })
     @IsEnum(ConceptType, { message: 'El concepto no es válido' })
     concept: ConceptType;
+
+    @IsOptional()
+    @IsString()
+    conceptLabel?: string;
+
+    @IsOptional()
+    @IsString()
+    description?: string;
 
     @IsNotEmpty({ message: 'La cantidad es obligatoria' })
     @IsInt({ message: 'La cantidad debe ser un número entero' })
