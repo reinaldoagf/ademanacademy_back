@@ -503,6 +503,28 @@ model PayablePayment {
   @@map("payable_payments")
 }
 
+// Modelo de Evento
+model Event {
+  id               String           @id @default(cuid())
+  code             String           @unique // Para manejar identificadores como EVE-2026-01
+  name             String
+  type             EventType        @default(sample)
+  startDate        DateTime // Fecha de inicio
+  endDate          DateTime // Fecha de fin (puede ser igual a startDate)
+  location         String
+  ticketsSold      Int              @default(0)
+  totalTickets     Int              @default(0)
+  ticketPrice      Decimal          @db.Decimal(10, 2)
+  productionStatus ProductionStatus @default(planning)
+  description      String?          @db.Text
+  isActive         Boolean          @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("events")
+}
+
 // ==================== ENUMS CORREGIDOS Y SEPARADOS ====================
 
 /**
@@ -638,4 +660,21 @@ enum PayableStatus {
   partial   @map("Pagado parcialmente")
   paid      @map("Pagado")
   cancelled @map("Anulada / Cancelada")
+}
+
+// Enums para Tipos de Eventos y Estados de Producción
+enum EventType {
+  annual_gala @map("Gala Anual")
+  masterclass @map("Masterclass")
+  competence  @map("Competencia")
+  sample      @map("Muestra")
+  other       @map("Otro")
+}
+
+enum ProductionStatus {
+  planning  @map("Planificación")
+  essays    @map("Ensayos Generales")
+  completed @map("Completado")
+  sold_out  @map("Agotado")
+  cancelled @map("Cancelado")
 }
