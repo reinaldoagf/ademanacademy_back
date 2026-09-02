@@ -525,6 +525,42 @@ model Event {
   @@map("events")
 }
 
+model SeatingMap {
+  id         String              @id @default(uuid())
+  location   Float?
+  totalWidth Float
+  totalHigh  Float
+  elements   SeatingMapElement[]
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+}
+
+model SeatingMapElement {
+  id            String  @id @default(uuid())
+  itemID        String // ID visual/lógico asignado desde el canvas
+  type          String // "tarima_pista" | "silla_vip" | etc.
+  name          String
+  chairNumber   String?
+  groupId       String?
+  rotation      Float
+  groupRotation Float?
+  price         Float
+  x             Float?
+  y             Float?
+  width         Float?
+  height        Float?
+  xMeters       Float
+  yMeters       Float
+  widthMeters   Float
+  tallMeters    Float
+
+  // Relación con el Mapa de Asientos
+  seatingMapId String
+  seatingMap   SeatingMap @relation(fields: [seatingMapId], references: [id], onDelete: Cascade)
+
+  @@index([seatingMapId])
+}
+
 // ==================== ENUMS CORREGIDOS Y SEPARADOS ====================
 
 /**

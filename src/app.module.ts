@@ -21,6 +21,7 @@ import { ProductCategoriesModule } from './product-categories/product-categories
 import { AccountsPayableModule } from './accounts-payable/accounts-payable.module';
 import { OrdersModule } from './orders/orders.module';
 import { EventsModule } from './events/events.module';
+import { SeatingMapsModule } from './seating-maps/seating-maps.module';
 
 @Module({
   imports: [
@@ -47,7 +48,8 @@ import { EventsModule } from './events/events.module';
     ProductCategoriesModule,
     AccountsPayableModule,
     OrdersModule,
-    EventsModule
+    EventsModule,
+    SeatingMapsModule
   ],
 })
 export class AppModule { }
