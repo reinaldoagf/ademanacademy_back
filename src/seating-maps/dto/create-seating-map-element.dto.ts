@@ -15,9 +15,9 @@ export class CreateSeatingMapElementDto {
     @IsString()
     chairNumber?: string;
 
-    @IsOptional()
     @IsString()
-    grupoId?: string;
+    @IsOptional()
+    groupId?: string; // Add this field
 
     @IsOptional()
     @IsNumber()
@@ -55,5 +55,5 @@ export class CreateSeatingMapElementDto {
     widthMeters: number;
 
     @IsNumber()
-    tallMeters: number;
+    heightMeters: number;
 }

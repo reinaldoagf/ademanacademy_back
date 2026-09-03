@@ -1,13 +1,16 @@
-import { IsNumber, IsArray, ValidateNested } from 'class-validator';
+import { IsNumber, IsArray, ValidateNested, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateSeatingMapElementDto } from './create-seating-map-element.dto';
 
 export class CreateSeatingMapDto {
+    @IsString()
+    location: string;
+
     @IsNumber()
     totalWidth: number;
 
     @IsNumber()
-    totalHigh: number;
+    totalHeight: number;
 
     @IsArray()
     @ValidateNested({ each: true })

@@ -39,6 +39,7 @@ CREATE TABLE `employees` (
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
+    UNIQUE INDEX `employees_userId_key`(`userId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -78,11 +79,12 @@ CREATE TABLE `orders` (
 -- CreateTable
 CREATE TABLE `order_items` (
     `id` VARCHAR(191) NOT NULL,
-    `orderId` VARCHAR(255) NOT NULL,
-    `studentId` VARCHAR(36) NULL,
-    `concept` ENUM('Mensualidad', 'Matrícula', 'Vestuario', 'Entradas Gala') NOT NULL,
+    `concept` ENUM('Vestuario', 'Uniforme', 'Entradas Gala', 'Producto') NOT NULL,
+    `description` VARCHAR(36) NULL,
     `quantity` INTEGER NOT NULL DEFAULT 1,
     `price` DECIMAL(10, 2) NOT NULL,
+    `orderId` VARCHAR(255) NOT NULL,
+    `studentId` VARCHAR(36) NULL,
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -93,7 +95,7 @@ CREATE TABLE `payment_orders` (
     `userId` VARCHAR(36) NOT NULL,
     `studentId` VARCHAR(36) NULL,
     `orderId` VARCHAR(255) NULL,
-    `concept` ENUM('Mensualidad', 'Matrícula', 'Vestuario', 'Entradas Gala') NOT NULL,
+    `concept` ENUM('Mensualidad', 'Matrícula', 'Vestuario', 'Entradas Gala', 'Producto') NOT NULL,
     `amount` DECIMAL(10, 2) NOT NULL,
     `dueDate` DATE NULL,
     `status` ENUM('Pendiente', 'Pagada', 'Vencida', 'Anulada') NOT NULL DEFAULT 'Pendiente',
@@ -105,14 +107,44 @@ CREATE TABLE `payment_orders` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
+CREATE TABLE `products` (
+    `id` VARCHAR(191) NOT NULL,
+    `name` VARCHAR(191) NOT NULL,
+    `description` TEXT NULL,
+    `salePrice` DECIMAL(10, 2) NOT NULL,
+    `cost` DECIMAL(10, 2) NOT NULL,
+    `currentStock` INTEGER NOT NULL DEFAULT 1,
+    `minimumStockAlert` INTEGER NOT NULL DEFAULT 1,
+    `images` JSON NULL,
+    `isActive` BOOLEAN NOT NULL DEFAULT true,
+    `categoryId` VARCHAR(191) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    UNIQUE INDEX `products_name_key`(`name`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `product-categories` (
+    `id` VARCHAR(191) NOT NULL,
+    `name` VARCHAR(191) NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    UNIQUE INDEX `product-categories_name_key`(`name`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
 CREATE TABLE `transactions` (
     `id` VARCHAR(191) NOT NULL,
     `userId` VARCHAR(36) NOT NULL,
     `studentId` VARCHAR(36) NULL,
     `paymentOrderId` VARCHAR(255) NULL,
-    `concept` ENUM('Mensualidad', 'Matrícula', 'Vestuario', 'Entradas Gala') NOT NULL,
+    `concept` ENUM('Mensualidad', 'Matrícula', 'Vestuario', 'Entradas Gala', 'Producto') NOT NULL,
     `amount` DECIMAL(10, 2) NOT NULL,
-    `method` ENUM('Transferencia', 'Tarjeta', 'Efectivo', 'Pago Móvil') NOT NULL,
+    `method` ENUM('Transferencia', 'Tarjeta', 'Efectivo', 'Pago Móvil', 'Cheque', 'Otro') NOT NULL,
     `status` ENUM('Aprobado', 'Pendiente', 'Rechazado') NOT NULL DEFAULT 'Pendiente',
     `referenceNumber` VARCHAR(100) NULL,
     `bankName` VARCHAR(100) NULL,
@@ -156,9 +188,9 @@ CREATE TABLE `groups` (
     `instructorId` VARCHAR(36) NULL,
     `classroomId` VARCHAR(191) NULL,
     `categoryId` VARCHAR(191) NULL,
+    `userId` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
-    `userId` VARCHAR(191) NULL,
 
     UNIQUE INDEX `groups_name_key`(`name`),
     PRIMARY KEY (`id`)
@@ -271,8 +303,120 @@ CREATE TABLE `settings` (
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- CreateTable
+CREATE TABLE `Supplier` (
+    `id` VARCHAR(191) NOT NULL,
+    `name` VARCHAR(191) NOT NULL,
+    `dni` VARCHAR(191) NOT NULL,
+    `email` VARCHAR(191) NULL,
+    `phone` VARCHAR(191) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    UNIQUE INDEX `Supplier_dni_key`(`dni`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `account_payables` (
+    `id` VARCHAR(191) NOT NULL,
+    `supplierId` VARCHAR(191) NULL,
+    `supplierName` VARCHAR(191) NOT NULL,
+    `supplierDni` VARCHAR(191) NULL,
+    `invoiceNumber` VARCHAR(191) NULL,
+    `concept` VARCHAR(191) NOT NULL,
+    `amountTotal` DOUBLE NOT NULL,
+    `amountPaid` DOUBLE NOT NULL DEFAULT 0,
+    `amountRemaining` DOUBLE NOT NULL,
+    `issueDate` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `dueDate` DATETIME(3) NOT NULL,
+    `status` ENUM('Pendiente', 'Pagado parcialmente', 'Pagado', 'Anulada / Cancelada') NOT NULL DEFAULT 'Pendiente',
+    `notes` VARCHAR(191) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    INDEX `account_payables_status_idx`(`status`),
+    INDEX `account_payables_dueDate_idx`(`dueDate`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `payable_payments` (
+    `id` VARCHAR(191) NOT NULL,
+    `accountPayableId` VARCHAR(191) NOT NULL,
+    `amount` DOUBLE NOT NULL,
+    `paymentDate` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `method` ENUM('Transferencia', 'Tarjeta', 'Efectivo', 'Pago Móvil', 'Cheque', 'Otro') NOT NULL DEFAULT 'Pago Móvil',
+    `referenceNumber` VARCHAR(191) NULL,
+    `receiptUrl` VARCHAR(191) NULL,
+    `notes` VARCHAR(191) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    INDEX `payable_payments_accountPayableId_idx`(`accountPayableId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `events` (
+    `id` VARCHAR(191) NOT NULL,
+    `code` VARCHAR(191) NOT NULL,
+    `name` VARCHAR(191) NOT NULL,
+    `type` ENUM('Gala Anual', 'Masterclass', 'Competencia', 'Muestra', 'Otro') NOT NULL DEFAULT 'Muestra',
+    `startDate` DATETIME(3) NOT NULL,
+    `endDate` DATETIME(3) NOT NULL,
+    `location` VARCHAR(191) NOT NULL,
+    `ticketsSold` INTEGER NOT NULL DEFAULT 0,
+    `totalTickets` INTEGER NOT NULL DEFAULT 0,
+    `ticketPrice` DECIMAL(10, 2) NOT NULL,
+    `productionStatus` ENUM('Planificación', 'Ensayos Generales', 'Completado', 'Agotado', 'Cancelado') NOT NULL DEFAULT 'Planificación',
+    `description` TEXT NULL,
+    `isActive` BOOLEAN NOT NULL DEFAULT true,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    UNIQUE INDEX `events_code_key`(`code`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `SeatingMap` (
+    `id` VARCHAR(191) NOT NULL,
+    `location` VARCHAR(191) NULL,
+    `totalWidth` DOUBLE NOT NULL,
+    `totalHeight` DOUBLE NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `SeatingMapElement` (
+    `id` VARCHAR(191) NOT NULL,
+    `itemID` VARCHAR(191) NOT NULL,
+    `type` VARCHAR(191) NOT NULL,
+    `name` VARCHAR(191) NOT NULL,
+    `chairNumber` VARCHAR(191) NULL,
+    `groupId` VARCHAR(191) NULL,
+    `rotation` DOUBLE NOT NULL,
+    `groupRotation` DOUBLE NULL,
+    `price` DOUBLE NOT NULL,
+    `x` DOUBLE NULL,
+    `y` DOUBLE NULL,
+    `width` DOUBLE NULL,
+    `height` DOUBLE NULL,
+    `xMeters` DOUBLE NOT NULL,
+    `yMeters` DOUBLE NOT NULL,
+    `widthMeters` DOUBLE NOT NULL,
+    `heightMeters` DOUBLE NOT NULL,
+    `seatingMapId` VARCHAR(191) NOT NULL,
+
+    INDEX `SeatingMapElement_seatingMapId_idx`(`seatingMapId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 -- AddForeignKey
-ALTER TABLE `employees` ADD CONSTRAINT `employees_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `employees` ADD CONSTRAINT `employees_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `students` ADD CONSTRAINT `students_groupId_fkey` FOREIGN KEY (`groupId`) REFERENCES `groups`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
@@ -297,6 +441,9 @@ ALTER TABLE `payment_orders` ADD CONSTRAINT `payment_orders_studentId_fkey` FORE
 
 -- AddForeignKey
 ALTER TABLE `payment_orders` ADD CONSTRAINT `payment_orders_orderId_fkey` FOREIGN KEY (`orderId`) REFERENCES `orders`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `products` ADD CONSTRAINT `products_categoryId_fkey` FOREIGN KEY (`categoryId`) REFERENCES `product-categories`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `transactions` ADD CONSTRAINT `transactions_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
@@ -348,3 +495,12 @@ ALTER TABLE `student_costumes` ADD CONSTRAINT `student_costumes_studentId_fkey` 
 
 -- AddForeignKey
 ALTER TABLE `student_costumes` ADD CONSTRAINT `student_costumes_costumeId_fkey` FOREIGN KEY (`costumeId`) REFERENCES `costumes`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `account_payables` ADD CONSTRAINT `account_payables_supplierId_fkey` FOREIGN KEY (`supplierId`) REFERENCES `Supplier`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `payable_payments` ADD CONSTRAINT `payable_payments_accountPayableId_fkey` FOREIGN KEY (`accountPayableId`) REFERENCES `account_payables`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `SeatingMapElement` ADD CONSTRAINT `SeatingMapElement_seatingMapId_fkey` FOREIGN KEY (`seatingMapId`) REFERENCES `SeatingMap`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

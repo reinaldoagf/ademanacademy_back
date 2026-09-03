@@ -526,13 +526,13 @@ model Event {
 }
 
 model SeatingMap {
-  id         String              @id @default(uuid())
-  location   Float?
-  totalWidth Float
-  totalHigh  Float
-  elements   SeatingMapElement[]
-  createdAt  DateTime            @default(now())
-  updatedAt  DateTime            @updatedAt
+  id          String              @id @default(uuid())
+  location    String?
+  totalWidth  Float
+  totalHeight Float
+  elements    SeatingMapElement[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
 }
 
 model SeatingMapElement {
@@ -552,7 +552,7 @@ model SeatingMapElement {
   xMeters       Float
   yMeters       Float
   widthMeters   Float
-  tallMeters    Float
+  heightMeters  Float
 
   // Relación con el Mapa de Asientos
   seatingMapId String
