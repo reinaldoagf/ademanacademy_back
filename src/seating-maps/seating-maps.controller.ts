@@ -25,17 +25,14 @@ export class SeatingMapsController {
     create(@Body() createSeatingMapDto: CreateSeatingMapDto) {
         return this.seatingMapsService.create(createSeatingMapDto);
     }
-
     @Get()
     findAll(@Query() filters: GetSeatingMapsFilterDto) {
         return this.seatingMapsService.findAll(filters);
     }
-
     @Get(':id')
     findOne(@Param('id', ParseUUIDPipe) id: string) {
         return this.seatingMapsService.findOne(id);
     }
-
     @Patch(':id')
     update(
         @Param('id', ParseUUIDPipe) id: string,

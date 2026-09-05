@@ -36,8 +36,9 @@ model User {
   groups            Group[]
   registrations     Registration[]
 
-  createdAt DateTime @default(now()) @map("createdAt")
-  updatedAt DateTime @updatedAt @map("updatedAt")
+  createdAt  DateTime    @default(now()) @map("createdAt")
+  updatedAt  DateTime    @updatedAt @map("updatedAt")
+  eventSeats EventSeat[]
 
   @@map("users")
 }
@@ -99,6 +100,7 @@ model Student {
   updatedAt       DateTime         @updatedAt @map("updatedAt")
   registrations   Registration[]
   studentUniforms StudentUniform[]
+  eventSeats      EventSeat[]
 
   @@map("students")
 }
@@ -192,7 +194,7 @@ model ProductCategory {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  @@map("product-categories")
+  @@map("product_categories")
 }
 
 // =========================================================================
@@ -256,7 +258,7 @@ model GroupCategory {
   // Relación inversa: Un salón puede albergar múltiples grupos
   groups Group[]
 
-  @@map("group-categories")
+  @@map("group_categories")
 }
 
 model Group {
@@ -511,16 +513,17 @@ model Event {
   type             EventType        @default(sample)
   startDate        DateTime // Fecha de inicio
   endDate          DateTime // Fecha de fin (puede ser igual a startDate)
-  location         String
-  ticketsSold      Int              @default(0)
-  totalTickets     Int              @default(0)
-  ticketPrice      Decimal          @db.Decimal(10, 2)
   productionStatus ProductionStatus @default(planning)
   description      String?          @db.Text
   isActive         Boolean          @default(true)
+  // 🎯 NUEVO: Relación opcional con el Mapa de Asientos que usará este evento
+  seatingMapId     String?
+  seatingMap       SeatingMap?      @relation(fields: [seatingMapId], references: [id], onDelete: SetNull)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  // 🎯 NUEVO: Relación con el estado de los asientos para este evento específico
+  eventSeats EventSeat[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
 
   @@map("events")
 }
@@ -531,34 +534,75 @@ model SeatingMap {
   totalWidth  Float
   totalHeight Float
   elements    SeatingMapElement[]
+  events      Event[]
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
+
+  @@map("seating_maps")
 }
 
 model SeatingMapElement {
-  id            String  @id @default(uuid())
-  itemID        String // ID visual/lógico asignado desde el canvas
-  type          String // "tarima_pista" | "silla_vip" | etc.
-  name          String
-  chairNumber   String?
-  groupId       String?
-  rotation      Float
-  groupRotation Float?
-  price         Float
-  x             Float?
-  y             Float?
-  width         Float?
-  height        Float?
-  xMeters       Float
-  yMeters       Float
-  widthMeters   Float
-  heightMeters  Float
+  id                     String  @id @default(uuid())
+  itemID                 String // ID visual/lógico asignado desde el canvas
+  type                   String // "tarima_pista" | "silla_vip" | etc.
+  name                   String
+  chairNumber            String?
+  groupId                String?
+  macroGroupId           String?
+  rotation               Float
+  groupRotation          Float?
+  price                  Float
+  x                      Float?
+  y                      Float?
+  width                  Float?
+  height                 Float?
+  xMeters                Float
+  yMeters                Float
+  widthMeters            Float
+  heightMeters           Float
+  limitPerRepresentative Float?
 
   // Relación con el Mapa de Asientos
   seatingMapId String
-  seatingMap   SeatingMap @relation(fields: [seatingMapId], references: [id], onDelete: Cascade)
+  seatingMap   SeatingMap  @relation(fields: [seatingMapId], references: [id], onDelete: Cascade)
+  // 🎯 NUEVO: Relación inversa para saber en qué eventos se está usando este elemento
+  eventSeats   EventSeat[]
 
   @@index([seatingMapId])
+  @@map("seating_map_elements")
+}
+
+// NUEVO MODELO: Controla el estado dinámico del asiento por cada Evento
+model EventSeat {
+  id String @id @default(uuid())
+
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  seatingMapElementId String
+  seatingMapElement   SeatingMapElement @relation(fields: [seatingMapElementId], references: [id], onDelete: Cascade)
+
+  status SeatStatus @default(available)
+
+  // ⏱️ Control de los 10 minutos de reserva temporal
+  reservedAt DateTime?
+  expiresAt  DateTime? // Fecha/Hora exacta en que caduca la reserva temporal
+
+  // 👤 Quién lo reservó o compró
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  studentId String?
+  student   Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 🛡️ Restricción crítica: Una misma silla física no puede tener registros duplicados para el mismo evento
+  @@unique([eventId, seatingMapElementId])
+  @@index([eventId])
+  @@index([status])
+  @@map("event_seats")
 }
 
 // ==================== ENUMS CORREGIDOS Y SEPARADOS ====================
@@ -713,4 +757,10 @@ enum ProductionStatus {
   completed @map("Completado")
   sold_out  @map("Agotado")
   cancelled @map("Cancelado")
+}
+
+enum SeatStatus {
+  available @map("Disponible")
+  reserved  @map("Reservado")
+  sold      @map("Pagado")
 }

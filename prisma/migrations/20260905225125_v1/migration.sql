@@ -126,13 +126,13 @@ CREATE TABLE `products` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `product-categories` (
+CREATE TABLE `product_categories` (
     `id` VARCHAR(191) NOT NULL,
     `name` VARCHAR(191) NOT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
-    UNIQUE INDEX `product-categories_name_key`(`name`),
+    UNIQUE INDEX `product_categories_name_key`(`name`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -168,7 +168,7 @@ CREATE TABLE `schedules` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `group-categories` (
+CREATE TABLE `group_categories` (
     `id` VARCHAR(191) NOT NULL,
     `name` VARCHAR(191) NOT NULL,
     `minimumAge` INTEGER NOT NULL DEFAULT 1,
@@ -176,7 +176,7 @@ CREATE TABLE `group-categories` (
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
-    UNIQUE INDEX `group-categories_name_key`(`name`),
+    UNIQUE INDEX `group_categories_name_key`(`name`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -364,13 +364,10 @@ CREATE TABLE `events` (
     `type` ENUM('Gala Anual', 'Masterclass', 'Competencia', 'Muestra', 'Otro') NOT NULL DEFAULT 'Muestra',
     `startDate` DATETIME(3) NOT NULL,
     `endDate` DATETIME(3) NOT NULL,
-    `location` VARCHAR(191) NOT NULL,
-    `ticketsSold` INTEGER NOT NULL DEFAULT 0,
-    `totalTickets` INTEGER NOT NULL DEFAULT 0,
-    `ticketPrice` DECIMAL(10, 2) NOT NULL,
     `productionStatus` ENUM('Planificación', 'Ensayos Generales', 'Completado', 'Agotado', 'Cancelado') NOT NULL DEFAULT 'Planificación',
     `description` TEXT NULL,
     `isActive` BOOLEAN NOT NULL DEFAULT true,
+    `seatingMapId` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
@@ -379,7 +376,7 @@ CREATE TABLE `events` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `SeatingMap` (
+CREATE TABLE `seating_maps` (
     `id` VARCHAR(191) NOT NULL,
     `location` VARCHAR(191) NULL,
     `totalWidth` DOUBLE NOT NULL,
@@ -391,13 +388,14 @@ CREATE TABLE `SeatingMap` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `SeatingMapElement` (
+CREATE TABLE `seating_map_elements` (
     `id` VARCHAR(191) NOT NULL,
     `itemID` VARCHAR(191) NOT NULL,
     `type` VARCHAR(191) NOT NULL,
     `name` VARCHAR(191) NOT NULL,
     `chairNumber` VARCHAR(191) NULL,
     `groupId` VARCHAR(191) NULL,
+    `macroGroupId` VARCHAR(191) NULL,
     `rotation` DOUBLE NOT NULL,
     `groupRotation` DOUBLE NULL,
     `price` DOUBLE NOT NULL,
@@ -409,9 +407,29 @@ CREATE TABLE `SeatingMapElement` (
     `yMeters` DOUBLE NOT NULL,
     `widthMeters` DOUBLE NOT NULL,
     `heightMeters` DOUBLE NOT NULL,
+    `limitPerRepresentative` DOUBLE NULL,
     `seatingMapId` VARCHAR(191) NOT NULL,
 
-    INDEX `SeatingMapElement_seatingMapId_idx`(`seatingMapId`),
+    INDEX `seating_map_elements_seatingMapId_idx`(`seatingMapId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `event_seats` (
+    `id` VARCHAR(191) NOT NULL,
+    `eventId` VARCHAR(191) NOT NULL,
+    `seatingMapElementId` VARCHAR(191) NOT NULL,
+    `status` ENUM('Disponible', 'Reservado', 'Pagado') NOT NULL DEFAULT 'Disponible',
+    `reservedAt` DATETIME(3) NULL,
+    `expiresAt` DATETIME(3) NULL,
+    `userId` VARCHAR(191) NULL,
+    `studentId` VARCHAR(191) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    INDEX `event_seats_eventId_idx`(`eventId`),
+    INDEX `event_seats_status_idx`(`status`),
+    UNIQUE INDEX `event_seats_eventId_seatingMapElementId_key`(`eventId`, `seatingMapElementId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -443,7 +461,7 @@ ALTER TABLE `payment_orders` ADD CONSTRAINT `payment_orders_studentId_fkey` FORE
 ALTER TABLE `payment_orders` ADD CONSTRAINT `payment_orders_orderId_fkey` FOREIGN KEY (`orderId`) REFERENCES `orders`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `products` ADD CONSTRAINT `products_categoryId_fkey` FOREIGN KEY (`categoryId`) REFERENCES `product-categories`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `products` ADD CONSTRAINT `products_categoryId_fkey` FOREIGN KEY (`categoryId`) REFERENCES `product_categories`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `transactions` ADD CONSTRAINT `transactions_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
@@ -467,7 +485,7 @@ ALTER TABLE `groups` ADD CONSTRAINT `groups_instructorId_fkey` FOREIGN KEY (`ins
 ALTER TABLE `groups` ADD CONSTRAINT `groups_classroomId_fkey` FOREIGN KEY (`classroomId`) REFERENCES `classrooms`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `groups` ADD CONSTRAINT `groups_categoryId_fkey` FOREIGN KEY (`categoryId`) REFERENCES `group-categories`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `groups` ADD CONSTRAINT `groups_categoryId_fkey` FOREIGN KEY (`categoryId`) REFERENCES `group_categories`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `groups` ADD CONSTRAINT `groups_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
@@ -503,4 +521,19 @@ ALTER TABLE `account_payables` ADD CONSTRAINT `account_payables_supplierId_fkey`
 ALTER TABLE `payable_payments` ADD CONSTRAINT `payable_payments_accountPayableId_fkey` FOREIGN KEY (`accountPayableId`) REFERENCES `account_payables`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `SeatingMapElement` ADD CONSTRAINT `SeatingMapElement_seatingMapId_fkey` FOREIGN KEY (`seatingMapId`) REFERENCES `SeatingMap`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `events` ADD CONSTRAINT `events_seatingMapId_fkey` FOREIGN KEY (`seatingMapId`) REFERENCES `seating_maps`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `seating_map_elements` ADD CONSTRAINT `seating_map_elements_seatingMapId_fkey` FOREIGN KEY (`seatingMapId`) REFERENCES `seating_maps`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `event_seats` ADD CONSTRAINT `event_seats_eventId_fkey` FOREIGN KEY (`eventId`) REFERENCES `events`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `event_seats` ADD CONSTRAINT `event_seats_seatingMapElementId_fkey` FOREIGN KEY (`seatingMapElementId`) REFERENCES `seating_map_elements`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `event_seats` ADD CONSTRAINT `event_seats_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `event_seats` ADD CONSTRAINT `event_seats_studentId_fkey` FOREIGN KEY (`studentId`) REFERENCES `students`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;

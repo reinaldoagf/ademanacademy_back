@@ -15,6 +15,10 @@ export class CreateSeatingMapElementDto {
     @IsString()
     chairNumber?: string;
 
+    @IsOptional()
+    @IsString()
+    macroGroupId?: string;
+
     @IsString()
     @IsOptional()
     groupId?: string; // Add this field
@@ -35,12 +39,17 @@ export class CreateSeatingMapElementDto {
     @IsNumber()
     height?: number;
 
+    @IsOptional()
+    @IsNumber()
+    limitPerRepresentative?: number;
+
     @IsNumber()
     rotation: number;
 
     @IsOptional()
     @IsNumber()
-    groupRotation?: number; // 👈 Agregado para cumplir con el esquema de Prisma
+    groupRotation?: number;
+
 
     @IsNumber()
     price: number;

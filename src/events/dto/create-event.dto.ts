@@ -3,12 +3,8 @@ import {
     IsString,
     IsOptional,
     IsEnum,
-    IsDateString,
-    IsInt,
-    IsNumber,
-    Min
+    IsDateString
 } from 'class-validator';
-import { Type } from 'class-transformer';
 import { EventType, ProductionStatus } from '@prisma/client';
 
 export class CreateEventDto {
@@ -29,26 +25,6 @@ export class CreateEventDto {
     @IsDateString({}, { message: 'La fecha de fin debe tener un formato de fecha válido (ISO8601)' })
     endDate: string;
 
-    @IsString({ message: 'La ubicación es obligatoria' })
-    location: string;
-
-    @IsInt({ message: 'Las entradas vendidas deben ser un número entero' })
-    @Min(0, { message: 'Las entradas vendidas no pueden ser negativas' })
-    @Type(() => Number)
-    @IsOptional()
-    ticketsSold?: number;
-
-    @IsInt({ message: 'El aforo total debe ser un número entero' })
-    @Min(0, { message: 'El aforo total no puede ser negativo' })
-    @Type(() => Number)
-    @IsOptional()
-    totalTickets?: number;
-
-    @IsNumber({}, { message: 'El precio de la entrada debe ser un número válido' })
-    @Min(0, { message: 'El precio no puede ser negativo' })
-    @Type(() => Number)
-    ticketPrice: number;
-
     @IsEnum(ProductionStatus, { message: 'El estado de producción no es válido' })
     @IsOptional()
     productionStatus?: ProductionStatus;
@@ -56,4 +32,7 @@ export class CreateEventDto {
     @IsString({ message: 'La descripción debe ser una cadena de texto' })
     @IsOptional()
     description?: string;
+
+    @IsString({ message: 'El mapa de asientos es obligatorio' })
+    seatingMapId: string;
 }

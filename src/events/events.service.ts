@@ -43,10 +43,6 @@ export class EventsService {
                     type: data.type ?? EventType.sample,
                     startDate,
                     endDate,
-                    location: data.location,
-                    ticketsSold: data.ticketsSold ?? 0,
-                    totalTickets: data.totalTickets ?? 0,
-                    ticketPrice: new Prisma.Decimal(data.ticketPrice ?? 0),
                     productionStatus: data.productionStatus ?? ProductionStatus.planning,
                     description: data.description,
                 },
@@ -92,7 +88,7 @@ export class EventsService {
         if (search) {
             where.OR = [
                 { name: { contains: search } },
-                { location: { contains: search } },
+                { seatingMap: { location: { contains: search } } },
                 { code: { contains: search } },
             ];
         }
@@ -104,6 +100,7 @@ export class EventsService {
                 skip,
                 take,
                 orderBy: { startDate: 'asc' },
+                include: { seatingMap: true }
             }),
         ]);
 
@@ -138,7 +135,7 @@ export class EventsService {
     async update(id: string, updateData: UpdateEventDto) {
         await this.findOne(id); // Lanza NotFoundException si no existe
 
-        const { startDate, endDate, ticketPrice, ...data } = updateData;
+        const { startDate, endDate, ...data } = updateData;
 
         const parsedStartDate = startDate ? new Date(startDate) : undefined;
         const parsedEndDate = endDate ? new Date(endDate) : undefined;
@@ -157,7 +154,6 @@ export class EventsService {
                     ...data,
                     ...(parsedStartDate && { startDate: parsedStartDate }),
                     ...(parsedEndDate && { endDate: parsedEndDate }),
-                    ...(ticketPrice !== undefined && { ticketPrice: new Prisma.Decimal(ticketPrice) }),
                 },
             });
         } catch (error) {
@@ -196,12 +192,7 @@ export class EventsService {
                 },
             }),
             this.prisma.event.findMany({
-                where: { isActive: true },
-                select: {
-                    ticketsSold: true,
-                    totalTickets: true,
-                    ticketPrice: true,
-                },
+                where: { isActive: true }
             }),
         ]);
 
@@ -217,20 +208,10 @@ export class EventsService {
             statusMap[group.productionStatus] = count;
             totalEvents += count;
         });
-
-        // Cálculos acumulados de tickets y recaudación
-        let totalTicketsSold = 0;
-        let totalRevenue = 0;
-
-        totals.forEach((e) => {
-            totalTicketsSold += e.ticketsSold;
-            totalRevenue += e.ticketsSold * Number(e.ticketPrice);
-        });
-
         return {
             totalEvents,
-            totalTicketsSold,
-            totalRevenue,
+            totalTicketsSold: 10,
+            totalRevenue: 10,
             byStatus: statusMap,
         };
     }

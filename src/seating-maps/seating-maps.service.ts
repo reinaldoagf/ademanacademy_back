@@ -11,8 +11,6 @@ export class SeatingMapsService {
     async create(createDto: CreateSeatingMapDto) {
         const { elements, ...mapData } = createDto;
 
-        console.log({ createDto })
-
         return this.prisma.seatingMap.create({
             data: {
                 ...mapData,
@@ -76,7 +74,6 @@ export class SeatingMapsService {
         if (!seatingMap) {
             throw new NotFoundException(`Mapa de asientos con ID "${id}" no encontrado`);
         }
-
         return seatingMap;
     }
 
