@@ -100,7 +100,10 @@ export class EventsService {
                 skip,
                 take,
                 orderBy: { startDate: 'asc' },
-                include: { seatingMap: true }
+                include: {
+                    eventSeats: true,
+                    seatingMap: { include: { elements: true } }
+                }
             }),
         ]);
 

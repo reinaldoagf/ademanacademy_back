@@ -507,7 +507,7 @@ model PayablePayment {
 
 // Modelo de Evento
 model Event {
-  id               String           @id @default(cuid())
+  id               String           @id @default(uuid())
   code             String           @unique // Para manejar identificadores como EVE-2026-01
   name             String
   type             EventType        @default(sample)
@@ -516,6 +516,7 @@ model Event {
   productionStatus ProductionStatus @default(planning)
   description      String?          @db.Text
   isActive         Boolean          @default(true)
+  ticketsSold      Float?           @default(0)
   // 🎯 NUEVO: Relación opcional con el Mapa de Asientos que usará este evento
   seatingMapId     String?
   seatingMap       SeatingMap?      @relation(fields: [seatingMapId], references: [id], onDelete: SetNull)

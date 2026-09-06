@@ -1,6 +1,7 @@
 // src/app.module.ts
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
@@ -22,13 +23,15 @@ import { AccountsPayableModule } from './accounts-payable/accounts-payable.modul
 import { OrdersModule } from './orders/orders.module';
 import { EventsModule } from './events/events.module';
 import { SeatingMapsModule } from './seating-maps/seating-maps.module';
+import { EventSeatsModule } from './event-seats/event-seats.module';
 
 @Module({
   imports: [
     // 1. Cargar variables de entorno globalmente
     ConfigModule.forRoot({
       isGlobal: true,
-    }),
+    }), // Nos permite leer el JWT_SECRET de las variables de entorno
+    ScheduleModule.forRoot(),
     PrismaModule, // 💡 REGÍSTRALO AQUÍ para activar su alcance global
     AuthModule,
     UsersModule,
@@ -49,7 +52,8 @@ import { SeatingMapsModule } from './seating-maps/seating-maps.module';
     AccountsPayableModule,
     OrdersModule,
     EventsModule,
-    SeatingMapsModule
+    SeatingMapsModule,
+    EventSeatsModule
   ],
 })
 export class AppModule { }
