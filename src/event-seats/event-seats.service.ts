@@ -103,9 +103,6 @@ export class EventSeatsService {
     @Cron(CronExpression.EVERY_MINUTE)
     async handleExpiredReservationsUpdate() {
         const now = new Date();
-
-        console.log('handleExpiredReservationsUpdate')
-
         // 1. Buscar las reservas que están a punto de expirar antes de actualizarlas
         const expiredSeats = await this.prisma.eventSeat.findMany({
             where: {

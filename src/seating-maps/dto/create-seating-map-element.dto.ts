@@ -1,12 +1,16 @@
 // src/seating-map/dto/create-seating-map-element.dto.ts
-import { IsString, IsNumber, IsOptional } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsEnum } from 'class-validator';
+import { SeatingMapType, SeatingMapItemType } from '@prisma/client';
 
 export class CreateSeatingMapElementDto {
     @IsString()
     itemID: string;
 
-    @IsString()
-    type: string;
+    @IsEnum(SeatingMapType)
+    type: SeatingMapType;
+
+    @IsEnum(SeatingMapItemType)
+    itemType: SeatingMapItemType;
 
     @IsString()
     name: string;

@@ -543,9 +543,10 @@ model SeatingMap {
 }
 
 model SeatingMapElement {
-  id                     String  @id @default(uuid())
+  id                     String             @id @default(uuid())
   itemID                 String // ID visual/lógico asignado desde el canvas
-  type                   String // "tarima_pista" | "silla_vip" | etc.
+  type                   SeatingMapType     @default(chair) // "tarima_pista" | "silla_vip" | etc.
+  itemType               SeatingMapItemType @default(general_chair)
   name                   String
   chairNumber            String?
   groupId                String?
@@ -764,4 +765,17 @@ enum SeatStatus {
   available @map("Disponible")
   reserved  @map("Reservado")
   sold      @map("Pagado")
+}
+
+enum SeatingMapType {
+  chair    @map("Silla")
+  platform @map("Tarima")
+}
+
+enum SeatingMapItemType {
+  stage_floor       @map("Tarima pista")
+  vip_chair         @map("Silla VIP")
+  general_chair     @map("Silla general")
+  sponsor_chair     @map("Silla de patrocinante")
+  preferred_seating @map("Silla preferencial")
 }

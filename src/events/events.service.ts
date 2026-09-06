@@ -45,6 +45,7 @@ export class EventsService {
                     endDate,
                     productionStatus: data.productionStatus ?? ProductionStatus.planning,
                     description: data.description,
+                    seatingMapId: data.seatingMapId,
                 },
             });
         } catch (error) {
