@@ -1,9 +1,11 @@
 // src/transactions/transactions.service.ts
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { RegisterTransactionDto } from './dto/register-transaction.dto';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { GetTransactionsFilterDto } from './dto/get-transactions-filter.dto';
+import { SeatStatus } from '@prisma/client';
 
 const CONDITION = []
 
@@ -12,6 +14,57 @@ export class TransactionsService {
     constructor(private readonly prisma: PrismaService) { }
 
 
+    async registerPaymentTransaction(dto: RegisterTransactionDto) {
+        const { paymentOrderId, userId, referenceNumber, bankName, receiptPath, amount, method } = dto;
+        const now = new Date();
+
+        return await this.prisma.$transaction(async (tx) => {
+            // 1. Obtener la orden de pago con los asientos asociados
+            const order = await tx.paymentOrder.findUnique({
+                where: { id: paymentOrderId },
+                include: { eventSeats: true },
+            });
+
+            if (!order) throw new NotFoundException('Orden de pago no encontrada.');
+            if (order.userId !== userId) throw new ForbiddenException('No tienes permiso para esta orden.');
+
+            // 2. Validar que la reserva no haya expirado (10 minutos)
+            const firstSeat = order.eventSeats[0];
+            if (!firstSeat || (firstSeat.expiresAt && firstSeat.expiresAt < now)) {
+                throw new BadRequestException('El tiempo de reserva (10 minutos) ha expirado. Por favor, vuelve a seleccionar los asientos.');
+            }
+
+            // 3. Registrar la Transacción en estado 'pending'
+            const transaction = await tx.transaction.create({
+                data: {
+                    paymentOrderId: order.id,
+                    userId,
+                    studentId: order.studentId,
+                    concept: order.concept,
+                    amount,
+                    method,
+                    referenceNumber,
+                    bankName,
+                    receiptPath,
+                    status: 'pending',
+                },
+            });
+
+            // 4. Cambiar estado de asientos a 'payment_pending' para congelar la expiración mientras aprueba el Admin
+            await tx.eventSeat.updateMany({
+                where: { paymentOrderId: order.id },
+                data: {
+                    status: SeatStatus.payment_pending,
+                    expiresAt: null, // Se retira la expiración porque el usuario ya pagó
+                },
+            });
+
+            return {
+                message: 'Comprobante registrado con éxito. En espera de aprobación por el administrador.',
+                transaction,
+            };
+        });
+    }
     // ➕ CREATE
     async create(createTransactionDto: CreateTransactionDto) {
         // Validamos primero que el alumno realmente exista

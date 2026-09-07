@@ -162,6 +162,7 @@ model PaymentOrder {
   updatedAt DateTime @updatedAt
 
   transactions Transaction[] // Una orden de pago puede tener varios intentos de transacciones
+  eventSeats   EventSeat[] // Relación 1 a N con asientos
 
   @@map("payment_orders")
 }
@@ -597,6 +598,10 @@ model EventSeat {
   studentId String?
   student   Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
 
+  // 🔗 Conexión con la Orden de Pago
+  paymentOrderId String?       @db.VarChar(255)
+  paymentOrder   PaymentOrder? @relation(fields: [paymentOrderId], references: [id], onDelete: SetNull)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -762,9 +767,10 @@ enum ProductionStatus {
 }
 
 enum SeatStatus {
-  available @map("Disponible")
-  reserved  @map("Reservado")
-  sold      @map("Pagado")
+  available       @map("Disponible")
+  reserved        @map("Reservado")
+  payment_pending @map("Pendiente")
+  sold            @map("Pagado")
 }
 
 enum SeatingMapType {

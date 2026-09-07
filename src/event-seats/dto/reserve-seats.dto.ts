@@ -1,5 +1,5 @@
 // dto/reserve-seats.dto.ts
-import { IsArray, IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsArray, IsEnum, IsNotEmpty, IsOptional, IsNumber, IsPositive, IsUUID } from 'class-validator';
 import { SeatStatus } from '@prisma/client';
 
 export class ReserveSeatsDto {
@@ -17,10 +17,15 @@ export class ReserveSeatsDto {
     status: SeatStatus; // RESERVED o SOLD
 
     @IsUUID()
-    @IsOptional()
-    userId?: string;
+    @IsNotEmpty({ message: 'El usuario es requerido.' })
+    userId: string;
 
     @IsUUID()
     @IsOptional()
     studentId?: string;
+
+    @IsNumber({ maxDecimalPlaces: 2 }, { message: 'El monto debe ser un número válido.' })
+    @IsPositive({ message: 'El monto debe ser mayor a cero.' })
+    totalAmount: number;
+
 }

@@ -1,9 +1,9 @@
 // event-seats.service.ts
-import { Injectable, BadRequestException, ConflictException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException, NotFoundException, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReserveSeatsDto } from './dto/reserve-seats.dto';
-import { SeatStatus } from '@prisma/client';
+import { ConceptType, PaymentOrderStatus, SeatStatus } from '@prisma/client';
 import { EventSeatsGateway } from './event-seats.gateway';
 
 @Injectable()
@@ -13,15 +13,71 @@ export class EventSeatsService {
         private readonly prisma: PrismaService,
         private readonly eventSeatsGateway: EventSeatsGateway
     ) { }
+    async approvePaymentTransaction(transactionId: string) {
+        return await this.prisma.$transaction(async (tx) => {
+            // 1. Buscar la transacción con su orden de pago
+            const transaction = await tx.transaction.findUnique({
+                where: { id: transactionId },
+                include: {
+                    paymentOrder: {
+                        include: { eventSeats: true },
+                    },
+                },
+            });
 
+            if (!transaction) throw new NotFoundException('Transacción no encontrada.');
+            if (transaction.status === 'approved') throw new BadRequestException('La transacción ya fue aprobada previamente.');
+
+            const paymentOrder = transaction.paymentOrder;
+            if (!paymentOrder) throw new BadRequestException('La transacción no tiene una orden de pago vinculada.');
+
+            // 2. Marcar Transacción como aprobada
+            await tx.transaction.update({
+                where: { id: transactionId },
+                data: { status: 'approved' },
+            });
+
+            // 3. Marcar Orden de Pago como completada
+            await tx.paymentOrder.update({
+                where: { id: paymentOrder.id },
+                data: { status: 'paid' },
+            });
+
+            // 4. Pasar los Asientos a estado 'sold'
+            await tx.eventSeat.updateMany({
+                where: { paymentOrderId: paymentOrder.id },
+                data: {
+                    status: SeatStatus.sold,
+                    expiresAt: null,
+                },
+            });
+
+            // 5. Incrementar contador de tickets en el evento
+            const eventId = paymentOrder.eventSeats[0]?.eventId;
+            if (eventId) {
+                await tx.event.update({
+                    where: { id: eventId },
+                    data: {
+                        ticketsSold: {
+                            increment: paymentOrder.eventSeats.length,
+                        },
+                    },
+                });
+            }
+
+            return {
+                message: 'Venta completada con éxito. Los asientos ahora están registrados como VENDIDOS.',
+                seatsCount: paymentOrder.eventSeats.length,
+            };
+        });
+    }
     async reserveOrBuySeats(dto: ReserveSeatsDto) {
-        const { eventId, seatingMapElementIds, status, userId, studentId } = dto;
+        const { eventId, seatingMapElementIds, status, userId, studentId, totalAmount } = dto;
         const now = new Date();
-        // Vencimiento a 10 minutos
         const expiresAt = status === SeatStatus.reserved ? new Date(now.getTime() + 10 * 60 * 1000) : null;
 
         return await this.prisma.$transaction(async (tx) => {
-            // 1. Consultar el estado actual de los asientos solicitados para este evento
+            // 1. Validar disponibilidad
             const existingSeats = await tx.eventSeat.findMany({
                 where: {
                     eventId,
@@ -29,34 +85,47 @@ export class EventSeatsService {
                 },
             });
 
-            // 2. Verificar disponibilidad de cada elemento
             for (const elementId of seatingMapElementIds) {
                 const currentSeat = existingSeats.find((s) => s.seatingMapElementId === elementId);
 
                 if (currentSeat) {
-                    // Si el asiento ya está VENDIDO
                     if (currentSeat.status === SeatStatus.sold) {
-                        throw new ConflictException(`El asiento con ID "${elementId}" ya ha sido vendido.`);
+                        throw new ConflictException(`El asiento "${elementId}" ya ha sido vendido.`);
                     }
 
-                    // Si está RESERVADO pero la reserva aún es válida (y no pertenece al usuario actual)
+                    // Si la reserva sigue vigente (expiresAt > now) y pertenece a otro usuario
                     const isReservationActive = currentSeat.expiresAt && currentSeat.expiresAt > now;
                     const isDifferentUser = currentSeat.userId !== userId;
 
-                    if (currentSeat.status === SeatStatus.reserved && isReservationActive && isDifferentUser) {
-                        throw new ConflictException(`El asiento con ID "${elementId}" está reservado por otro usuario.`);
+                    if (
+                        (currentSeat.status === SeatStatus.reserved || currentSeat.status === SeatStatus.payment_pending) &&
+                        isReservationActive &&
+                        isDifferentUser
+                    ) {
+                        throw new ConflictException(`El asiento "${elementId}" está reservado por otro usuario.`);
                     }
                 }
             }
 
-            // 3. Crear o Actualizar las sillas usando 'upsert' por cada elemento seleccionado
+            // 2. Crear Orden de Pago si es una Reserva
+            let paymentOrder: Awaited<ReturnType<typeof tx.paymentOrder.create>> | null = null;
+            if (status === SeatStatus.reserved) {
+                paymentOrder = await tx.paymentOrder.create({
+                    data: {
+                        userId,
+                        studentId: studentId || null,
+                        concept: ConceptType.ticket, // Cambia por tu enum de concepto
+                        amount: totalAmount,
+                        status: PaymentOrderStatus.pending,
+                    },
+                });
+            }
+
+            // 3. Upsert de asientos vinculados a la PaymentOrder
             const operations = seatingMapElementIds.map((elementId) =>
                 tx.eventSeat.upsert({
                     where: {
-                        eventId_seatingMapElementId: {
-                            eventId,
-                            seatingMapElementId: elementId,
-                        },
+                        eventId_seatingMapElementId: { eventId, seatingMapElementId: elementId },
                     },
                     update: {
                         status,
@@ -64,6 +133,7 @@ export class EventSeatsService {
                         expiresAt,
                         userId: userId || null,
                         studentId: studentId || null,
+                        paymentOrderId: paymentOrder ? paymentOrder.id : null,
                     },
                     create: {
                         eventId,
@@ -73,27 +143,17 @@ export class EventSeatsService {
                         expiresAt,
                         userId: userId || null,
                         studentId: studentId || null,
+                        paymentOrderId: paymentOrder ? paymentOrder.id : null,
                     },
                 })
             );
 
             const result = await Promise.all(operations);
 
-            // 4. Si la operación es una VENTA, actualizar contador de boletos del Evento
-            if (status === SeatStatus.sold) {
-                await tx.event.update({
-                    where: { id: eventId },
-                    data: {
-                        ticketsSold: {
-                            increment: seatingMapElementIds.length,
-                        },
-                    },
-                });
-            }
-
             return {
-                message: status === SeatStatus.sold ? 'Venta procesada con éxito' : 'Reserva realizada por 10 minutos',
-                count: result.length,
+                message: 'Reserva realizada por 10 minutos',
+                expiresAt,
+                paymentOrderId: paymentOrder?.id,
                 seats: result,
             };
         });
