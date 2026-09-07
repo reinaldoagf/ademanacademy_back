@@ -1,8 +1,9 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SeatingMapsService } from './seating-maps.service';
 import { SeatingMapsController } from './seating-maps.controller';
+import * as express from 'express';
 
 @Module({
     imports: [JwtModule.registerAsync({
@@ -17,4 +18,14 @@ import { SeatingMapsController } from './seating-maps.controller';
     providers: [SeatingMapsService],
     exports: [SeatingMapsService],
 })
-export class SeatingMapsModule { }
+export class SeatingMapsModule implements NestModule {
+    configure(consumer: MiddlewareConsumer) {
+        consumer
+            .apply(express.json({ limit: '50mb' })) // Ajusta el límite que necesites (ej. 50mb)
+            .forRoutes(
+                { path: 'seating-maps', method: RequestMethod.POST },
+                { path: 'seating-maps/:id', method: RequestMethod.PATCH },
+                { path: 'seating-maps/:id', method: RequestMethod.PUT },
+            );
+    }
+}

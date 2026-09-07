@@ -6,9 +6,12 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { join } from 'path';
 import * as express from 'express';
+import { json, urlencoded } from 'express';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule);// Amplía el límite global para JSON y datos de formularios
+  app.use(json({ limit: '50mb' }));
+  app.use(urlencoded({ extended: true, limit: '50mb' }));
   // 🚀 Habilitar validaciones automatizadas a nivel global
   app.useGlobalPipes(
     new ValidationPipe({
