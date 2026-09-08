@@ -81,7 +81,7 @@ export class CompleteOnboardingDto {
     @IsArray()
     @ValidateNested({ each: true })
     @Type(() => RepresentedStudentDto)
-    representedStudents?: RepresentedStudentDto[];
+    clients?: RepresentedStudentDto[];
 
     @IsOptional()
     @ValidateNested()

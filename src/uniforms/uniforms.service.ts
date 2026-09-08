@@ -243,8 +243,8 @@ export class UniformsService {
         const student = await this.prisma.student.findUnique({ where: { id: assignDto.studentId } });
         if (!student) throw new NotFoundException('Estudiante no encontrado.');
 
-        // Crear asignación
-        return this.prisma.studentUniform.create({
+        // Crear asignación (to review)
+        /* return this.prisma.studentUniform.create({
             data: {
                 uniformId,
                 studentId: assignDto.studentId,
@@ -253,7 +253,7 @@ export class UniformsService {
                 status: 'assigned',
             },
             include: { student: true, uniform: true }
-        });
+        }); */
     }
 
     // 🎯 ACTUALIZAR ESTADO DE LA ASIGNACIÓN (DEVOLVER/DAÑADO/EXTRAVIADO)

@@ -29,7 +29,7 @@ model User {
   // Lado inverso de la relación 1:1
   employee          Employee?
   // Relación inversa: Un usuario puede tener muchos representados
-  student           Student[]
+  client            Client[]
   paymentOrders     PaymentOrder[]
   orders            Order[]
   transactions      Transaction[]
@@ -73,36 +73,58 @@ model Employee {
 
 // 💡 MODELO: REPRESENTADOS
 model Student {
-  id                  String   @id @default(uuid())
-  // 🎯 CAMBIO: El DNI del alumno ahora es opcional y NO unique para evitar fallos si varios alumnos no lo tienen
-  dni                 String?  @db.VarChar(30)
-  firstName           String   @db.VarChar(150)
-  lastName            String   @db.VarChar(150)
-  birthDate           DateTime @db.Date
-  kinship             Kinship  @default(son)
-  medicalObservations String?  @db.Text
+  id                  String           @id @default(uuid())
+  shirtSize           String           @db.VarChar(10) // Ej: "12", "M"
+  kinship             Kinship          @default(son)
+  medicalObservations String?          @db.Text
+  hasExperience       Boolean          @default(false)
+  group               Group?           @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId             String?
+  clients             Client[]
+  uniforms            StudentUniform[]
+  costumeAssignments  StudentCostume[]
 
-  // 🎯 NUEVOS CAMPOS DEL ALUMNO
-  address            String           @db.Text
-  phone              String?          @db.VarChar(40) // Opcional
-  shirtSize          String           @db.VarChar(10) // Ej: "12", "M"
-  hasExperience      Boolean          @default(false)
-  group              Group?           @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  groupId            String?
-  user               User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId             String?          @db.VarChar(36) // Ahora acepta NULL en MySQL si el Admin registra al estudiante directamente
-  transactions       Transaction[]
-  paymentOrders      PaymentOrder[]
-  orderItems         OrderItem[]
-  costumeAssignments StudentCostume[]
-
-  createdAt       DateTime         @default(now()) @map("createdAt")
-  updatedAt       DateTime         @updatedAt @map("updatedAt")
-  registrations   Registration[]
-  studentUniforms StudentUniform[]
-  eventSeats      EventSeat[]
+  createdAt     DateTime       @default(now()) @map("createdAt")
+  updatedAt     DateTime       @updatedAt @map("updatedAt")
+  registrations Registration[]
 
   @@map("students")
+}
+
+model Client {
+  id        String   @id @default(uuid())
+  // 🎯 CAMBIO: El DNI del alumno ahora es opcional y NO unique para evitar fallos si varios alumnos no lo tienen
+  dni       String?  @db.VarChar(30)
+  firstName String   @db.VarChar(150)
+  lastName  String   @db.VarChar(150)
+  birthDate DateTime @db.Date
+
+  // 🎯 NUEVOS CAMPOS DEL ALUMNO
+  address String  @db.Text
+  phone   String? @db.VarChar(40) // Opcional
+
+  student   Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId String?
+
+  user          User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String?        @db.VarChar(36) // Ahora acepta NULL en MySQL si el Admin registra al estudiante directamente
+  transactions  Transaction[]
+  paymentOrders PaymentOrder[]
+  orderItems    OrderItem[]
+  type          ClientType     @default(representative)
+
+  registrations Registration[]
+  eventSeats    EventSeat[]
+
+  group           Group?           @relation(fields: [groupId], references: [id])
+  groupId         String?
+  studentUniforms StudentUniform[]
+  studentCostumes StudentCostume[]
+
+  createdAt DateTime @default(now()) @map("createdAt")
+  updatedAt DateTime @updatedAt @map("updatedAt")
+
+  @@map("clients")
 }
 
 model Order {
@@ -128,10 +150,10 @@ model OrderItem {
   quantity    Int                  @default(1)
   price       Decimal              @db.Decimal(10, 2) // Precio unitario al momento de la compra
 
-  orderId   String   @db.VarChar(255)
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  studentId String?  @db.VarChar(36)
-  student   Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  orderId  String  @db.VarChar(255)
+  order    Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  clientId String? @db.VarChar(36)
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   @@map("order_items")
 }
@@ -141,11 +163,11 @@ model OrderItem {
 // =========================================================================
 
 model PaymentOrder {
-  id        String   @id @default(cuid())
-  userId    String   @db.VarChar(36)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  studentId String?  @db.VarChar(36)
-  student   Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  id       String  @id @default(cuid())
+  userId   String  @db.VarChar(36)
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId String? @db.VarChar(36)
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   // 🔗 Conexión opcional con Pedidos: 
   // - Si viene de la tienda, se conecta a un 'OrderId'.
@@ -203,11 +225,11 @@ model ProductCategory {
 // =========================================================================
 
 model Transaction {
-  id        String   @id @default(cuid())
-  userId    String   @db.VarChar(36)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  studentId String?  @db.VarChar(36)
-  student   Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  id       String  @id @default(cuid())
+  userId   String  @db.VarChar(36)
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId String? @db.VarChar(36)
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   // 🔗 Conexión con la Orden de Pago: Toda transacción debe saldar una deuda (Orden de Pago)
   paymentOrderId String?       @db.VarChar(255)
@@ -276,11 +298,12 @@ model Group {
   user               User?            @relation(fields: [userId], references: [id])
   // Relación inversa: Un salón puede albergar múltiples grupos
   schedules          WeeklySchedule[]
-  students           Student[]
+  clients            Client[]
   registrations      Registration[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  students  Student[]
 
   @@map("groups")
 }
@@ -316,6 +339,8 @@ model Registration {
   group     Group?             @relation(fields: [groupId], references: [id])
   createdAt DateTime           @default(now())
   updatedAt DateTime           @updatedAt
+  client    Client?            @relation(fields: [clientId], references: [id])
+  clientId  String?
 
   @@map("registrations")
 }
@@ -343,7 +368,9 @@ model StudentUniform {
 
   // Relación con el Estudiante
   studentId String
-  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  costumeId String?
+  costume   Costume? @relation(fields: [costumeId], references: [id])
 
   // Relación con el Vestuario
   uniformId String
@@ -358,12 +385,12 @@ model StudentUniform {
   assignedAt DateTime  @default(now()) // Cuándo se le dio
   returnedAt DateTime? // Cuándo lo devolvió (si aplica)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  costume   Costume? @relation(fields: [costumeId], references: [id])
-  costumeId String?
+  createdAt DateTime @default(now()) @map("createdAt")
+  updatedAt DateTime @updatedAt @map("updatedAt")
+  client    Client?  @relation(fields: [clientId], references: [id])
+  clientId  String?
 
-  @@map("student_uniforms")
+  @@map("client_uniforms")
 }
 
 // 👗 MODELO DE VESTUARIO (Optimizado)
@@ -380,9 +407,10 @@ model Costume {
   // 🎯 RELACIÓN NUEVA: Alumnos a los que se ha asignado este vestuario
   assignments StudentCostume[]
 
-  createdAt       DateTime         @default(now()) @map("createdAt")
-  updatedAt       DateTime         @updatedAt @map("updatedAt")
-  studentUniforms StudentUniform[]
+  clientUniforms StudentUniform[]
+
+  createdAt DateTime @default(now()) @map("createdAt")
+  updatedAt DateTime @updatedAt @map("updatedAt")
 
   @@map("costumes")
 }
@@ -392,8 +420,8 @@ model StudentCostume {
   id String @id @default(uuid())
 
   // Relación con el Estudiante
+  student   Student @relation(fields: [studentId], references: [id])
   studentId String
-  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   // Relación con el Vestuario
   costumeId String
@@ -410,8 +438,10 @@ model StudentCostume {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  client    Client?  @relation(fields: [clientId], references: [id])
+  clientId  String?
 
-  @@map("student_costumes")
+  @@map("client_costumes")
 }
 
 model Setting {
@@ -595,8 +625,8 @@ model EventSeat {
   userId String?
   user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  studentId String?
-  student   Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
 
   // 🔗 Conexión con la Orden de Pago
   paymentOrderId String?       @db.VarChar(255)
@@ -694,7 +724,7 @@ enum LockerRoomCategory {
 
 enum ProfileType {
   representative @map("Representante")
-  student        @map("Alumno")
+  client         @map("Alumno")
 }
 
 enum Kinship {
@@ -784,4 +814,9 @@ enum SeatingMapItemType {
   general_chair     @map("Silla general")
   sponsor_chair     @map("Silla de patrocinante")
   preferred_seating @map("Silla preferencial")
+}
+
+enum ClientType {
+  student        @map("Estudiante")
+  representative @map("Representante")
 }

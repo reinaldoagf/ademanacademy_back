@@ -72,7 +72,7 @@ export class EventSeatsService {
         });
     }
     async reserveOrBuySeats(dto: ReserveSeatsDto) {
-        const { eventId, seatingMapElementIds, status, userId, studentId, totalAmount } = dto;
+        const { eventId, seatingMapElementIds, status, userId, clientId, totalAmount } = dto;
         const now = new Date();
         const expiresAt = status === SeatStatus.reserved ? new Date(now.getTime() + 10 * 60 * 1000) : null;
 
@@ -113,7 +113,7 @@ export class EventSeatsService {
                 paymentOrder = await tx.paymentOrder.create({
                     data: {
                         userId,
-                        studentId: studentId || null,
+                        clientId: clientId || null,
                         concept: ConceptType.ticket, // Cambia por tu enum de concepto
                         amount: totalAmount,
                         status: PaymentOrderStatus.pending,
@@ -132,7 +132,7 @@ export class EventSeatsService {
                         reservedAt: now,
                         expiresAt,
                         userId: userId || null,
-                        studentId: studentId || null,
+                        clientId: clientId || null,
                         paymentOrderId: paymentOrder ? paymentOrder.id : null,
                     },
                     create: {
@@ -142,7 +142,7 @@ export class EventSeatsService {
                         reservedAt: now,
                         expiresAt,
                         userId: userId || null,
-                        studentId: studentId || null,
+                        clientId: clientId || null,
                         paymentOrderId: paymentOrder ? paymentOrder.id : null,
                     },
                 })
@@ -190,7 +190,7 @@ export class EventSeatsService {
             data: {
                 status: SeatStatus.available,
                 userId: null,
-                studentId: null,
+                clientId: null,
                 expiresAt: null,
                 reservedAt: null,
             },

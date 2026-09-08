@@ -3,8 +3,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { GetStudentsFilterDto } from './dto/get-students-filter.dto';
-import { Kinship } from '@prisma/client';
-import { group } from 'console';
+import { ClientType, Kinship, Prisma } from '@prisma/client';
+
 
 // Diccionario para los conceptos (por si también quieres traducirlos)
 /* export const KinshipLabel: Record<Kinship, string> = {
@@ -26,44 +26,100 @@ export class StudentsService {
      * Crea un nuevo estudiante validando la unicidad del DNI
      */
     async create(createStudentDto: CreateStudentDto): Promise<any> {
-        if (createStudentDto.dni) {
-            // 🌟 CAMBIADO: findUnique ➡️ findFirst
-            const existingStudent = await this.prisma.student.findFirst({
-                where: { dni: createStudentDto.dni },
+        const {
+            dni,
+            firstName,
+            lastName,
+            birthDate,
+            address,
+            phone,
+            shirtSize,
+            kinship,
+            medicalObservations,
+            hasExperience,
+            userId,
+            groupId,
+        } = createStudentDto;
+
+        // 1. Validar DNI único para estudiantes si fue enviado
+        if (dni) {
+            const existingStudent = await this.prisma.client.findFirst({
+                where: { dni, type: ClientType.student },
             });
 
             if (existingStudent) {
-                throw new ConflictException(`El estudiante con DNI ${createStudentDto.dni} ya está registrado`);
+                throw new ConflictException(`El estudiante con DNI "${dni}" ya está registrado`);
             }
         }
 
-        return await this.prisma.student.create({
-            data: {
-                ...createStudentDto,
-                birthDate: new Date(createStudentDto.birthDate),
-            },
-            include: {
-                user: {
-                    select: { id: true, name: true, email: true }
+        // 2. Transacción de Prisma para crear ambas entidades
+        return await this.prisma.$transaction(async (tx) => {
+            // Step A: Crear el registro en 'Student'
+            const newStudent = await tx.student.create({
+                data: {
+                    shirtSize,
+                    kinship,
+                    medicalObservations,
+                    hasExperience,
+                    groupId: groupId || null,
                 },
-                group: true
-            }
+            });
+
+            // Step B: Crear el registro en 'Client' vinculado al 'Student'
+            const newClient = await tx.client.create({
+                data: {
+                    dni,
+                    firstName,
+                    lastName,
+                    birthDate: new Date(birthDate),
+                    address,
+                    phone,
+                    type: ClientType.student, // Define el tipo como estudiante
+                    userId: userId || null,
+                    studentId: newStudent.id, // Relación 1 a N / 1 a 1 con Student
+                    groupId: groupId || null,
+                },
+                include: {
+                    student: {
+                        include: {
+                            group: true,
+                        },
+                    },
+                    user: true,
+                    group: true,
+                },
+            });
+
+            return newClient;
         });
     }
+
 
     /**
      * Obtiene estudiantes con soporte para paginación, filtros por parentesco y búsqueda global
      */
     async findAll(filters: GetStudentsFilterDto) {
-        const { page = 1, limit = 10, search, kinship } = filters;
+        const { page = 1, limit = 10, search, kinship, userId } = filters;
         const skip = (page - 1) * limit;
 
-        const where: any = {};
+        // 1. Condición base: Solo clientes de tipo "student"
+        const where: Prisma.ClientWhereInput = {
+            type: ClientType.student,
+        };
 
-        if (kinship) {
-            where.kinship = kinship;
+        // 2. Filtro opcional por userId (Representante/Usuario)
+        if (userId) {
+            where.userId = userId;
         }
 
+        // 3. Filtro por parentesco (reside en la relación con Student)
+        if (kinship) {
+            where.student = {
+                kinship: kinship,
+            };
+        }
+
+        // 4. Búsqueda por Nombre, Apellido o DNI
         if (search) {
             where.OR = [
                 { firstName: { contains: search } },
@@ -72,76 +128,30 @@ export class StudentsService {
             ];
         }
 
+        // 5. Consulta paginada con conteo total
         const [data, totalItems] = await Promise.all([
-            this.prisma.student.findMany({
+            this.prisma.client.findMany({
                 where,
                 skip,
                 take: limit,
                 orderBy: { createdAt: 'desc' },
                 include: {
-                    user: {
-                        select: { id: true, name: true, email: true }
+                    student: {
+                        include: {
+                            group: true,
+                        },
                     },
-                    group: true
-                }
-            }),
-            this.prisma.student.count({ where })
-        ]);
-
-        const totalPages = Math.ceil(totalItems / limit);
-
-        return {
-            data: data,
-            meta: {
-                totalItems,
-                itemCount: data.length,
-                itemsPerPage: limit,
-                totalPages,
-                currentPage: page,
-            }
-        };
-    }
-
-    /**
-   * Obtiene únicamente los estudiantes que pertenecen al usuario autenticado (userId)
-   * con soporte para paginación, filtros por parentesco y búsqueda global
-   */
-    async findByUserId(userId: string, filters: GetStudentsFilterDto) {
-        const { page = 1, limit = 10, search, kinship } = filters;
-        const skip = (page - 1) * limit;
-
-        // 1. Forzamos que la consulta base filtre estrictamente por el userId del token
-        const where: any = {
-            userId: filters.userId ? filters.userId : userId, // 👈 Ajusta este campo según el nombre exacto de la FK en tu schema (ej. userId o representativeId)
-        };
-
-        // 2. Acoplamos los filtros condicionales adicionales
-        if (kinship) {
-            where.kinship = kinship;
-        }
-
-        if (search) {
-            where.OR = [
-                { firstName: { contains: search } },
-                { lastName: { contains: search } },
-                { dni: { contains: search } },
-            ];
-        }
-
-        // 3. Consultas paralelas optimizadas
-        const [data, totalItems] = await Promise.all([
-            this.prisma.student.findMany({
-                where,
-                skip,
-                take: limit,
-                orderBy: { createdAt: 'desc' },
-                include: {
                     user: {
-                        select: { id: true, name: true, email: true }
-                    }
-                }
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                        },
+                    },
+                    group: true,
+                },
             }),
-            this.prisma.student.count({ where })
+            this.prisma.client.count({ where }),
         ]);
 
         const totalPages = Math.ceil(totalItems / limit);
@@ -154,7 +164,79 @@ export class StudentsService {
                 itemsPerPage: limit,
                 totalPages,
                 currentPage: page,
-            }
+            },
+        };
+    }
+
+    /**
+   * Obtiene únicamente los estudiantes que pertenecen al usuario autenticado (userId)
+   * con soporte para paginación, filtros por parentesco y búsqueda global
+   */
+    async findByUserId(userId: string, filters: GetStudentsFilterDto) {
+        const { page = 1, limit = 10, search, kinship } = filters;
+        const skip = (page - 1) * limit;
+
+        // 1. Filtro base obligatorio: Tipo estudiante y pertenecientes al userId especificado
+        const targetUserId = filters.userId || userId;
+
+        const where: Prisma.ClientWhereInput = {
+            type: ClientType.student,
+            userId: targetUserId,
+        };
+
+        // 2. Filtro por parentesco (reside en la relación 'student')
+        if (kinship) {
+            where.student = {
+                kinship: kinship,
+            };
+        }
+
+        // 3. Búsqueda por Nombre, Apellido o DNI
+        if (search) {
+            where.OR = [
+                { firstName: { contains: search } },
+                { lastName: { contains: search } },
+                { dni: { contains: search } },
+            ];
+        }
+
+        // 4. Consultas paralelas
+        const [data, totalItems] = await Promise.all([
+            this.prisma.client.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { createdAt: 'desc' },
+                include: {
+                    student: {
+                        include: {
+                            group: true,
+                        },
+                    },
+                    user: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                        },
+                    },
+                    group: true,
+                },
+            }),
+            this.prisma.client.count({ where }),
+        ]);
+
+        const totalPages = Math.ceil(totalItems / limit);
+
+        return {
+            data,
+            meta: {
+                totalItems,
+                itemCount: data.length,
+                itemsPerPage: limit,
+                totalPages,
+                currentPage: page,
+            },
         };
     }
 
@@ -162,44 +244,103 @@ export class StudentsService {
      * Busca un estudiante por su ID único.
      */
     async findOne(id: string): Promise<any> {
-        const student = await this.prisma.student.findUnique({
-            where: { id },
-            include: { user: true }
+        const clientStudent = await this.prisma.client.findFirst({
+            where: {
+                id,
+                type: ClientType.student,
+            },
+            include: {
+                student: {
+                    include: {
+                        group: true,
+                    },
+                },
+                user: true,
+                group: true,
+            },
         });
 
-        if (!student) {
+        if (!clientStudent) {
             throw new NotFoundException(`Estudiante con ID ${id} no encontrado`);
         }
-        return student;
-    }
 
+        return clientStudent;
+    }
     /**
      * Actualiza los datos de un estudiante resguardando la unicidad del DNI
      */
     async update(id: string, updateStudentDto: UpdateStudentDto): Promise<any> {
-        await this.findOne(id);
+        // Verificar existencia del cliente-estudiante y obtener el studentId
+        const currentClient = await this.findOne(id);
 
-        if (updateStudentDto.dni) {
-            const existingDni = await this.prisma.student.findFirst({
-                where: { dni: updateStudentDto.dni, NOT: { id } },
+        const {
+            dni,
+            firstName,
+            lastName,
+            birthDate,
+            address,
+            phone,
+            shirtSize,
+            kinship,
+            medicalObservations,
+            hasExperience,
+            userId,
+            groupId,
+        } = updateStudentDto;
+
+        // Validar conflicto de DNI en otros clientes de tipo estudiante
+        if (dni) {
+            const existingDni = await this.prisma.client.findFirst({
+                where: {
+                    dni,
+                    type: ClientType.student,
+                    NOT: { id },
+                },
             });
+
             if (existingDni) {
-                throw new ConflictException(`El DNI ${updateStudentDto.dni} ya pertenece a otro estudiante`);
+                throw new ConflictException(`El DNI ${dni} ya pertenece a otro estudiante`);
             }
         }
 
-        return await this.prisma.student.update({
-            where: { id },
-            data: {
-                ...updateStudentDto,
-                birthDate: updateStudentDto.birthDate ? new Date(updateStudentDto.birthDate) : undefined,
-            },
-            include: {
-                user: {
-                    select: { id: true, name: true, email: true }
-                },
-                group: true
+        return await this.prisma.$transaction(async (tx) => {
+            // A. Actualizar datos en la tabla 'Student' si existe la relación
+            if (currentClient.studentId) {
+                await tx.student.update({
+                    where: { id: currentClient.studentId },
+                    data: {
+                        ...(shirtSize && { shirtSize }),
+                        ...(kinship && { kinship }),
+                        ...(medicalObservations !== undefined && { medicalObservations }),
+                        ...(hasExperience !== undefined && { hasExperience }),
+                        ...(groupId !== undefined && { groupId: groupId || null }),
+                    },
+                });
             }
+
+            // B. Actualizar datos en la tabla 'Client'
+            return await tx.client.update({
+                where: { id },
+                data: {
+                    ...(dni !== undefined && { dni }),
+                    ...(firstName && { firstName }),
+                    ...(lastName && { lastName }),
+                    ...(birthDate && { birthDate: new Date(birthDate) }),
+                    ...(address && { address }),
+                    ...(phone !== undefined && { phone }),
+                    ...(userId !== undefined && { userId: userId || null }),
+                    ...(groupId !== undefined && { groupId: groupId || null }),
+                },
+                include: {
+                    student: {
+                        include: {
+                            group: true,
+                        },
+                    },
+                    user: true,
+                    group: true,
+                },
+            });
         });
     }
 
@@ -207,10 +348,20 @@ export class StudentsService {
      * Elimina un estudiante de la base de datos
      */
     async remove(id: string): Promise<{ message: string }> {
-        await this.findOne(id);
+        const clientStudent = await this.findOne(id);
 
-        await this.prisma.student.delete({
-            where: { id },
+        await this.prisma.$transaction(async (tx) => {
+            // A. Eliminar el registro en Client (su FK studentId será liberada)
+            await tx.client.delete({
+                where: { id },
+            });
+
+            // B. Eliminar el registro asociado en Student si existía
+            if (clientStudent.studentId) {
+                await tx.student.delete({
+                    where: { id: clientStudent.studentId },
+                });
+            }
         });
 
         return { message: `Estudiante con ID ${id} eliminado correctamente` };

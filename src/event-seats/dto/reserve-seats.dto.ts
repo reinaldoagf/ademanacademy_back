@@ -22,7 +22,7 @@ export class ReserveSeatsDto {
 
     @IsUUID()
     @IsOptional()
-    studentId?: string;
+    clientId?: string;
 
     @IsNumber({ maxDecimalPlaces: 2 }, { message: 'El monto debe ser un número válido.' })
     @IsPositive({ message: 'El monto debe ser mayor a cero.' })

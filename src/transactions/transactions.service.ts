@@ -39,7 +39,7 @@ export class TransactionsService {
                 data: {
                     paymentOrderId: order.id,
                     userId,
-                    studentId: order.studentId,
+                    clientId: order.clientId,
                     concept: order.concept,
                     amount,
                     method,
@@ -161,7 +161,7 @@ export class TransactionsService {
                     user: {
                         select: { name: true, email: true, dni: true, phone: true },
                     },
-                    student: true,
+                    client: true,
                 },
             }),
             this.prisma.transaction.count({ where }),
@@ -173,7 +173,7 @@ export class TransactionsService {
             data: transactions.map(tx => ({
                 id: tx.id,
                 realId: tx.id,
-                student: tx.student,
+                client: tx.client,
                 user: tx.user,
                 concept: tx.concept,
                 amount: Number(tx.amount),
@@ -258,11 +258,11 @@ export class TransactionsService {
                 } */
 
                 // Paso C: Si es Matrícula, inscribimos al estudiante en el grupo asignado
-                if (transaction.concept === 'tuition' && groupId && transaction.studentId) {
+                if (transaction.concept === 'tuition' && groupId && transaction.clientId) {
                     const group = await this.prisma.group.findUnique({
                         where: { id: groupId },
                         include: {
-                            students: true
+                            clients: true
                         }
                     });
 
@@ -270,19 +270,19 @@ export class TransactionsService {
                         throw new NotFoundException('El grupo especificada no existe.');
                     }
 
-                    if (group.totalNumberOfSlots == group.students.length) {
+                    if (group.totalNumberOfSlots == group.clients.length) {
                         throw new NotFoundException('Grupo sin cupos disponibles.');
                     }
 
                     const student = await tx.student.update({
-                        where: { id: transaction.studentId },
+                        where: { id: transaction.clientId },
                         data: { groupId: group.id }, // Asignamos el id del grupo elegido en el modal
                     });
                     if (!student) {
                         throw new NotFoundException('El estudiante no existe.');
                     }
                     await tx.registration.updateMany({
-                        where: { studentId: student.id, status: 'pending' },
+                        where: { clientId: student.id, status: 'pending' },
                         data: {
                             status: 'approved', groupId: group.id
                         }

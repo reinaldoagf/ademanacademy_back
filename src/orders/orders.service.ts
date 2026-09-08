@@ -77,7 +77,7 @@ export class OrdersService {
                 },
                 include: {
                     items: {
-                        include: { student: true },
+                        include: { client: { include: { student: true } } },
                     },
                 },
             });
@@ -126,7 +126,7 @@ export class OrdersService {
                 include: {
                     user: true,
                     items: {
-                        include: { student: true },
+                        include: { client: { include: { student: true } } },
                     },
                     paymentOrder: true,
                 }
@@ -153,7 +153,7 @@ export class OrdersService {
             include: {
                 user: true,
                 items: {
-                    include: { student: true },
+                    include: { client: { include: { student: true } } },
                 },
                 paymentOrder: true,
             },

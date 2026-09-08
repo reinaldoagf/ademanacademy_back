@@ -5,7 +5,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CompleteOnboardingDto, ProfileType } from './dto/complete-onboarding.dto';
 import { GetUsersFilterDto } from './dto/get-users-filter.dto';
-import { User } from '@prisma/client'; // 🎯 Importación nativa estándar
+import { ClientType, User } from '@prisma/client'; // 🎯 Importación nativa estándar
 
 @Injectable()
 export class UsersService {
@@ -175,25 +175,50 @@ export class UsersService {
 
         // Operación B: Si es REPRESENTATIVE, insertar estudiantes
         if (dto.profileType === 'representative' && dto.representedStudents) {
-          const studentsData = dto.representedStudents.map((student) => ({
-            firstName: student.firstName,
-            lastName: student.lastName,
-            dni: student.dni || null,
-            birthDate: new Date(student.birthDate),
-            kinship: student.kinship,
+          const representedStudents = dto.representedStudents.map((representedStudent) => ({
+            firstName: representedStudent.firstName,
+            lastName: representedStudent.lastName,
+            dni: representedStudent.dni || null,
+            birthDate: new Date(representedStudent.birthDate),
+            type: ClientType.student,
+            kinship: representedStudent.kinship,
             userId: userId,
-            address: student.address,
-            phone: student.phone || null,
-            shirtSize: student.shirtSize,
-            hasExperience: student.hasExperience,
-            medicalObservations: student.medicalObservations || null,
+            address: representedStudent.address,
+            phone: representedStudent.phone || null,
+            shirtSize: representedStudent.shirtSize,
+            hasExperience: representedStudent.hasExperience,
+            medicalObservations: representedStudent.medicalObservations || null,
           }));
 
-          for (const element of studentsData) {
-            const student = await tx.student.create({
-              data: element
+          for (const representedStudent of representedStudents) {
+            if (representedStudent.type == ClientType.student) {
+              const student = await tx.student.create({
+                data: {
+                  kinship: representedStudent.kinship,
+                  shirtSize: representedStudent.shirtSize,
+                  hasExperience: representedStudent.hasExperience,
+                  medicalObservations: representedStudent.medicalObservations || null,
+                }
+              });
+              await tx.registration.create({
+                data: {
+                  userId: userId,
+                  studentId: student.id,
+                }
+              });
+            }
+            const client = await tx.client.create({
+              data: {
+                firstName: representedStudent.firstName,
+                lastName: representedStudent.lastName,
+                dni: representedStudent.dni || null,
+                birthDate: new Date(representedStudent.birthDate),
+                type: ClientType.student,
+                userId: userId,
+                address: representedStudent.address,
+                phone: representedStudent.phone || null,
+              }
             });
-
             // 🎯 Operación D: Flujo e inserción de la información de Pago (Matrícula)
             if (dto.payment) {
 
@@ -201,9 +226,9 @@ export class UsersService {
               await tx.transaction.create({
                 data: {
                   userId: userId,
-                  studentId: student.id,
+                  clientId: client.id,
                   concept: 'tuition',
-                  amount: dto.payment.amount / studentsData.length,
+                  amount: dto.payment.amount / representedStudents.length,
                   method: 'bank_transfer', // Define un valor por defecto o extiéndelo en tu enum
                   status: 'pending', // Queda 'pending' para auditoría manual del administrador
                   referenceNumber: dto.payment.reference || null,
@@ -212,63 +237,66 @@ export class UsersService {
                 }
               });
 
-              await tx.registration.create({
-                data: {
-                  userId: userId,
-                  studentId: student.id,
-                }
-              });
+
 
             }
 
 
           }
+        }
+        // Operación C: Si es STUDENT autónomo
+        if (dto.profileType === 'student') {
+          const nameParts = user.name.split(' ');
+          const firstName = nameParts[0] || 'Por definir';
+          const lastName = nameParts.slice(1).join(' ') || 'Por definir';
+          const client = await tx.client.create({
+            data: {
+              firstName,
+              lastName,
+              dni: user.dni,
+              birthDate: new Date(),
+              userId: userId,
+              address: 'Dirección por definir',
+              phone: user.phone || null,
+            }
+          });
+          const student = await tx.student.create({
+            data: {
+              kinship: 'other',
+              shirtSize: 'M',
+              hasExperience: false,
+              medicalObservations: null,
+            }
+          });
+          if (dto.payment) {
 
-          // Operación C: Si es STUDENT autónomo
-          if (dto.profileType === 'student') {
-            const nameParts = user.name.split(' ');
-            const firstName = nameParts[0] || 'Por definir';
-            const lastName = nameParts.slice(1).join(' ') || 'Por definir';
-
-            const newStudent = await tx.student.create({
+            await tx.transaction.create({
               data: {
-                firstName,
-                lastName,
-                dni: user.dni,
-                birthDate: new Date(),
-                kinship: 'other',
                 userId: userId,
-                address: 'Dirección por definir',
-                phone: user.phone || null,
-                shirtSize: 'M',
-                hasExperience: false,
-                medicalObservations: null,
+                clientId: client.id,
+                concept: 'tuition',
+                amount: dto.payment.amount,
+                method: 'bank_transfer', // Define un valor por defecto o extiéndelo en tu enum
+                status: 'pending', // Queda 'pending' para auditoría manual del administrador
+                referenceNumber: dto.payment.reference || null,
+                bankName: dto.payment.bankName || null,
+                receiptPath: receiptPath
               }
             });
-            if (dto.payment) {
-
-              await tx.transaction.create({
-                data: {
-                  userId: userId,
-                  studentId: newStudent.id,
-                  concept: 'tuition',
-                  amount: dto.payment.amount,
-                  method: 'bank_transfer', // Define un valor por defecto o extiéndelo en tu enum
-                  status: 'pending', // Queda 'pending' para auditoría manual del administrador
-                  referenceNumber: dto.payment.reference || null,
-                  bankName: dto.payment.bankName || null,
-                  receiptPath: receiptPath
-                }
-              });
-            }
-
           }
-
-          return {
-            message: 'Onboarding y reporte de pago procesados con éxito.',
-            user: updatedUser,
-          };
+          await tx.registration.create({
+            data: {
+              userId: userId,
+              studentId: student.id,
+            }
+          });
         }
+
+        return {
+          message: 'Onboarding y reporte de pago procesados con éxito.',
+          user: updatedUser,
+        };
+
       });
     } catch (error: any) {
       console.error({ error });

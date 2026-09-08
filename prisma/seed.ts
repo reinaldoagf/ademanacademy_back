@@ -1,5 +1,5 @@
 // prisma/seed.ts
-import { ProfileType, Kinship, ClassroomType, ClassroomStatus, TypeOfContract, PayrollStatus } from '@prisma/client';
+import { ProfileType, Kinship, ClassroomType, ClassroomStatus, TypeOfContract, PayrollStatus, ClientType } from '@prisma/client';
 import { PrismaService } from '../src/prisma/prisma.service'; // 🎯 1. Importa tu propio servicio
 import * as bcrypt from 'bcrypt';
 
@@ -15,7 +15,7 @@ async function main() {
     await prisma.weeklySchedule.deleteMany();
     await prisma.group.deleteMany();
     await prisma.classroom.deleteMany();
-    await prisma.student.deleteMany();
+    await prisma.client.deleteMany();
     await prisma.user.deleteMany();
     await prisma.employee.deleteMany();
     await prisma.setting.deleteMany();
@@ -108,7 +108,7 @@ async function main() {
         console.log(`✅ Empleado creado: ${createdEmployee.firstName} ${createdEmployee.lastName} (${createdEmployee.id})`);
     }
 
-    const representative = await prisma.user.create({
+    const user = await prisma.user.create({
         data: {
             dni: 'V-11223344',
             name: 'Juan Representante',
@@ -127,21 +127,34 @@ async function main() {
     // ==========================================
     // 3. CREACIÓN DE ALUMNOS (Students)
     // ==========================================
+    // 2. Crear primero el registro de Student (Representado / Alumno)
     const student1 = await prisma.student.create({
+        data: {
+            shirtSize: '10',
+            kinship: Kinship.son,
+            hasExperience: false,
+            medicalObservations: 'Ninguna',
+            // groupId: 'ID_DEL_GRUPO', // Opcional si ya tienes un grupo creado
+        },
+    });
+
+    // 3. Crear el Client asignándole el studentId y userId correspondientes
+    const client1 = await prisma.client.create({
         data: {
             firstName: 'Pedrito',
             lastName: 'Pérez',
             birthDate: new Date('2018-05-15'),
-            kinship: Kinship.son,
-            medicalObservations: 'Ninguna',
             address: 'Alta Vista, Puerto Ordaz, Bolívar',
-            shirtSize: '10',
-            hasExperience: false,
-            userId: representative.id, // Enlazado a su representante
+            dni: 'V-32145678', // Opcional
+            phone: '0414-1234567', // Opcional
+            type: ClientType.representative, // O el tipo de cliente que corresponda
+            userId: user.id, // Enlazado a su usuario/representante
+            studentId: student1.id, // 🎯 Enlazado al estudiante creado previamente
         },
     });
 
-    console.log('👶 Estudiantes creados.');
+    console.log('Data de prueba creada con éxito:');
+    console.log({ student1, client1 });
 
     // ==========================================
     // 4. CREACIÓN DE SALONES (Classrooms)

@@ -46,18 +46,30 @@ CREATE TABLE `employees` (
 -- CreateTable
 CREATE TABLE `students` (
     `id` VARCHAR(191) NOT NULL,
+    `shirtSize` VARCHAR(10) NOT NULL,
+    `kinship` ENUM('Hijo', 'Hija', 'Sobrino', 'Sobrina', 'Tutorado', 'Otro') NOT NULL DEFAULT 'Hijo',
+    `medicalObservations` TEXT NULL,
+    `hasExperience` BOOLEAN NOT NULL DEFAULT false,
+    `groupId` VARCHAR(191) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `clients` (
+    `id` VARCHAR(191) NOT NULL,
     `dni` VARCHAR(30) NULL,
     `firstName` VARCHAR(150) NOT NULL,
     `lastName` VARCHAR(150) NOT NULL,
     `birthDate` DATE NOT NULL,
-    `kinship` ENUM('Hijo', 'Hija', 'Sobrino', 'Sobrina', 'Tutorado', 'Otro') NOT NULL DEFAULT 'Hijo',
-    `medicalObservations` TEXT NULL,
     `address` TEXT NOT NULL,
     `phone` VARCHAR(40) NULL,
-    `shirtSize` VARCHAR(10) NOT NULL,
-    `hasExperience` BOOLEAN NOT NULL DEFAULT false,
-    `groupId` VARCHAR(191) NULL,
+    `studentId` VARCHAR(191) NULL,
     `userId` VARCHAR(36) NULL,
+    `type` ENUM('Estudiante', 'Representante') NOT NULL DEFAULT 'Representante',
+    `groupId` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
@@ -84,7 +96,7 @@ CREATE TABLE `order_items` (
     `quantity` INTEGER NOT NULL DEFAULT 1,
     `price` DECIMAL(10, 2) NOT NULL,
     `orderId` VARCHAR(255) NOT NULL,
-    `studentId` VARCHAR(36) NULL,
+    `clientId` VARCHAR(36) NULL,
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -93,7 +105,7 @@ CREATE TABLE `order_items` (
 CREATE TABLE `payment_orders` (
     `id` VARCHAR(191) NOT NULL,
     `userId` VARCHAR(36) NOT NULL,
-    `studentId` VARCHAR(36) NULL,
+    `clientId` VARCHAR(36) NULL,
     `orderId` VARCHAR(255) NULL,
     `concept` ENUM('Mensualidad', 'Matrícula', 'Vestuario', 'Entradas Gala', 'Producto') NOT NULL,
     `amount` DECIMAL(10, 2) NOT NULL,
@@ -140,7 +152,7 @@ CREATE TABLE `product_categories` (
 CREATE TABLE `transactions` (
     `id` VARCHAR(191) NOT NULL,
     `userId` VARCHAR(36) NOT NULL,
-    `studentId` VARCHAR(36) NULL,
+    `clientId` VARCHAR(36) NULL,
     `paymentOrderId` VARCHAR(255) NULL,
     `concept` ENUM('Mensualidad', 'Matrícula', 'Vestuario', 'Entradas Gala', 'Producto') NOT NULL,
     `amount` DECIMAL(10, 2) NOT NULL,
@@ -221,6 +233,7 @@ CREATE TABLE `registrations` (
     `groupId` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
+    `clientId` VARCHAR(191) NULL,
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -242,9 +255,10 @@ CREATE TABLE `uniforms` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `student_uniforms` (
+CREATE TABLE `client_uniforms` (
     `id` VARCHAR(191) NOT NULL,
     `studentId` VARCHAR(191) NOT NULL,
+    `costumeId` VARCHAR(191) NULL,
     `uniformId` VARCHAR(191) NOT NULL,
     `assignedSize` VARCHAR(10) NOT NULL,
     `status` ENUM('assigned', 'returned', 'damaged', 'lost') NOT NULL DEFAULT 'assigned',
@@ -253,7 +267,7 @@ CREATE TABLE `student_uniforms` (
     `returnedAt` DATETIME(3) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
-    `costumeId` VARCHAR(191) NULL,
+    `clientId` VARCHAR(191) NULL,
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -275,7 +289,7 @@ CREATE TABLE `costumes` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `student_costumes` (
+CREATE TABLE `client_costumes` (
     `id` VARCHAR(191) NOT NULL,
     `studentId` VARCHAR(191) NOT NULL,
     `costumeId` VARCHAR(191) NOT NULL,
@@ -286,6 +300,7 @@ CREATE TABLE `student_costumes` (
     `returnedAt` DATETIME(3) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
+    `clientId` VARCHAR(191) NULL,
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -392,7 +407,8 @@ CREATE TABLE `seating_maps` (
 CREATE TABLE `seating_map_elements` (
     `id` VARCHAR(191) NOT NULL,
     `itemID` VARCHAR(191) NOT NULL,
-    `type` VARCHAR(191) NOT NULL,
+    `type` ENUM('Silla', 'Tarima') NOT NULL DEFAULT 'Silla',
+    `itemType` ENUM('Tarima pista', 'Silla VIP', 'Silla general', 'Silla de patrocinante', 'Silla preferencial') NOT NULL DEFAULT 'Silla general',
     `name` VARCHAR(191) NOT NULL,
     `chairNumber` VARCHAR(191) NULL,
     `groupId` VARCHAR(191) NULL,
@@ -420,11 +436,12 @@ CREATE TABLE `event_seats` (
     `id` VARCHAR(191) NOT NULL,
     `eventId` VARCHAR(191) NOT NULL,
     `seatingMapElementId` VARCHAR(191) NOT NULL,
-    `status` ENUM('Disponible', 'Reservado', 'Pagado') NOT NULL DEFAULT 'Disponible',
+    `status` ENUM('Disponible', 'Reservado', 'Pendiente', 'Pagado') NOT NULL DEFAULT 'Disponible',
     `reservedAt` DATETIME(3) NULL,
     `expiresAt` DATETIME(3) NULL,
     `userId` VARCHAR(191) NULL,
-    `studentId` VARCHAR(191) NULL,
+    `clientId` VARCHAR(191) NULL,
+    `paymentOrderId` VARCHAR(255) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
@@ -441,7 +458,13 @@ ALTER TABLE `employees` ADD CONSTRAINT `employees_userId_fkey` FOREIGN KEY (`use
 ALTER TABLE `students` ADD CONSTRAINT `students_groupId_fkey` FOREIGN KEY (`groupId`) REFERENCES `groups`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `students` ADD CONSTRAINT `students_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `clients` ADD CONSTRAINT `clients_studentId_fkey` FOREIGN KEY (`studentId`) REFERENCES `students`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `clients` ADD CONSTRAINT `clients_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `clients` ADD CONSTRAINT `clients_groupId_fkey` FOREIGN KEY (`groupId`) REFERENCES `groups`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `orders` ADD CONSTRAINT `orders_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
@@ -450,13 +473,13 @@ ALTER TABLE `orders` ADD CONSTRAINT `orders_userId_fkey` FOREIGN KEY (`userId`) 
 ALTER TABLE `order_items` ADD CONSTRAINT `order_items_orderId_fkey` FOREIGN KEY (`orderId`) REFERENCES `orders`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `order_items` ADD CONSTRAINT `order_items_studentId_fkey` FOREIGN KEY (`studentId`) REFERENCES `students`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `order_items` ADD CONSTRAINT `order_items_clientId_fkey` FOREIGN KEY (`clientId`) REFERENCES `clients`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `payment_orders` ADD CONSTRAINT `payment_orders_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `payment_orders` ADD CONSTRAINT `payment_orders_studentId_fkey` FOREIGN KEY (`studentId`) REFERENCES `students`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `payment_orders` ADD CONSTRAINT `payment_orders_clientId_fkey` FOREIGN KEY (`clientId`) REFERENCES `clients`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `payment_orders` ADD CONSTRAINT `payment_orders_orderId_fkey` FOREIGN KEY (`orderId`) REFERENCES `orders`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
@@ -468,7 +491,7 @@ ALTER TABLE `products` ADD CONSTRAINT `products_categoryId_fkey` FOREIGN KEY (`c
 ALTER TABLE `transactions` ADD CONSTRAINT `transactions_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `transactions` ADD CONSTRAINT `transactions_studentId_fkey` FOREIGN KEY (`studentId`) REFERENCES `students`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `transactions` ADD CONSTRAINT `transactions_clientId_fkey` FOREIGN KEY (`clientId`) REFERENCES `clients`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `transactions` ADD CONSTRAINT `transactions_paymentOrderId_fkey` FOREIGN KEY (`paymentOrderId`) REFERENCES `payment_orders`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
@@ -501,19 +524,28 @@ ALTER TABLE `registrations` ADD CONSTRAINT `registrations_studentId_fkey` FOREIG
 ALTER TABLE `registrations` ADD CONSTRAINT `registrations_groupId_fkey` FOREIGN KEY (`groupId`) REFERENCES `groups`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `student_uniforms` ADD CONSTRAINT `student_uniforms_studentId_fkey` FOREIGN KEY (`studentId`) REFERENCES `students`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `registrations` ADD CONSTRAINT `registrations_clientId_fkey` FOREIGN KEY (`clientId`) REFERENCES `clients`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `student_uniforms` ADD CONSTRAINT `student_uniforms_uniformId_fkey` FOREIGN KEY (`uniformId`) REFERENCES `uniforms`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `client_uniforms` ADD CONSTRAINT `client_uniforms_studentId_fkey` FOREIGN KEY (`studentId`) REFERENCES `students`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `student_uniforms` ADD CONSTRAINT `student_uniforms_costumeId_fkey` FOREIGN KEY (`costumeId`) REFERENCES `costumes`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `client_uniforms` ADD CONSTRAINT `client_uniforms_costumeId_fkey` FOREIGN KEY (`costumeId`) REFERENCES `costumes`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `student_costumes` ADD CONSTRAINT `student_costumes_studentId_fkey` FOREIGN KEY (`studentId`) REFERENCES `students`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `client_uniforms` ADD CONSTRAINT `client_uniforms_uniformId_fkey` FOREIGN KEY (`uniformId`) REFERENCES `uniforms`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `student_costumes` ADD CONSTRAINT `student_costumes_costumeId_fkey` FOREIGN KEY (`costumeId`) REFERENCES `costumes`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `client_uniforms` ADD CONSTRAINT `client_uniforms_clientId_fkey` FOREIGN KEY (`clientId`) REFERENCES `clients`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `client_costumes` ADD CONSTRAINT `client_costumes_studentId_fkey` FOREIGN KEY (`studentId`) REFERENCES `students`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `client_costumes` ADD CONSTRAINT `client_costumes_costumeId_fkey` FOREIGN KEY (`costumeId`) REFERENCES `costumes`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `client_costumes` ADD CONSTRAINT `client_costumes_clientId_fkey` FOREIGN KEY (`clientId`) REFERENCES `clients`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `account_payables` ADD CONSTRAINT `account_payables_supplierId_fkey` FOREIGN KEY (`supplierId`) REFERENCES `Supplier`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
@@ -537,4 +569,7 @@ ALTER TABLE `event_seats` ADD CONSTRAINT `event_seats_seatingMapElementId_fkey` 
 ALTER TABLE `event_seats` ADD CONSTRAINT `event_seats_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `event_seats` ADD CONSTRAINT `event_seats_studentId_fkey` FOREIGN KEY (`studentId`) REFERENCES `students`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `event_seats` ADD CONSTRAINT `event_seats_clientId_fkey` FOREIGN KEY (`clientId`) REFERENCES `clients`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `event_seats` ADD CONSTRAINT `event_seats_paymentOrderId_fkey` FOREIGN KEY (`paymentOrderId`) REFERENCES `payment_orders`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
