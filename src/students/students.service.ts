@@ -273,6 +273,8 @@ export class StudentsService {
         // Verificar existencia del cliente-estudiante y obtener el studentId
         const currentClient = await this.findOne(id);
 
+        // console.log({ updateStudentDto })
+
         const {
             dni,
             firstName,
