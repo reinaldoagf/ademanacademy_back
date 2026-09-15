@@ -24,6 +24,7 @@ import { OrdersModule } from './orders/orders.module';
 import { EventsModule } from './events/events.module';
 import { SeatingMapsModule } from './seating-maps/seating-maps.module';
 import { EventSeatsModule } from './event-seats/event-seats.module';
+import { ClientsModule } from './clients/clients.module';
 
 @Module({
   imports: [
@@ -53,7 +54,8 @@ import { EventSeatsModule } from './event-seats/event-seats.module';
     OrdersModule,
     EventsModule,
     SeatingMapsModule,
-    EventSeatsModule
+    EventSeatsModule,
+    ClientsModule
   ],
 })
 export class AppModule { }

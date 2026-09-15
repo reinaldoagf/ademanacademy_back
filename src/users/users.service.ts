@@ -212,6 +212,7 @@ export class UsersService {
                 firstName: representedStudent.firstName,
                 lastName: representedStudent.lastName,
                 dni: representedStudent.dni || null,
+                email: representedStudent.email || null,
                 birthDate: new Date(representedStudent.birthDate),
                 type: ClientType.student,
                 userId: userId,
@@ -254,9 +255,10 @@ export class UsersService {
               firstName,
               lastName,
               dni: user.dni,
+              email: user.email,
               birthDate: new Date(),
               userId: userId,
-              address: 'Dirección por definir',
+              address: user.address || '',
               phone: user.phone || null,
             }
           });

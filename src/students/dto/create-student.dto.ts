@@ -10,6 +10,10 @@ export class CreateStudentDto {
 
     @IsString()
     @IsNotEmpty()
+    email: string;
+
+    @IsString()
+    @IsNotEmpty()
     firstName: string;
 
     @IsString()

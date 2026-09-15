@@ -8,7 +8,7 @@ CREATE TABLE `users` (
     `password` VARCHAR(255) NULL,
     `isAdmin` BOOLEAN NOT NULL DEFAULT false,
     `profileOnboarding` BOOLEAN NOT NULL DEFAULT false,
-    `profileType` ENUM('Representante', 'Alumno') NULL,
+    `profileType` ENUM('Representante', 'Estudiante') NULL,
     `occupation` VARCHAR(150) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
@@ -63,8 +63,10 @@ CREATE TABLE `clients` (
     `dni` VARCHAR(30) NULL,
     `firstName` VARCHAR(150) NOT NULL,
     `lastName` VARCHAR(150) NOT NULL,
+    `email` VARCHAR(180) NULL,
     `birthDate` DATE NOT NULL,
     `address` TEXT NOT NULL,
+    `countryCode` VARCHAR(40) NULL,
     `phone` VARCHAR(40) NULL,
     `studentId` VARCHAR(191) NULL,
     `userId` VARCHAR(36) NULL,
@@ -73,6 +75,7 @@ CREATE TABLE `clients` (
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
+    UNIQUE INDEX `clients_email_key`(`email`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 

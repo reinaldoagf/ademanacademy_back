@@ -28,6 +28,7 @@ export class StudentsService {
     async create(createStudentDto: CreateStudentDto): Promise<any> {
         const {
             dni,
+            email,
             firstName,
             lastName,
             birthDate,
@@ -69,6 +70,7 @@ export class StudentsService {
             const newClient = await tx.client.create({
                 data: {
                     dni,
+                    email,
                     firstName,
                     lastName,
                     birthDate: new Date(birthDate),

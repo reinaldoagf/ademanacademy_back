@@ -97,11 +97,13 @@ model Client {
   dni       String?  @db.VarChar(30)
   firstName String   @db.VarChar(150)
   lastName  String   @db.VarChar(150)
+  email     String?  @unique @db.VarChar(180)
   birthDate DateTime @db.Date
 
   // 🎯 NUEVOS CAMPOS DEL ALUMNO
-  address String  @db.Text
-  phone   String? @db.VarChar(40) // Opcional
+  address     String  @db.Text
+  countryCode String? @db.VarChar(40) // Opcional
+  phone       String? @db.VarChar(40) // Opcional
 
   student   Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
   studentId String?
@@ -724,7 +726,7 @@ enum LockerRoomCategory {
 
 enum ProfileType {
   representative @map("Representante")
-  client         @map("Alumno")
+  student        @map("Estudiante")
 }
 
 enum Kinship {
