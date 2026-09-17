@@ -11,7 +11,7 @@ export class OrdersService {
     constructor(private readonly prisma: PrismaService) { }
 
     async create(createOrderDto: CreateOrderDto) {
-        const { userId, items, status } = createOrderDto;
+        const { clientId, items, status } = createOrderDto;
 
         // 1. Calcular monto total
         const totalAmount = items.reduce((acc, item) => {
@@ -59,10 +59,14 @@ export class OrdersService {
                 }
             }
 
+            const user = await tx.user.findUnique({
+                where: { id: clientId },
+            });
+
             // 3. Crear la Orden con sus OrderItems
             const order = await tx.order.create({
                 data: {
-                    userId,
+                    clientId,
                     totalAmount,
                     ...(status && { status }),
                     items: {
@@ -88,7 +92,7 @@ export class OrdersService {
             // 5. Crear automáticamente la PaymentOrder
             const paymentOrder = await tx.paymentOrder.create({
                 data: {
-                    userId,
+                    clientId,
                     orderId: order.id,
                     concept: primaryConcept,
                     amount: totalAmount,
@@ -124,7 +128,9 @@ export class OrdersService {
                 take: limit,
                 orderBy: { createdAt: 'desc' },
                 include: {
-                    user: true,
+                    client: {
+                        include: { user: true }
+                    },
                     items: {
                         include: { client: { include: { student: true } } },
                     },
@@ -151,7 +157,9 @@ export class OrdersService {
         const order = await this.prisma.order.findUnique({
             where: { id },
             include: {
-                user: true,
+                client: {
+                    include: { user: true }
+                },
                 items: {
                     include: { client: { include: { student: true } } },
                 },

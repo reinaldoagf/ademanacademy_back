@@ -30,15 +30,14 @@ model User {
   employee          Employee?
   // Relación inversa: Un usuario puede tener muchos representados
   client            Client[]
-  paymentOrders     PaymentOrder[]
-  orders            Order[]
   transactions      Transaction[]
   groups            Group[]
   registrations     Registration[]
 
-  createdAt  DateTime    @default(now()) @map("createdAt")
-  updatedAt  DateTime    @updatedAt @map("updatedAt")
-  eventSeats EventSeat[]
+  createdAt     DateTime       @default(now()) @map("createdAt")
+  updatedAt     DateTime       @updatedAt @map("updatedAt")
+  eventSeats    EventSeat[]
+  paymentOrders PaymentOrder[]
 
   @@map("users")
 }
@@ -112,6 +111,7 @@ model Client {
   userId        String?        @db.VarChar(36) // Ahora acepta NULL en MySQL si el Admin registra al estudiante directamente
   transactions  Transaction[]
   paymentOrders PaymentOrder[]
+  orders        Order[]
   orderItems    OrderItem[]
   type          ClientType     @default(representative)
 
@@ -130,9 +130,9 @@ model Client {
 }
 
 model Order {
-  id     String @id @default(uuid())
-  userId String @db.VarChar(36)
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id       String @id @default(uuid())
+  clientId String @db.VarChar(36)
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   totalAmount Decimal     @db.Decimal(10, 2)
   status      OrderStatus @default(pending_preparation) // Estado logístico
@@ -166,8 +166,6 @@ model OrderItem {
 
 model PaymentOrder {
   id       String  @id @default(cuid())
-  userId   String  @db.VarChar(36)
-  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   clientId String? @db.VarChar(36)
   client   Client? @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
@@ -187,6 +185,8 @@ model PaymentOrder {
 
   transactions Transaction[] // Una orden de pago puede tener varios intentos de transacciones
   eventSeats   EventSeat[] // Relación 1 a N con asientos
+  user         User?         @relation(fields: [userId], references: [id])
+  userId       String?
 
   @@map("payment_orders")
 }

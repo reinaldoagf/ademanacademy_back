@@ -82,7 +82,7 @@ CREATE TABLE `clients` (
 -- CreateTable
 CREATE TABLE `orders` (
     `id` VARCHAR(191) NOT NULL,
-    `userId` VARCHAR(36) NOT NULL,
+    `clientId` VARCHAR(36) NOT NULL,
     `totalAmount` DECIMAL(10, 2) NOT NULL,
     `status` ENUM('Pendiente por Preparar', 'Listo para Entregar', 'Entregado', 'Cancelado') NOT NULL DEFAULT 'Pendiente por Preparar',
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -107,7 +107,6 @@ CREATE TABLE `order_items` (
 -- CreateTable
 CREATE TABLE `payment_orders` (
     `id` VARCHAR(191) NOT NULL,
-    `userId` VARCHAR(36) NOT NULL,
     `clientId` VARCHAR(36) NULL,
     `orderId` VARCHAR(255) NULL,
     `concept` ENUM('Mensualidad', 'Matrícula', 'Vestuario', 'Entradas Gala', 'Producto') NOT NULL,
@@ -116,6 +115,7 @@ CREATE TABLE `payment_orders` (
     `status` ENUM('Pendiente', 'Pagada', 'Vencida', 'Anulada') NOT NULL DEFAULT 'Pendiente',
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
+    `userId` VARCHAR(191) NULL,
 
     UNIQUE INDEX `payment_orders_orderId_key`(`orderId`),
     PRIMARY KEY (`id`)
@@ -470,7 +470,7 @@ ALTER TABLE `clients` ADD CONSTRAINT `clients_userId_fkey` FOREIGN KEY (`userId`
 ALTER TABLE `clients` ADD CONSTRAINT `clients_groupId_fkey` FOREIGN KEY (`groupId`) REFERENCES `groups`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `orders` ADD CONSTRAINT `orders_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `orders` ADD CONSTRAINT `orders_clientId_fkey` FOREIGN KEY (`clientId`) REFERENCES `clients`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `order_items` ADD CONSTRAINT `order_items_orderId_fkey` FOREIGN KEY (`orderId`) REFERENCES `orders`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
@@ -479,13 +479,13 @@ ALTER TABLE `order_items` ADD CONSTRAINT `order_items_orderId_fkey` FOREIGN KEY 
 ALTER TABLE `order_items` ADD CONSTRAINT `order_items_clientId_fkey` FOREIGN KEY (`clientId`) REFERENCES `clients`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `payment_orders` ADD CONSTRAINT `payment_orders_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE `payment_orders` ADD CONSTRAINT `payment_orders_clientId_fkey` FOREIGN KEY (`clientId`) REFERENCES `clients`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `payment_orders` ADD CONSTRAINT `payment_orders_orderId_fkey` FOREIGN KEY (`orderId`) REFERENCES `orders`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `payment_orders` ADD CONSTRAINT `payment_orders_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `products` ADD CONSTRAINT `products_categoryId_fkey` FOREIGN KEY (`categoryId`) REFERENCES `product_categories`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;

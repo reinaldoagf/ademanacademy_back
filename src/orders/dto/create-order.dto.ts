@@ -4,9 +4,9 @@ import { OrderStatus } from '@prisma/client';
 import { CreateOrderItemDto } from './create-order-item.dto';
 
 export class CreateOrderDto {
-    @IsNotEmpty({ message: 'El userId es obligatorio' })
+    @IsNotEmpty({ message: 'El cliente es obligatorio' })
     @IsString()
-    userId: string;
+    clientId: string;
 
     @IsOptional()
     @IsEnum(OrderStatus, { message: 'El estado del pedido no es válido' })
