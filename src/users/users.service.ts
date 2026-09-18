@@ -250,6 +250,14 @@ export class UsersService {
           const nameParts = user.name.split(' ');
           const firstName = nameParts[0] || 'Por definir';
           const lastName = nameParts.slice(1).join(' ') || 'Por definir';
+          const student = await tx.student.create({
+            data: {
+              kinship: 'other',
+              shirtSize: 'M',
+              hasExperience: false,
+              medicalObservations: null,
+            }
+          });
           const client = await tx.client.create({
             data: {
               firstName,
@@ -258,16 +266,10 @@ export class UsersService {
               email: user.email,
               birthDate: new Date(),
               userId: userId,
+              studentId: student.id,
               address: user.address || '',
               phone: user.phone || null,
-            }
-          });
-          const student = await tx.student.create({
-            data: {
-              kinship: 'other',
-              shirtSize: 'M',
-              hasExperience: false,
-              medicalObservations: null,
+              type: ClientType.student,
             }
           });
           if (dto.payment) {
@@ -290,6 +292,7 @@ export class UsersService {
             data: {
               userId: userId,
               studentId: student.id,
+              clientId: client.id,
             }
           });
         }

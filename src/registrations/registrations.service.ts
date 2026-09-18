@@ -48,7 +48,8 @@ export class RegistrationsService {
                     user: {
                         select: { name: true, email: true, dni: true, phone: true },
                     },
-                    student: true
+                    student: true,
+                    client: true,
                 },
             }),
             this.prisma.registration.count({ where }),
@@ -64,6 +65,7 @@ export class RegistrationsService {
                 realId: tx.id,
                 student: tx.student,
                 user: tx.user,
+                client: tx.client,
                 status: tx.status,
                 createdAt: tx.createdAt.toISOString().split('T')[0],
             })),
