@@ -250,12 +250,14 @@ export class TransactionsService {
                 });
 
                 // Paso B: Actualizar la Orden de Pago relacionada (si existe relación en tu esquema)
-                /* if (transaction.paymentOrderId) {
+                if (transaction.paymentOrderId) {
                     await tx.paymentOrder.update({
                         where: { id: transaction.paymentOrderId },
-                        data: { status: 'approved' },
+                        data: {
+                            status: 'paid',
+                        },
                     });
-                } */
+                }
 
                 // Paso C: Si es Matrícula, inscribimos al estudiante en el grupo asignado
                 if (transaction.concept === 'tuition' && groupId && transaction.clientId) {
@@ -267,24 +269,43 @@ export class TransactionsService {
                     });
 
                     if (!group) {
-                        throw new NotFoundException('El grupo especificada no existe.');
+                        throw new NotFoundException('El grupo especificado no existe.');
                     }
 
-                    if (group.totalNumberOfSlots == group.clients.length) {
+                    if (group.totalNumberOfSlots === group.clients.length) {
                         throw new NotFoundException('Grupo sin cupos disponibles.');
                     }
 
-                    const student = await tx.student.update({
+                    // 1. Buscamos el cliente para obtener su relación con el estudiante
+                    const client = await tx.client.findUnique({
                         where: { id: transaction.clientId },
-                        data: { groupId: group.id }, // Asignamos el id del grupo elegido en el modal
+                        select: { id: true, studentId: true }
                     });
-                    if (!student) {
-                        throw new NotFoundException('El estudiante no existe.');
+
+                    if (!client) {
+                        throw new NotFoundException('El cliente asociado a la transacción no existe.');
                     }
+
+                    // 2. Si el cliente tiene un estudiante asociado, actualizamos el Student
+                    if (client.studentId) {
+                        await tx.student.update({
+                            where: { id: client.studentId }, // 👈 Usamos client.studentId
+                            data: { groupId: group.id },
+                        });
+                    }
+
+                    // 3. También actualizamos el groupId en Client si tu negocio lo requiere
+                    await tx.client.update({
+                        where: { id: client.id },
+                        data: { groupId: group.id },
+                    });
+
+                    // 4. Actualizamos las inscripciones pendientes
                     await tx.registration.updateMany({
-                        where: { clientId: student.id, status: 'pending' },
+                        where: { clientId: client.id, status: 'pending' },
                         data: {
-                            status: 'approved', groupId: group.id
+                            status: 'approved',
+                            groupId: group.id
                         }
                     });
                 }

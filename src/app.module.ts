@@ -25,6 +25,8 @@ import { EventsModule } from './events/events.module';
 import { SeatingMapsModule } from './seating-maps/seating-maps.module';
 import { EventSeatsModule } from './event-seats/event-seats.module';
 import { ClientsModule } from './clients/clients.module';
+import { InstructorsModule } from './instructors/instructors.module';
+
 
 @Module({
   imports: [
@@ -55,7 +57,8 @@ import { ClientsModule } from './clients/clients.module';
     EventsModule,
     SeatingMapsModule,
     EventSeatsModule,
-    ClientsModule
+    ClientsModule,
+    InstructorsModule
   ],
 })
 export class AppModule { }
