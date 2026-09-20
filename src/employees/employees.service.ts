@@ -41,6 +41,7 @@ export class EmployeesService {
                     typeOfEmployee: data.typeOfEmployee,
                     medicalObservations: data.medicalObservations,
                     address: data.address,
+                    countryCode: data.countryCode,
                     phone: data.phone,
                     hoursTaughtMonth: data.hoursTaughtMonth ?? 1,
                     hourlyRate: new Prisma.Decimal(data.hourlyRate ?? 0),

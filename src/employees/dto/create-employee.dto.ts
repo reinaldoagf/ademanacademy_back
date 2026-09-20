@@ -18,6 +18,10 @@ export class CreateEmployeeDto {
     @IsString()
     name: string;
 
+    @IsOptional()
+    @IsString()
+    countryCode?: string;
+
     @IsString()
     @IsOptional()
     beat?: string;

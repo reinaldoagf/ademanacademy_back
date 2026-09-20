@@ -53,6 +53,7 @@ model Employee {
   typeOfEmployee      TypeOfEmployee @default(administrative)
   medicalObservations String?        @db.Text
   address             String         @db.Text
+  countryCode         String?        @db.VarChar(40) // Opcional
   phone               String?        @db.VarChar(40) // Opcional
   hoursTaughtMonth    Int            @default(1)
   hourlyRate          Decimal        @db.Decimal(10, 2)
