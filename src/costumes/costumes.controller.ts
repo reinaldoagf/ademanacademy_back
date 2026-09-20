@@ -111,7 +111,6 @@ export class CostumesController {
                 throw new BadRequestException('El formato de las imágenes existentes es inválido.');
             }
         }
-
         // Pasamos todo al servicio
         return this.costumesService.update(id, {
             ...updateCostumeDto,

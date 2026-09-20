@@ -138,7 +138,6 @@ export class ProductsController {
                 throw new BadRequestException('El formato de las imágenes existentes es inválido.');
             }
         }
-
         // Pasamos los datos al servicio
         return this.productsService.update(id, updateProductDto, existingImages, newFilePaths);
     }
