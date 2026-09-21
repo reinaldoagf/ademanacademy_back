@@ -72,11 +72,26 @@ export class EventSeatsService {
         });
     }
     async reserveOrBuySeats(dto: ReserveSeatsDto) {
-        const { eventId, seatingMapElementIds, status, userId, clientId, totalAmount } = dto;
+        const { eventId, seatingMapElementIds, status, clientId, totalAmount, reservationDurationMinutes = 10 } = dto;
         const now = new Date();
-        const expiresAt = status === SeatStatus.reserved ? new Date(now.getTime() + 10 * 60 * 1000) : null;
+        const expiresAt = status === SeatStatus.reserved
+            ? new Date(now.getTime() + reservationDurationMinutes * 60 * 1000)
+            : null;
 
+        if (!clientId) {
+            throw new BadRequestException('El ID del cliente es obligatorio para realizar la reserva.');
+        }
+
+        // Aumentamos el timeout a 15000 ms por seguridad operativa
         return await this.prisma.$transaction(async (tx) => {
+            const client = await tx.client.findUnique({
+                where: { id: clientId },
+            });
+
+            if (!client) {
+                throw new NotFoundException(`Cliente con ID ${clientId} no fue encontrado.`);
+            }
+
             // 1. Validar disponibilidad
             const existingSeats = await tx.eventSeat.findMany({
                 where: {
@@ -93,14 +108,13 @@ export class EventSeatsService {
                         throw new ConflictException(`El asiento "${elementId}" ya ha sido vendido.`);
                     }
 
-                    // Si la reserva sigue vigente (expiresAt > now) y pertenece a otro usuario
                     const isReservationActive = currentSeat.expiresAt && currentSeat.expiresAt > now;
-                    const isDifferentUser = currentSeat.userId !== userId;
+                    const isDifferentClient = currentSeat.clientId !== clientId;
 
                     if (
                         (currentSeat.status === SeatStatus.reserved || currentSeat.status === SeatStatus.payment_pending) &&
                         isReservationActive &&
-                        isDifferentUser
+                        isDifferentClient
                     ) {
                         throw new ConflictException(`El asiento "${elementId}" está reservado por otro usuario.`);
                     }
@@ -109,56 +123,73 @@ export class EventSeatsService {
 
             // 2. Crear Orden de Pago si es una Reserva
             let paymentOrder: Awaited<ReturnType<typeof tx.paymentOrder.create>> | null = null;
-            if (status === SeatStatus.reserved) {
-                paymentOrder = await tx.paymentOrder.create({
-                    data: {
-                        userId,
-                        clientId: clientId || null,
-                        concept: ConceptType.ticket, // Cambia por tu enum de concepto
-                        amount: totalAmount,
-                        status: PaymentOrderStatus.pending,
-                    },
+
+            paymentOrder = await tx.paymentOrder.create({
+                data: {
+                    userId: client.userId ?? null,
+                    clientId: client.id,
+                    concept: ConceptType.ticket,
+                    amount: totalAmount,
+                    status: status === SeatStatus.reserved ? PaymentOrderStatus.pending : PaymentOrderStatus.paid,
+                },
+            });
+
+
+            // 3. SEPARAR Y EJECUTAR OPERACIONES EN LOTE (REEMPLAZO DE UPSERT)
+            const existingElementIds = new Set(existingSeats.map((s) => s.seatingMapElementId));
+            const newElementIds = seatingMapElementIds.filter((id) => !existingElementIds.has(id));
+
+            const seatDataCommon = {
+                status,
+                reservedAt: now,
+                expiresAt,
+                userId: client.userId ?? null,
+                clientId: client.id,
+                paymentOrderId: paymentOrder ? paymentOrder.id : null,
+            };
+
+            // A. Crear asientos que NO existían previamente (1 sola query SQL)
+            if (newElementIds.length > 0) {
+                await tx.eventSeat.createMany({
+                    data: newElementIds.map((elementId) => ({
+                        eventId,
+                        seatingMapElementId: elementId,
+                        ...seatDataCommon,
+                    })),
                 });
             }
 
-            // 3. Upsert de asientos vinculados a la PaymentOrder
-            const operations = seatingMapElementIds.map((elementId) =>
-                tx.eventSeat.upsert({
+            // B. Actualizar asientos que YA existían (1 sola query SQL)
+            if (existingElementIds.size > 0) {
+                await tx.eventSeat.updateMany({
                     where: {
-                        eventId_seatingMapElementId: { eventId, seatingMapElementId: elementId },
-                    },
-                    update: {
-                        status,
-                        reservedAt: now,
-                        expiresAt,
-                        userId: userId || null,
-                        clientId: clientId || null,
-                        paymentOrderId: paymentOrder ? paymentOrder.id : null,
-                    },
-                    create: {
                         eventId,
-                        seatingMapElementId: elementId,
-                        status,
-                        reservedAt: now,
-                        expiresAt,
-                        userId: userId || null,
-                        clientId: clientId || null,
-                        paymentOrderId: paymentOrder ? paymentOrder.id : null,
+                        seatingMapElementId: { in: Array.from(existingElementIds) },
                     },
-                })
-            );
+                    data: seatDataCommon,
+                });
+            }
 
-            const result = await Promise.all(operations);
+            // 4. Retornar los asientos actualizados
+            const updatedSeats = await tx.eventSeat.findMany({
+                where: {
+                    eventId,
+                    seatingMapElementId: { in: seatingMapElementIds },
+                },
+            });
 
             return {
-                message: 'Reserva realizada por 10 minutos',
+                message: status === SeatStatus.reserved
+                    ? `Reserva realizada por ${reservationDurationMinutes} minutos`
+                    : 'Compra procesada exitosamente',
                 expiresAt,
                 paymentOrderId: paymentOrder?.id,
-                seats: result,
+                seats: updatedSeats,
             };
+        }, {
+            timeout: 15000, // Timeout extendido de respaldo
         });
     }
-
     // OPCIÓN 2 (ALT): Si prefieres conservar el historial y actualizar el estado a AVAILABLE:
     @Cron(CronExpression.EVERY_MINUTE)
     async handleExpiredReservationsUpdate() {
@@ -182,18 +213,54 @@ export class EventSeatsService {
 
         const expiredIds = expiredSeats.map((seat) => seat.id);
 
-        // 2. Actualizar las reservas a disponible
-        await this.prisma.eventSeat.updateMany({
+        // 1. Obtener los asientos que expiraron JUNTO con sus paymentOrderId antes de limpiar las relaciones
+        const seatsToRelease = await this.prisma.eventSeat.findMany({
             where: {
                 id: { in: expiredIds },
             },
-            data: {
-                status: SeatStatus.available,
-                userId: null,
-                clientId: null,
-                expiresAt: null,
-                reservedAt: null,
+            select: {
+                id: true,
+                paymentOrderId: true,
             },
+        });
+
+        // Extraer los IDs únicos de paymentOrder que no sean nulos
+        const paymentOrderIdsToDelete = Array.from(
+            new Set(
+                seatsToRelease
+                    .map((seat) => seat.paymentOrderId)
+                    .filter((id): id is string => Boolean(id))
+            )
+        );
+
+        // 2. Ejecutar la actualización y la eliminación en una transacción de Prisma
+        const [updatedSeatsCount, deletedPaymentOrders] = await this.prisma.$transaction([
+            // A. Desvincular y actualizar el estado de los asientos expirados
+            this.prisma.eventSeat.updateMany({
+                where: {
+                    id: { in: expiredIds },
+                },
+                data: {
+                    status: SeatStatus.available,
+                    userId: null,
+                    clientId: null,
+                    expiresAt: null,
+                    reservedAt: null,
+                    paymentOrderId: null, // Limpiamos la referencia a la orden de pago
+                },
+            }),
+
+            // B. Eliminar las órdenes de pago asociadas (o actualizar su status a 'cancelled')
+            this.prisma.paymentOrder.deleteMany({
+                where: {
+                    id: { in: paymentOrderIdsToDelete },
+                },
+            }),
+        ]);
+
+        console.log({
+            updatedSeatsCount: updatedSeatsCount.count,
+            deletedPaymentOrdersCount: deletedPaymentOrders.count,
         });
 
         // 3. Agrupar por eventId y transmitir el evento en tiempo real

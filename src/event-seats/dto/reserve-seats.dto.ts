@@ -1,5 +1,5 @@
 // dto/reserve-seats.dto.ts
-import { IsArray, IsEnum, IsNotEmpty, IsOptional, IsNumber, IsPositive, IsUUID } from 'class-validator';
+import { IsArray, IsEnum, IsNotEmpty, IsOptional, IsNumber, IsPositive, IsUUID, Min } from 'class-validator';
 import { SeatStatus } from '@prisma/client';
 
 export class ReserveSeatsDto {
@@ -17,15 +17,15 @@ export class ReserveSeatsDto {
     status: SeatStatus; // RESERVED o SOLD
 
     @IsUUID()
-    @IsNotEmpty({ message: 'El usuario es requerido.' })
-    userId: string;
-
-    @IsUUID()
-    @IsOptional()
-    clientId?: string;
+    @IsNotEmpty({ message: 'El cliente es requerido.' })
+    clientId: string;
 
     @IsNumber({ maxDecimalPlaces: 2 }, { message: 'El monto debe ser un número válido.' })
     @IsPositive({ message: 'El monto debe ser mayor a cero.' })
     totalAmount: number;
 
+    @IsOptional()
+    @IsNumber()
+    @Min(1, { message: 'El tiempo de reserva debe ser de al menos 1 minuto.' })
+    reservationDurationMinutes?: number;
 }
