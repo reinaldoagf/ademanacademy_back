@@ -6,7 +6,72 @@ import { GetPaymentOrdersFilterDto } from './dto/get-payment-orders-filter.dto'
 export class PaymentOrdersService {
     constructor(private readonly prisma: PrismaService) { }
 
-    // 🔍 READ ALL (Con paginación y filtro por nombre del salón o tipo)
+    async findMyOrders(filters: GetPaymentOrdersFilterDto, userId: string) {
+        const { page = 1, limit = 10, search, status, concept } = filters;
+        const skip = (page - 1) * limit;
+
+        // Construcción de condiciones dinámicas de búsqueda
+        const where: any = {};
+        console.log({ userId })
+        // Filtro por usuario logueado
+        where.userId = userId;
+
+        if (status) {
+            where.status = status;
+        }
+        if (concept) {
+            where.concept = concept;
+        }
+        if (search) {
+            where.OR = [
+                {
+                    user: {
+                        OR: [
+                            { name: { contains: search } },
+                            { email: { contains: search } },
+                        ],
+                    },
+                },
+                {
+                    student: {
+                        OR: [
+                            { firstName: { contains: search } },
+                            { lastName: { contains: search } },
+                        ],
+                    },
+                },
+            ];
+        }
+
+        // Ejecutar consultas en paralelo para optimizar rendimiento en BD
+        const [totalItems, data] = await Promise.all([
+            this.prisma.paymentOrder.count({ where }),
+            this.prisma.paymentOrder.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { createdAt: 'desc' },
+                include: {
+                    user: true,
+                    client: { include: { student: true } }
+                }
+            }),
+        ]);
+
+        const totalPages = Math.ceil(totalItems / limit);
+
+        return {
+            meta: {
+                totalItems,
+                itemCount: data.length,
+                itemsPerPage: limit,
+                totalPages,
+                currentPage: page,
+            },
+            data,
+        };
+    }
+
     async findAll(filters: GetPaymentOrdersFilterDto) {
         const { page = 1, limit = 10, search, status, concept } = filters;
         const skip = (page - 1) * limit;
@@ -70,5 +135,32 @@ export class PaymentOrdersService {
             },
             data,
         };
+    }
+
+    async findOne(id: string) {
+        const paymentOrder = await this.prisma.paymentOrder.findUnique({
+            where: { id },
+            include: {
+                user: true,
+                client: { include: { student: true } },
+                order: {
+                    include: {
+                        items: true
+                    }
+                },
+                eventSeats: {
+                    include: {
+                        event: true,
+                        seatingMapElement: true
+                    }
+                }
+            }
+        });
+
+        if (!paymentOrder) {
+            throw new NotFoundException(`Orden de pago con ID ${id} no encontrada`);
+        }
+
+        return paymentOrder;
     }
 }
