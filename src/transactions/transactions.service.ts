@@ -200,7 +200,13 @@ export class TransactionsService {
     async findOne(id: string) {
         const transaction = await this.prisma.transaction.findUnique({
             where: { id },
-            include: { user: true },
+            include: {
+                user: true, client: {
+                    include: {
+                        student: true
+                    }
+                },
+            },
         });
         if (!transaction) {
             throw new NotFoundException(`Transacción con ID ${id} no encontrada.`);
