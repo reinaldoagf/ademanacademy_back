@@ -161,7 +161,11 @@ export class TransactionsService {
                     user: {
                         select: { name: true, email: true, dni: true, phone: true },
                     },
-                    client: true,
+                    client: {
+                        include: {
+                            student: true,
+                        }
+                    },
                 },
             }),
             this.prisma.transaction.count({ where }),
