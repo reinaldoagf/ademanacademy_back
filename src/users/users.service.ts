@@ -3,10 +3,17 @@ import { Injectable, NotFoundException, Inject, BadRequestException, InternalSer
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { CompleteOnboardingDto, ProfileType } from './dto/complete-onboarding.dto';
 import { GetUsersFilterDto } from './dto/get-users-filter.dto';
-import { ClientType, User } from '@prisma/client'; // 🎯 Importación nativa estándar
-
+import { ClientType, User, Prisma } from '@prisma/client'; // 🎯 Importación nativa estándar
+export type UserWithClients = Prisma.UserGetPayload<{
+  include: {
+    client: {
+      include: {
+        student: true;
+      };
+    };
+  };
+}>;
 @Injectable()
 export class UsersService {
   // 💡 Tipamos como 'any' para evitar que TypeScript se queje por la estructura interna de accesores de Prisma v7
@@ -41,10 +48,18 @@ export class UsersService {
   /**
    * Busca un usuario por su correo electrónico (Utilizado en AuthService)
    */
-  async findByEmail(email: string): Promise<User | null> {
-    return await this.prismaClient.findUnique({
+  async findByEmail(email: string): Promise<UserWithClients | null> {
+    const user = await this.prismaClient.findUnique({
       where: { email },
+      include: {
+        client: {
+          include: {
+            student: true, // Incluye la información del estudiante si existe la relación
+          },
+        },
+      },
     });
+    return user
   }
 
   /**

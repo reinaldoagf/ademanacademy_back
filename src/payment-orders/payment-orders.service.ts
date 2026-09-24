@@ -12,7 +12,6 @@ export class PaymentOrdersService {
 
         // Construcción de condiciones dinámicas de búsqueda
         const where: any = {};
-        console.log({ userId })
         // Filtro por usuario logueado
         where.userId = userId;
 

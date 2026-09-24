@@ -91,6 +91,7 @@ export class AuthService {
         profileOnboarding: user.profileOnboarding,
         profileType: user.profileType,
         dni: user.dni,
+        client: user.client,
       },
     };
   }

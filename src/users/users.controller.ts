@@ -84,6 +84,11 @@ export class UsersController {
         throw new BadRequestException('Debes adjuntar el comprobante de pago.');
       }
     }
+    if (profileType === 'student') {
+      if (!file) {
+        throw new BadRequestException('Debes adjuntar el comprobante de pago.');
+      }
+    }
 
     const completeOnboardingDto = {
       profileType,
