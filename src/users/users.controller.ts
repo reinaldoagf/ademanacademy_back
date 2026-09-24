@@ -73,11 +73,11 @@ export class UsersController {
 
     const profileType = body.profileType;
     const representativeOccupation = body.representativeOccupation;
-    const clients = body.clients ? JSON.parse(body.clients) : undefined;
+    const representedStudents = body.representedStudents ? JSON.parse(body.representedStudents) : undefined;
     const payment = body.payment ? JSON.parse(body.payment) : undefined;
 
     if (profileType === 'representative') {
-      if (!clients || clients.length === 0) {
+      if (!representedStudents || representedStudents.length === 0) {
         throw new BadRequestException('Como representante, debes registrar al menos a un estudiante.');
       }
       if (!file) {
@@ -93,7 +93,7 @@ export class UsersController {
     const completeOnboardingDto = {
       profileType,
       representativeOccupation,
-      clients,
+      representedStudents,
       payment,
     };
 

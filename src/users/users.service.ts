@@ -205,6 +205,8 @@ export class UsersService {
             medicalObservations: representedStudent.medicalObservations || null,
           }));
 
+          console.log({ representedStudents })
+
           for (const representedStudent of representedStudents) {
             if (representedStudent.type == ClientType.student) {
               const student = await tx.student.create({
@@ -221,40 +223,41 @@ export class UsersService {
                   studentId: student.id,
                 }
               });
-            }
-            const client = await tx.client.create({
-              data: {
-                firstName: representedStudent.firstName,
-                lastName: representedStudent.lastName,
-                dni: representedStudent.dni || null,
-                email: representedStudent.email || null,
-                birthDate: new Date(representedStudent.birthDate),
-                type: ClientType.student,
-                userId: userId,
-                address: representedStudent.address,
-                phone: representedStudent.phone || null,
-              }
-            });
-            // 🎯 Operación D: Flujo e inserción de la información de Pago (Matrícula)
-            if (dto.payment) {
-
-              // 2. Crear el registro de la transacción enviada por el usuario
-              await tx.transaction.create({
+              const client = await tx.client.create({
                 data: {
+                  firstName: representedStudent.firstName,
+                  lastName: representedStudent.lastName,
+                  dni: representedStudent.dni || null,
+                  email: representedStudent.email || null,
+                  birthDate: new Date(representedStudent.birthDate),
+                  type: ClientType.student,
                   userId: userId,
-                  clientId: client.id,
-                  concept: 'tuition',
-                  amount: dto.payment.amount / representedStudents.length,
-                  method: 'bank_transfer', // Define un valor por defecto o extiéndelo en tu enum
-                  status: 'pending', // Queda 'pending' para auditoría manual del administrador
-                  referenceNumber: dto.payment.referenceNumber || null,
-                  bankName: dto.payment.bankName || null,
-                  receiptPath: receiptPath
+                  studentId: student.id,
+                  address: representedStudent.address,
+                  phone: representedStudent.phone || null,
                 }
               });
+              // 🎯 Operación D: Flujo e inserción de la información de Pago (Matrícula)
+              if (dto.payment) {
+
+                // 2. Crear el registro de la transacción enviada por el usuario
+                await tx.transaction.create({
+                  data: {
+                    userId: userId,
+                    clientId: client.id,
+                    concept: 'tuition',
+                    amount: dto.payment.amount / representedStudents.length,
+                    method: 'bank_transfer', // Define un valor por defecto o extiéndelo en tu enum
+                    status: 'pending', // Queda 'pending' para auditoría manual del administrador
+                    referenceNumber: dto.payment.referenceNumber || null,
+                    bankName: dto.payment.bankName || null,
+                    receiptPath: receiptPath
+                  }
+                });
 
 
 
+              }
             }
 
 
@@ -263,8 +266,8 @@ export class UsersService {
         // Operación C: Si es STUDENT autónomo
         if (dto.profileType === 'student') {
           const nameParts = user.name.split(' ');
-          const firstName = nameParts[0] || 'Por definir';
-          const lastName = nameParts.slice(1).join(' ') || 'Por definir';
+          const firstName = nameParts[0] || '';
+          const lastName = nameParts.slice(1).join(' ') || '';
           const student = await tx.student.create({
             data: {
               kinship: 'other',
