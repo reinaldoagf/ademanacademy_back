@@ -247,7 +247,7 @@ export class UsersService {
                   amount: dto.payment.amount / representedStudents.length,
                   method: 'bank_transfer', // Define un valor por defecto o extiéndelo en tu enum
                   status: 'pending', // Queda 'pending' para auditoría manual del administrador
-                  referenceNumber: dto.payment.reference || null,
+                  referenceNumber: dto.payment.referenceNumber || null,
                   bankName: dto.payment.bankName || null,
                   receiptPath: receiptPath
                 }
@@ -297,7 +297,7 @@ export class UsersService {
                 amount: dto.payment.amount,
                 method: 'bank_transfer', // Define un valor por defecto o extiéndelo en tu enum
                 status: 'pending', // Queda 'pending' para auditoría manual del administrador
-                referenceNumber: dto.payment.reference || null,
+                referenceNumber: dto.payment.referenceNumber || null,
                 bankName: dto.payment.bankName || null,
                 receiptPath: receiptPath
               }
