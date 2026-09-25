@@ -134,7 +134,11 @@ export class OrdersService {
                     items: {
                         include: { client: { include: { student: true } } },
                     },
-                    paymentOrder: true,
+                    paymentOrder: {
+                        include: {
+                            transactions: true,
+                        }
+                    },
                 }
             }),
         ]);
@@ -163,7 +167,11 @@ export class OrdersService {
                 items: {
                     include: { client: { include: { student: true } } },
                 },
-                paymentOrder: true,
+                paymentOrder: {
+                    include: {
+                        transactions: true,
+                    }
+                },
             },
         });
 
