@@ -82,7 +82,11 @@ export class GroupsService {
                 include: {
                     classroom: true,
                     instructor: true,
-                    students: true,
+                    students: {
+                        include: {
+                            clients: true
+                        }
+                    },
                     schedules: true,
                 }
             }),
