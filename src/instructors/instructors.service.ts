@@ -19,7 +19,8 @@ export class InstructorsService {
 
         if (search) {
             where.OR = [
-                { name: { contains: search } },
+                { firstName: { contains: search } },
+                { lastName: { contains: search } },
             ];
         }
 

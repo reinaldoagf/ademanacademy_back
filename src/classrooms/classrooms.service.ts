@@ -76,7 +76,11 @@ export class ClassroomsService {
                 include: {
                     groups: {
                         include: {
-                            students: true,
+                            students: {
+                                include: {
+                                    clients: true
+                                }
+                            },
                             schedules: {
                                 include: {
                                     group: true,
