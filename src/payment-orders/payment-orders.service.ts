@@ -117,7 +117,7 @@ export class PaymentOrdersService {
                 orderBy: { createdAt: 'desc' },
                 include: {
                     user: true,
-                    client: { include: { student: true } }
+                    client: { include: { user: true, student: true } }
                 }
             }),
         ]);
