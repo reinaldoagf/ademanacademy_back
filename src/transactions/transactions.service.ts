@@ -302,6 +302,15 @@ export class TransactionsService {
                             where: { id: client.studentId }, // 👈 Usamos client.studentId
                             data: { groupId: group.id },
                         });
+
+                        // 💡 CORRECCIÓN: Usamos updateMany con studentId de forma segura dentro de la transacción
+                        await tx.registration.updateMany({
+                            where: { studentId: client.studentId },
+                            data: {
+                                status: 'approved',
+                                groupId: group.id
+                            },
+                        });
                     }
 
                     // 3. También actualizamos el groupId en Client si tu negocio lo requiere
