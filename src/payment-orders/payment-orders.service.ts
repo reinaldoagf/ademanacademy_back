@@ -28,14 +28,16 @@ export class PaymentOrdersService {
                         OR: [
                             { name: { contains: search } },
                             { email: { contains: search } },
+                            { dni: { contains: search } },
                         ],
                     },
                 },
                 {
-                    student: {
+                    client: {
                         OR: [
                             { firstName: { contains: search } },
                             { lastName: { contains: search } },
+                            { dni: { contains: search } },
                         ],
                     },
                 },
@@ -96,7 +98,7 @@ export class PaymentOrdersService {
                     },
                 },
                 {
-                    student: {
+                    client: {
                         OR: [
                             { firstName: { contains: search } },
                             { lastName: { contains: search } },

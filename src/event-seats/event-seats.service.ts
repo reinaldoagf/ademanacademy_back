@@ -206,6 +206,9 @@ export class EventSeatsService {
                 id: true,
                 eventId: true,
                 seatingMapElementId: true,
+                paymentOrderId: true,
+                userId: true,     // Capturamos el usuario
+                clientId: true,   // Capturamos el cliente/sesión si aplica
             },
         });
 
@@ -232,7 +235,17 @@ export class EventSeatsService {
                     .filter((id): id is string => Boolean(id))
             )
         );
-
+        // Mapeo opcional para notificar por usuario o cliente afectado
+        const affectedUsersMap = expiredSeats.reduce((acc, seat) => {
+            const targetId = seat.userId;
+            if (targetId && seat.paymentOrderId) {
+                if (!acc[targetId]) acc[targetId] = [];
+                if (!acc[targetId].includes(seat.paymentOrderId)) {
+                    acc[targetId].push(seat.paymentOrderId);
+                }
+            }
+            return acc;
+        }, {} as Record<string, string[]>);
         // 2. Ejecutar la actualización y la eliminación en una transacción de Prisma
         const [updatedSeatsCount, deletedPaymentOrders] = await this.prisma.$transaction([
             // A. Desvincular y actualizar el estado de los asientos expirados
@@ -258,10 +271,6 @@ export class EventSeatsService {
             }),
         ]);
 
-        console.log({
-            updatedSeatsCount: updatedSeatsCount.count,
-            deletedPaymentOrdersCount: deletedPaymentOrders.count,
-        });
 
         // 3. Agrupar por eventId y transmitir el evento en tiempo real
         const seatsByEvent = expiredSeats.reduce((acc, seat) => {
@@ -277,6 +286,24 @@ export class EventSeatsService {
         Object.entries(seatsByEvent).forEach(([eventId, seats]) => {
             this.eventSeatsGateway.emitSeatsUpdated(eventId, seats);
         });
+
+        // B. Emitir evento de órdenes eliminadas/canceladas a los clientes afectados
+        if (paymentOrderIdsToDelete.length > 0) {
+
+            // 1. Si emites un evento global/sala de ordenes
+            this.eventSeatsGateway.emitPaymentOrdersCancelled({
+                paymentOrderIds: paymentOrderIdsToDelete,
+                reason: "RESERVATION_EXPIRED",
+            });
+
+            // 2. O si notificas a la sala privada de cada usuario/cliente
+            Object.entries(affectedUsersMap).forEach(([targetId, orderIds]) => {
+                this.eventSeatsGateway.emitUserPaymentOrdersUpdated(targetId, {
+                    action: "DELETED",
+                    paymentOrderIds: orderIds,
+                });
+            });
+        }
 
         this.logger.log(`Se liberaron ${expiredSeats.length} reservas expiradas.`);
     }
