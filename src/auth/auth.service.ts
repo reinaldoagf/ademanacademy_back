@@ -33,7 +33,8 @@ export class AuthService {
 
     // 4. Enviar al UsersService incluyendo el rol calculado internamente
     const user = await this.usersService.create({
-      name: registerDto.name,
+      firstName: registerDto.firstName,
+      lastName: registerDto.lastName,
       email: registerDto.email,
       phone: registerDto.phone,
       dni: registerDto.dni,
@@ -85,7 +86,8 @@ export class AuthService {
       access_token: this.jwtService.sign(payload),
       user: {
         id: user.id,
-        name: user.name,
+        firstName: user.firstName,
+        lastName: user.lastName,
         email: user.email,
         isAdmin: user.isAdmin,
         profileOnboarding: user.profileOnboarding,

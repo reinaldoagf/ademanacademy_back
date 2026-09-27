@@ -30,7 +30,8 @@ async function main() {
     const admin = await prisma.user.create({
         data: {
             dni: 'V-12345678',
-            name: 'Carlos Administrador',
+            firstName: 'Valentina',
+            lastName: 'Birrot',
             email: 'admin@academia.com',
             phone: '+584141112233',
             password: hashedPassword, // Recuerda hashear en producción
@@ -111,8 +112,9 @@ async function main() {
     const user = await prisma.user.create({
         data: {
             dni: 'V-11223344',
-            name: 'Juan Representante',
-            email: 'juan.rep@gmail.com',
+            firstName: 'Alonso',
+            lastName: 'Fermin',
+            email: 'alonso.rep@gmail.com',
             phone: '+584125554433',
             password: hashedPassword,
             isAdmin: false,
@@ -152,9 +154,6 @@ async function main() {
             studentId: student1.id, // 🎯 Enlazado al estudiante creado previamente
         },
     });
-
-    console.log('Data de prueba creada con éxito:');
-    console.log({ student1, client1 });
 
     // ==========================================
     // 4. CREACIÓN DE SALONES (Classrooms)

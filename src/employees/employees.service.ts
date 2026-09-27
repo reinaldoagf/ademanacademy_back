@@ -115,7 +115,7 @@ export class EmployeesService {
                 { lastName: { contains: search } },
                 { dni: { contains: search } },
                 { phone: { contains: search } },
-                { user: { name: { contains: search } } },
+                { user: { firstName: { contains: search }, lastName: { contains: search } } },
             ];
         }
 
@@ -128,7 +128,7 @@ export class EmployeesService {
                 orderBy: { createdAt: 'desc' },
                 include: {
                     user: {
-                        select: { id: true, email: true, name: true },
+                        select: { id: true, email: true, firstName: true, lastName: true },
                     },
                     groups: true,
                 },

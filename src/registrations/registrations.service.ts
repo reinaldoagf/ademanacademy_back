@@ -46,7 +46,7 @@ export class RegistrationsService {
                 orderBy: { createdAt: 'desc' }, // Transacciones más recientes primero
                 include: {
                     user: {
-                        select: { name: true, email: true, dni: true, phone: true },
+                        select: { firstName: true, lastName: true, email: true, dni: true, phone: true },
                     },
                     student: true,
                     client: true,
@@ -63,9 +63,9 @@ export class RegistrationsService {
             data: registrations.map(tx => ({
                 id: tx.id, // Máscara estética parecida a tu mock (TX-901)
                 realId: tx.id,
-                student: tx.student,
-                user: tx.user,
-                client: tx.client,
+                studentId: tx.studentId,
+                userId: tx.userId,
+                clientId: tx.clientId,
                 status: tx.status,
                 createdAt: tx.createdAt.toISOString().split('T')[0],
             })),

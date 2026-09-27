@@ -71,7 +71,7 @@ export class EventSeatsService {
             };
         });
     }
-    async reserveOrBuySeats(dto: ReserveSeatsDto) {
+    async reserveOrBuySeats(registeringUserId: string, dto: ReserveSeatsDto) {
         const { eventId, seatingMapElementIds, status, clientId, totalAmount, reservationDurationMinutes = 10 } = dto;
         const now = new Date();
         const expiresAt = status === SeatStatus.reserved
@@ -126,7 +126,7 @@ export class EventSeatsService {
 
             paymentOrder = await tx.paymentOrder.create({
                 data: {
-                    userId: client.userId ?? null,
+                    registeringUserId: registeringUserId,
                     clientId: client.id,
                     concept: ConceptType.ticket,
                     amount: totalAmount,

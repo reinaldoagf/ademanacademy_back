@@ -2,7 +2,8 @@
 CREATE TABLE `users` (
     `id` VARCHAR(191) NOT NULL,
     `dni` VARCHAR(30) NOT NULL,
-    `name` VARCHAR(150) NOT NULL,
+    `firstName` VARCHAR(150) NOT NULL,
+    `lastName` VARCHAR(150) NOT NULL,
     `email` VARCHAR(180) NOT NULL,
     `phone` VARCHAR(180) NOT NULL,
     `password` VARCHAR(255) NULL,
@@ -30,6 +31,7 @@ CREATE TABLE `employees` (
     `typeOfEmployee` ENUM('Personal Administrativo y de Gestión', 'Personal Docente y Artístico', 'Personal de Soporte y Operaciones') NOT NULL DEFAULT 'Personal Administrativo y de Gestión',
     `medicalObservations` TEXT NULL,
     `address` TEXT NOT NULL,
+    `countryCode` VARCHAR(40) NULL,
     `phone` VARCHAR(40) NULL,
     `hoursTaughtMonth` INTEGER NOT NULL DEFAULT 1,
     `hourlyRate` DECIMAL(10, 2) NOT NULL,
@@ -115,7 +117,7 @@ CREATE TABLE `payment_orders` (
     `status` ENUM('Pendiente', 'Pagada', 'Vencida', 'Anulada') NOT NULL DEFAULT 'Pendiente',
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
-    `userId` VARCHAR(191) NULL,
+    `registeringUserId` VARCHAR(191) NULL,
 
     UNIQUE INDEX `payment_orders_orderId_key`(`orderId`),
     PRIMARY KEY (`id`)
@@ -154,7 +156,7 @@ CREATE TABLE `product_categories` (
 -- CreateTable
 CREATE TABLE `transactions` (
     `id` VARCHAR(191) NOT NULL,
-    `userId` VARCHAR(36) NOT NULL,
+    `registeringUserId` VARCHAR(36) NOT NULL,
     `clientId` VARCHAR(36) NULL,
     `paymentOrderId` VARCHAR(255) NULL,
     `concept` ENUM('Mensualidad', 'Matrícula', 'Vestuario', 'Entradas Gala', 'Producto') NOT NULL,
@@ -485,13 +487,13 @@ ALTER TABLE `payment_orders` ADD CONSTRAINT `payment_orders_clientId_fkey` FOREI
 ALTER TABLE `payment_orders` ADD CONSTRAINT `payment_orders_orderId_fkey` FOREIGN KEY (`orderId`) REFERENCES `orders`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `payment_orders` ADD CONSTRAINT `payment_orders_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `payment_orders` ADD CONSTRAINT `payment_orders_registeringUserId_fkey` FOREIGN KEY (`registeringUserId`) REFERENCES `users`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `products` ADD CONSTRAINT `products_categoryId_fkey` FOREIGN KEY (`categoryId`) REFERENCES `product_categories`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `transactions` ADD CONSTRAINT `transactions_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `transactions` ADD CONSTRAINT `transactions_registeringUserId_fkey` FOREIGN KEY (`registeringUserId`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `transactions` ADD CONSTRAINT `transactions_clientId_fkey` FOREIGN KEY (`clientId`) REFERENCES `clients`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

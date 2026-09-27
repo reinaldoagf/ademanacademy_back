@@ -69,7 +69,7 @@ export class ClientsService {
                     include: {
                         student: true,
                         user: {
-                            select: { id: true, name: true, email: true },
+                            select: { id: true, firstName: true, lastName: true, email: true, phone: true, profileType: true },
                         },
                         group: true,
                     },
@@ -130,7 +130,8 @@ export class ClientsService {
                     user: {
                         select: {
                             id: true,
-                            name: true,
+                            firstName: true,
+                            lastName: true,
                             email: true,
                             phone: true,
                         },
@@ -167,7 +168,8 @@ export class ClientsService {
                 user: {
                     select: {
                         id: true,
-                        name: true,
+                        firstName: true,
+                        lastName: true,
                         email: true,
                         phone: true,
                     },
@@ -267,7 +269,7 @@ export class ClientsService {
                     },
                     include: {
                         user: {
-                            select: { id: true, name: true, email: true },
+                            select: { id: true, firstName: true, lastName: true, email: true },
                         },
                         student: true,
                     },

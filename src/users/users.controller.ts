@@ -69,7 +69,7 @@ export class UsersController {
     @Body() body: any,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    const userId = user?.sub;
+    const registeringUserId = user?.sub;
 
     const profileType = body.profileType;
     const representativeOccupation = body.representativeOccupation;
@@ -98,6 +98,6 @@ export class UsersController {
     };
 
     // 🚀 Pasamos el objeto "file" completo al servicio
-    return this.usersService.completeOnboarding(userId, completeOnboardingDto, file);
+    return this.usersService.completeOnboarding(registeringUserId, completeOnboardingDto, file);
   }
 }

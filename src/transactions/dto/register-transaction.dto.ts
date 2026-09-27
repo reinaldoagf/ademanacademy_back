@@ -16,10 +16,6 @@ export class RegisterTransactionDto {
     @IsString({ message: 'El ID de la orden de pago debe ser una cadena de texto.' })
     paymentOrderId: string;
 
-    @IsNotEmpty({ message: 'El ID del usuario es obligatorio.' })
-    @IsString({ message: 'El ID del usuario debe ser una cadena de texto.' })
-    userId: string;
-
     @IsOptional()
     @IsString({ message: 'El ID del estudiante debe ser una cadena de texto.' })
     studentId?: string;

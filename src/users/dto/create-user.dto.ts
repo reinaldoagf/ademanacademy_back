@@ -3,7 +3,11 @@ import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional, IsBoolean, Matche
 export class CreateUserDto {
   @IsString({ message: 'El nombre debe ser una cadena de texto' })
   @IsNotEmpty({ message: 'El nombre es un campo obligatorio' })
-  name: string;
+  firstName: string;
+
+  @IsString({ message: 'El apellido debe ser una cadena de texto' })
+  @IsNotEmpty({ message: 'El apellido es un campo obligatorio' })
+  lastName: string;
 
   @IsEmail({}, { message: 'El formato del correo electrónico no es válido' })
   @IsNotEmpty({ message: 'El correo electrónico es un campo obligatorio' })

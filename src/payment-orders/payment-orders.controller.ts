@@ -19,13 +19,13 @@ export class PaymentOrdersController {
 
     @Get('my-orders')
     async findMyOrders(
+        @CurrentUser() user: any, // 👈 El decorador extrae el user automáticamente
         @Query() filters: GetPaymentOrdersFilterDto,
-        @CurrentUser() user: any // 👈 El decorador extrae el user automáticamente
     ) {
         // Extraemos el id de forma 100% segura y limpia
-        const userId = user?.sub;
+        const registeringUserId = user?.sub;
         // Por ahora, requerimos que el usuario lo envíe o usamos el 'sub' del token si lo configuras
-        return this.paymentOrdersService.findMyOrders(filters, userId);
+        return this.paymentOrdersService.findMyOrders(registeringUserId, filters);
     }
 
     @Get(':id')

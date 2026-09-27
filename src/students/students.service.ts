@@ -146,7 +146,8 @@ export class StudentsService {
                     user: {
                         select: {
                             id: true,
-                            name: true,
+                            firstName: true,
+                            lastName: true,
                             email: true,
                         },
                     },
@@ -218,7 +219,8 @@ export class StudentsService {
                     user: {
                         select: {
                             id: true,
-                            name: true,
+                            firstName: true,
+                            lastName: true,
                             email: true,
                         },
                     },

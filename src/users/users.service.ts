@@ -160,11 +160,11 @@ export class UsersService {
     return await this.prismaClient.count();
   }
 
-  async completeOnboarding(userId: string, dto: any, file?: Express.Multer.File) {
+  async completeOnboarding(registeringUserId: string, dto: any, file?: Express.Multer.File) {
     // 1. Validaciones previas de usuario...
 
     const receiptPath = file ? file.filename : null;
-    const user = await this.prismaClient.findUnique({ where: { id: userId } });
+    const user = await this.prismaClient.findUnique({ where: { id: registeringUserId } });
 
     if (!user) {
       throw new BadRequestException('Usuario no encontrado.');
@@ -179,13 +179,13 @@ export class UsersService {
 
         // Operación A: Actualizar estatus del usuario
         const updatedUser = await tx.user.update({
-          where: { id: userId },
+          where: { id: registeringUserId },
           data: {
             profileType: dto.profileType,
             profileOnboarding: true,
             occupation: dto.profileType === 'representative' ? dto.representativeOccupation : undefined,
           },
-          select: { id: true, name: true, email: true, phone: true, profileType: true, profileOnboarding: true, occupation: true }
+          select: { id: true, firstName: true, lastName: true, email: true, phone: true, profileType: true, profileOnboarding: true, occupation: true }
         });
 
         // Operación B: Si es REPRESENTATIVE, insertar estudiantes
@@ -197,7 +197,7 @@ export class UsersService {
             birthDate: new Date(representedStudent.birthDate),
             type: ClientType.student,
             kinship: representedStudent.kinship,
-            userId: userId,
+            userId: registeringUserId,
             address: representedStudent.address,
             phone: representedStudent.phone || null,
             shirtSize: representedStudent.shirtSize,
@@ -218,7 +218,7 @@ export class UsersService {
               });
               await tx.registration.create({
                 data: {
-                  userId: userId,
+                  userId: registeringUserId,
                   studentId: student.id,
                 }
               });
@@ -230,7 +230,7 @@ export class UsersService {
                   email: representedStudent.email || null,
                   birthDate: new Date(representedStudent.birthDate),
                   type: ClientType.student,
-                  userId: userId,
+                  userId: registeringUserId,
                   studentId: student.id,
                   address: representedStudent.address,
                   phone: representedStudent.phone || null,
@@ -242,7 +242,7 @@ export class UsersService {
                 // 2. Crear el registro de la transacción enviada por el usuario
                 await tx.transaction.create({
                   data: {
-                    userId: userId,
+                    registeringUserId: registeringUserId,
                     clientId: client.id,
                     concept: 'tuition',
                     amount: dto.payment.amount / representedStudents.length,
@@ -264,9 +264,6 @@ export class UsersService {
         }
         // Operación C: Si es STUDENT autónomo
         if (dto.profileType === 'student') {
-          const nameParts = user.name.split(' ');
-          const firstName = nameParts[0] || '';
-          const lastName = nameParts.slice(1).join(' ') || '';
           const student = await tx.student.create({
             data: {
               kinship: 'other',
@@ -277,12 +274,12 @@ export class UsersService {
           });
           const client = await tx.client.create({
             data: {
-              firstName,
-              lastName,
+              firstName: user.firstName,
+              lastName: user.lastName,
               dni: user.dni,
               email: user.email,
               birthDate: new Date(),
-              userId: userId,
+              userId: registeringUserId,
               studentId: student.id,
               address: user.address || '',
               phone: user.phone || null,
@@ -293,7 +290,7 @@ export class UsersService {
 
             await tx.transaction.create({
               data: {
-                userId: userId,
+                registeringUserId: registeringUserId,
                 clientId: client.id,
                 concept: 'tuition',
                 amount: dto.payment.amount,
@@ -307,7 +304,7 @@ export class UsersService {
           }
           await tx.registration.create({
             data: {
-              userId: userId,
+              userId: registeringUserId,
               studentId: student.id,
               clientId: client.id,
             }

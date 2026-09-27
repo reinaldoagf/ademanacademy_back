@@ -7,7 +7,11 @@ export class SignupDto {
 
   @IsString({ message: 'El nombre debe ser una cadena de texto' })
   @IsNotEmpty({ message: 'El nombre es obligatorio' })
-  name: string;
+  firstName: string;
+
+  @IsString({ message: 'El nombre debe ser una cadena de texto' })
+  @IsNotEmpty({ message: 'El nombre es obligatorio' })
+  lastName: string;
 
   @IsEmail({}, { message: 'El formato del correo electrónico no es válido' })
   @IsNotEmpty({ message: 'El correo electrónico es obligatorio' })

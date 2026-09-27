@@ -13,8 +13,12 @@ export class TransactionsController {
     constructor(private readonly transactionsService: TransactionsService) { }
 
     @Post()
-    async create(@Body() createTransactionDto: CreateTransactionDto) {
-        return this.transactionsService.create(createTransactionDto);
+    async create(
+        @CurrentUser() user: any,
+        @Body() createTransactionDto: CreateTransactionDto
+    ) {
+        const registeringUserId = user.sub;
+        return this.transactionsService.create(registeringUserId, createTransactionDto);
     }
 
     @Get()

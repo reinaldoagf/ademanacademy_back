@@ -15,7 +15,8 @@ datasource db {
 model User {
   id                String         @id @default(uuid())
   dni               String         @unique @db.VarChar(30) // 💡 Añadido DNI único
-  name              String         @db.VarChar(150)
+  firstName         String         @db.VarChar(150)
+  lastName          String         @db.VarChar(150)
   email             String         @unique @db.VarChar(180)
   phone             String         @unique @db.VarChar(180)
   password          String?        @db.VarChar(255)
@@ -184,10 +185,10 @@ model PaymentOrder {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  transactions Transaction[] // Una orden de pago puede tener varios intentos de transacciones
-  eventSeats   EventSeat[] // Relación 1 a N con asientos
-  user         User?         @relation(fields: [userId], references: [id])
-  userId       String?
+  transactions      Transaction[] // Una orden de pago puede tener varios intentos de transacciones
+  eventSeats        EventSeat[] // Relación 1 a N con asientos
+  registeringUser   User?         @relation(fields: [registeringUserId], references: [id])
+  registeringUserId String?
 
   @@map("payment_orders")
 }
@@ -228,11 +229,11 @@ model ProductCategory {
 // =========================================================================
 
 model Transaction {
-  id       String  @id @default(cuid())
-  userId   String  @db.VarChar(36) // registered by user
-  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  clientId String? @db.VarChar(36)
-  client   Client? @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  id                String  @id @default(cuid())
+  registeringUserId String  @db.VarChar(36) // registered by user
+  registeringUser   User    @relation(fields: [registeringUserId], references: [id], onDelete: Cascade)
+  clientId          String? @db.VarChar(36)
+  client            Client? @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   // 🔗 Conexión con la Orden de Pago: Toda transacción debe saldar una deuda (Orden de Pago)
   paymentOrderId String?       @db.VarChar(255)

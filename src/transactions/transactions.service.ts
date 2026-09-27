@@ -7,29 +7,27 @@ import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { GetTransactionsFilterDto } from './dto/get-transactions-filter.dto';
 import { SeatStatus } from '@prisma/client';
 
-const CONDITION = []
-
 @Injectable()
 export class TransactionsService {
     constructor(private readonly prisma: PrismaService) { }
 
 
-    async registerPaymentTransaction(dto: RegisterTransactionDto) {
-        const { paymentOrderId, userId, referenceNumber, bankName, receiptPath, amount, method } = dto;
+    async registerPaymentTransaction(registeringUserId: string, dto: RegisterTransactionDto) {
+        const { paymentOrderId, referenceNumber, bankName, receiptPath, amount, method } = dto;
         const now = new Date();
 
         return await this.prisma.$transaction(async (tx) => {
             // 1. Obtener la orden de pago con los asientos asociados
-            const order = await tx.paymentOrder.findUnique({
+            const paymentOrder = await tx.paymentOrder.findUnique({
                 where: { id: paymentOrderId },
                 include: { eventSeats: true },
             });
 
-            if (!order) throw new NotFoundException('Orden de pago no encontrada.');
-            if (order.userId !== userId) throw new ForbiddenException('No tienes permiso para esta orden.');
+            if (!paymentOrder) throw new NotFoundException('Orden de pago no encontrada.');
+            if (paymentOrder.registeringUserId !== registeringUserId) throw new ForbiddenException('No tienes permiso para esta orden.');
 
             // 2. Validar que la reserva no haya expirado (10 minutos)
-            const firstSeat = order.eventSeats[0];
+            const firstSeat = paymentOrder.eventSeats[0];
             if (!firstSeat || (firstSeat.expiresAt && firstSeat.expiresAt < now)) {
                 throw new BadRequestException('El tiempo de reserva (10 minutos) ha expirado. Por favor, vuelve a seleccionar los asientos.');
             }
@@ -37,10 +35,10 @@ export class TransactionsService {
             // 3. Registrar la Transacción en estado 'pending'
             const transaction = await tx.transaction.create({
                 data: {
-                    paymentOrderId: order.id,
-                    userId,
-                    clientId: order.clientId,
-                    concept: order.concept,
+                    paymentOrderId: paymentOrder.id,
+                    registeringUserId,
+                    clientId: paymentOrder.clientId,
+                    concept: paymentOrder.concept,
                     amount,
                     method,
                     referenceNumber,
@@ -52,7 +50,7 @@ export class TransactionsService {
 
             // 4. Cambiar estado de asientos a 'payment_pending' para congelar la expiración mientras aprueba el Admin
             await tx.eventSeat.updateMany({
-                where: { paymentOrderId: order.id },
+                where: { paymentOrderId: paymentOrder.id },
                 data: {
                     status: SeatStatus.payment_pending,
                     expiresAt: null, // Se retira la expiración porque el usuario ya pagó
@@ -66,18 +64,21 @@ export class TransactionsService {
         });
     }
     // ➕ CREATE
-    async create(createTransactionDto: CreateTransactionDto) {
-        // Validamos primero que el alumno realmente exista
-        const studentExists = await this.prisma.student.findUnique({
-            where: { id: createTransactionDto.userId },
-        });
-        if (!studentExists) {
-            throw new NotFoundException('El alumno especificado no existe.');
-        }
-
+    async create(registeringUserId: string, createTransactionDto: CreateTransactionDto) {
         return this.prisma.transaction.create({
-            data: createTransactionDto,
-            include: { user: true },
+            data: {
+                registeringUserId,
+                clientId: createTransactionDto.clientId,
+                paymentOrderId: createTransactionDto.paymentOrderId,
+                concept: createTransactionDto.concept,
+                amount: createTransactionDto.amount,
+                method: createTransactionDto.method,
+                referenceNumber: createTransactionDto.referenceNumber,
+                bankName: createTransactionDto.bankName,
+                receiptPath: createTransactionDto.receiptPath || null,
+                status: createTransactionDto.status,
+            },
+            include: { registeringUser: true, client: { include: { student: true, user: true } } },
         });
     }
 
@@ -112,7 +113,9 @@ export class TransactionsService {
         const where: any = {};
 
         if (userId) {
-            where.userId = userId;
+            where.client = {
+                userId: userId,
+            };
         }
 
         if (concept) {
@@ -158,11 +161,12 @@ export class TransactionsService {
                 take: limit,
                 orderBy: { createdAt: 'desc' },
                 include: {
-                    user: {
-                        select: { name: true, email: true, dni: true, phone: true },
+                    registeringUser: {
+                        select: { firstName: true, lastName: true, email: true, dni: true, phone: true },
                     },
                     client: {
                         include: {
+                            user: true,
                             student: true,
                         }
                     },
@@ -178,7 +182,7 @@ export class TransactionsService {
                 id: tx.id,
                 realId: tx.id,
                 client: tx.client,
-                user: tx.user,
+                registeringUser: tx.registeringUser,
                 concept: tx.concept,
                 amount: Number(tx.amount),
                 method: tx.method,
@@ -201,7 +205,8 @@ export class TransactionsService {
         const transaction = await this.prisma.transaction.findUnique({
             where: { id },
             include: {
-                user: true, client: {
+                registeringUser: true,
+                client: {
                     include: {
                         student: true
                     }

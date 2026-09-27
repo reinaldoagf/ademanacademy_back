@@ -12,14 +12,14 @@ import { PaymentOrderStatus } from '@prisma/client';
 export class PaymentOrdersService {
     constructor(private readonly prisma: PrismaService) { }
 
-    async findMyOrders(filters: GetPaymentOrdersFilterDto, userId: string) {
+    async findMyOrders(registeringUserId: string, filters: GetPaymentOrdersFilterDto,) {
         const { page = 1, limit = 10, search, status, concept } = filters;
         const skip = (page - 1) * limit;
 
         // Construcción de condiciones dinámicas de búsqueda
         const where: any = {};
         // Filtro por usuario logueado
-        where.userId = userId;
+        where.registeringUserId = registeringUserId;
 
         if (status) {
             where.status = status;
@@ -59,7 +59,7 @@ export class PaymentOrdersService {
                 take: limit,
                 orderBy: { createdAt: 'desc' },
                 include: {
-                    user: true,
+                    registeringUser: true,
                     client: { include: { student: true } }
                 }
             }),
@@ -124,7 +124,7 @@ export class PaymentOrdersService {
                 take: limit,
                 orderBy: { createdAt: 'desc' },
                 include: {
-                    user: true,
+                    registeringUser: true,
                     client: { include: { user: true, student: true } }
                 }
             }),
@@ -148,7 +148,7 @@ export class PaymentOrdersService {
         const paymentOrder = await this.prisma.paymentOrder.findUnique({
             where: { id },
             include: {
-                user: true,
+                registeringUser: true,
                 client: { include: { student: true } },
                 order: {
                     include: {
@@ -179,7 +179,7 @@ export class PaymentOrdersService {
         const paymentOrder = await this.prisma.paymentOrder.findUnique({
             where: { id },
             include: {
-                user: true,
+                registeringUser: true,
                 client: { include: { student: true } },
                 order: {
                     include: {
@@ -209,7 +209,7 @@ export class PaymentOrdersService {
         try {
             // 2. Transacción de Prisma para guardar la transacción y actualizar la orden de pago
             return await this.prisma.$transaction(async (tx) => {
-                const resolvedUserId = userId || paymentOrder.userId;
+                const resolvedUserId = userId || paymentOrder.registeringUserId;
 
                 if (!resolvedUserId) {
                     throw new BadRequestException(
@@ -219,7 +219,7 @@ export class PaymentOrdersService {
                 // Operación A: Crear la Transacción
                 const transaction = await tx.transaction.create({
                     data: {
-                        userId: resolvedUserId,
+                        registeringUserId: resolvedUserId,
                         clientId: paymentOrder.clientId || null,
                         paymentOrderId: paymentOrder.id,
                         concept: paymentOrder.concept || 'ticket',
@@ -265,7 +265,7 @@ export class PaymentOrdersService {
                         updatedAt: new Date(),
                     },
                     include: {
-                        user: true,
+                        registeringUser: true,
                         client: true,
                         order: true,
                         eventSeats: true,
