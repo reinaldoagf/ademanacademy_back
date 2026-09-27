@@ -205,7 +205,6 @@ export class UsersService {
             medicalObservations: representedStudent.medicalObservations || null,
           }));
 
-          console.log({ representedStudents })
 
           for (const representedStudent of representedStudents) {
             if (representedStudent.type == ClientType.student) {

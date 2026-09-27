@@ -229,7 +229,7 @@ model ProductCategory {
 
 model Transaction {
   id       String  @id @default(cuid())
-  userId   String  @db.VarChar(36)
+  userId   String  @db.VarChar(36) // registered by user
   user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   clientId String? @db.VarChar(36)
   client   Client? @relation(fields: [clientId], references: [id], onDelete: Cascade)
