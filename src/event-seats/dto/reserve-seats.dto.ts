@@ -21,7 +21,7 @@ export class ReserveSeatsDto {
     clientId: string;
 
     @IsNumber({ maxDecimalPlaces: 2 }, { message: 'El monto debe ser un número válido.' })
-    @IsPositive({ message: 'El monto debe ser mayor a cero.' })
+    @Min(0, { message: 'El monto no puede ser negativo.' })
     totalAmount: number;
 
     @IsOptional()

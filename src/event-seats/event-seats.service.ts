@@ -25,6 +25,13 @@ export class EventSeatsService {
         },
         receiptPath: string, // 'receipt-1790488217862-902425808.jpeg'
     ) {
+        const user = await this.prisma.user.findFirst({
+            where: { id: userId },
+        });
+        const isAdmin = user?.isAdmin ?? false;
+        if (!isAdmin && dto.totalAmount <= 0) {
+            throw new BadRequestException('El monto debe ser mayor a cero.');
+        }
         const { eventId, seatingMapElementIds, totalAmount, bankName, referenceNumber } = dto;
         const now = new Date();
 
@@ -208,6 +215,13 @@ export class EventSeatsService {
         });
     }
     async reserveOrBuySeats(registeringUserId: string, dto: ReserveSeatsDto) {
+        const user = await this.prisma.user.findFirst({
+            where: { id: registeringUserId },
+        });
+        const isAdmin = user?.isAdmin ?? false;
+        if (!isAdmin && dto.totalAmount <= 0) {
+            throw new BadRequestException('El monto debe ser mayor a cero.');
+        }
         const { eventId, seatingMapElementIds, status, clientId, totalAmount, reservationDurationMinutes = 10 } = dto;
         const now = new Date();
         const expiresAt = status === SeatStatus.reserved
