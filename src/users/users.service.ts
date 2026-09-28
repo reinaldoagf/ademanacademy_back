@@ -89,7 +89,8 @@ export class UsersService {
         orderBy: { createdAt: 'desc' },
         select: {
           id: true,
-          name: true,
+          firstName: true,
+          lastName: true,
           dni: true,
           email: true,
           phone: true,
