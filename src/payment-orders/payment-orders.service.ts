@@ -12,7 +12,7 @@ import { PaymentOrderStatus } from '@prisma/client';
 export class PaymentOrdersService {
     constructor(private readonly prisma: PrismaService) { }
 
-    async findMyOrders(registeringUserId: string, filters: GetPaymentOrdersFilterDto,) {
+    async findMyOrdersRecords(registeringUserId: string, filters: GetPaymentOrdersFilterDto,) {
         const { page = 1, limit = 10, search, status, concept } = filters;
         const skip = (page - 1) * limit;
 
@@ -78,7 +78,74 @@ export class PaymentOrdersService {
             data,
         };
     }
+    async findMyOrders(userId: string, filters: GetPaymentOrdersFilterDto,) {
+        const { page = 1, limit = 10, search, status, concept } = filters;
+        const skip = (page - 1) * limit;
 
+        // Construcción de condiciones dinámicas de búsqueda
+        const where: any = {};
+        // Filtro por usuario logueado
+        where.client = {
+            userId: userId
+        };
+
+        if (status) {
+            where.status = status;
+        }
+        if (concept) {
+            where.concept = concept;
+        }
+        if (search) {
+            where.OR = [
+                {
+                    user: {
+                        OR: [
+                            { name: { contains: search } },
+                            { email: { contains: search } },
+                            { dni: { contains: search } },
+                        ],
+                    },
+                },
+                {
+                    client: {
+                        OR: [
+                            { firstName: { contains: search } },
+                            { lastName: { contains: search } },
+                            { dni: { contains: search } },
+                        ],
+                    },
+                },
+            ];
+        }
+
+        // Ejecutar consultas en paralelo para optimizar rendimiento en BD
+        const [totalItems, data] = await Promise.all([
+            this.prisma.paymentOrder.count({ where }),
+            this.prisma.paymentOrder.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { createdAt: 'desc' },
+                include: {
+                    registeringUser: true,
+                    client: { include: { student: true } }
+                }
+            }),
+        ]);
+
+        const totalPages = Math.ceil(totalItems / limit);
+
+        return {
+            meta: {
+                totalItems,
+                itemCount: data.length,
+                itemsPerPage: limit,
+                totalPages,
+                currentPage: page,
+            },
+            data,
+        };
+    }
     async findAll(filters: GetPaymentOrdersFilterDto) {
         const { page = 1, limit = 10, search, status, concept } = filters;
         const skip = (page - 1) * limit;

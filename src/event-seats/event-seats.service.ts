@@ -2,6 +2,7 @@
 import { Injectable, BadRequestException, ConflictException, NotFoundException, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
+import { ClientPurchaseSeatsDto } from './dto/client-purchase-seats.dto';
 import { ReserveSeatsDto } from './dto/reserve-seats.dto';
 import { ConceptType, PaymentOrderStatus, SeatStatus } from '@prisma/client';
 import { EventSeatsGateway } from './event-seats.gateway';
@@ -13,6 +14,141 @@ export class EventSeatsService {
         private readonly prisma: PrismaService,
         private readonly eventSeatsGateway: EventSeatsGateway
     ) { }
+    async clientPurchaseSeats(
+        userId: string,
+        dto: {
+            eventId: string;
+            seatingMapElementIds: string[];
+            totalAmount: number;
+            bankName: string;
+            referenceNumber: string;
+        },
+        receiptPath: string, // 'receipt-1790488217862-902425808.jpeg'
+    ) {
+        const { eventId, seatingMapElementIds, totalAmount, bankName, referenceNumber } = dto;
+        const now = new Date();
+
+        return await this.prisma.$transaction(
+            async (tx) => {
+                // 1. Obtener cliente
+                const client = await tx.client.findFirst({
+                    where: { userId },
+                });
+
+                if (!client) {
+                    throw new NotFoundException('No se encontró el perfil de cliente para este usuario.');
+                }
+
+                // 2. Validar disponibilidad
+                const existingSeats = await tx.eventSeat.findMany({
+                    where: {
+                        eventId,
+                        seatingMapElementId: { in: seatingMapElementIds },
+                    },
+                });
+
+                for (const elementId of seatingMapElementIds) {
+                    const currentSeat = existingSeats.find((s) => s.seatingMapElementId === elementId);
+
+                    if (currentSeat) {
+                        if (currentSeat.status === SeatStatus.sold) {
+                            throw new ConflictException(`El asiento "${elementId}" ya ha sido vendido.`);
+                        }
+
+                        const isReservationActive = currentSeat.expiresAt && currentSeat.expiresAt > now;
+                        const isDifferentClient = currentSeat.clientId !== client.id;
+
+                        if (
+                            (currentSeat.status === SeatStatus.reserved ||
+                                currentSeat.status === SeatStatus.payment_pending) &&
+                            (isReservationActive || currentSeat.expiresAt === null) &&
+                            isDifferentClient
+                        ) {
+                            throw new ConflictException(
+                                `El asiento "${elementId}" ya está reservado o en verificación por otro usuario.`,
+                            );
+                        }
+                    }
+                }
+
+                // 3. Crear Orden de Pago (pending)
+                const paymentOrder = await tx.paymentOrder.create({
+                    data: {
+                        registeringUserId: userId,
+                        clientId: client.id,
+                        concept: ConceptType.ticket,
+                        amount: totalAmount,
+                        status: PaymentOrderStatus.pending,
+                    },
+                });
+
+                // 4. Registrar Transacción con la imagen recibida
+                await tx.transaction.create({
+                    data: {
+                        registeringUserId: userId,
+                        clientId: client.id,
+                        paymentOrderId: paymentOrder.id,
+                        concept: ConceptType.ticket,
+                        amount: totalAmount,
+                        method: 'bank_transfer',
+                        status: 'pending',
+                        bankName: bankName,
+                        referenceNumber: referenceNumber,
+                        receiptPath: receiptPath,
+                    },
+                });
+
+                // 5. Reservar asientos con estado 'reserved'
+                const existingElementIds = new Set(existingSeats.map((s) => s.seatingMapElementId));
+                const newElementIds = seatingMapElementIds.filter((id) => !existingElementIds.has(id));
+
+                const seatDataCommon = {
+                    status: SeatStatus.reserved, // 👈 Cambiado a 'reserved' igual que en reserveOrBuySeats
+                    reservedAt: now,
+                    expiresAt: null, // O define una fecha si expira la reserva
+                    userId: userId,
+                    clientId: client.id,
+                    paymentOrderId: paymentOrder.id,
+                };
+
+                // A. Crear asientos nuevos
+                if (newElementIds.length > 0) {
+                    await tx.eventSeat.createMany({
+                        data: newElementIds.map((elementId) => ({
+                            eventId,
+                            seatingMapElementId: elementId,
+                            ...seatDataCommon,
+                        })),
+                    });
+                }
+
+                // B. Actualizar asientos existentes
+                if (existingElementIds.size > 0) {
+                    await tx.eventSeat.updateMany({
+                        where: {
+                            eventId,
+                            seatingMapElementId: { in: Array.from(existingElementIds) },
+                        },
+                        data: seatDataCommon,
+                    });
+                }
+
+                const updatedSeats = await tx.eventSeat.findMany({
+                    where: {
+                        eventId,
+                        seatingMapElementId: { in: seatingMapElementIds },
+                    },
+                });
+
+                return {
+                    message: 'Solicitud enviada con éxito. En espera de verificación del comprobante.',
+                    paymentOrderId: paymentOrder.id,
+                    seats: updatedSeats,
+                };
+            },
+            { timeout: 15000 },
+        );
+    }
     async approvePaymentTransaction(transactionId: string) {
         return await this.prisma.$transaction(async (tx) => {
             // 1. Buscar la transacción con su orden de pago

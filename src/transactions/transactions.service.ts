@@ -208,7 +208,8 @@ export class TransactionsService {
                 registeringUser: true,
                 client: {
                     include: {
-                        student: true
+                        student: true,
+                        user: true
                     }
                 },
             },
