@@ -74,7 +74,8 @@ export class UsersService {
 
     if (search) {
       where.OR = [
-        { name: { contains: search } },
+        { firstName: { contains: search } },
+        { lastName: { contains: search } },
         { email: { contains: search } },
         { dni: { contains: search } },
         { phone: { contains: search } },
