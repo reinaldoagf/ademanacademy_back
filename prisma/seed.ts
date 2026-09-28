@@ -154,7 +154,8 @@ async function main() {
             lastName: 'Pérez',
             birthDate: new Date('2018-05-15'),
             address: 'Alta Vista, Puerto Ordaz, Bolívar',
-            dni: 'V-32145678', // Opcional
+            IDNumberPrefix: 'V',
+            dni: '32145678',
             phone: '0414-1234567', // Opcional
             type: ClientType.representative, // O el tipo de cliente que corresponda
             userId: user.id, // Enlazado a su usuario/representante

@@ -2,6 +2,10 @@ import { IsString, IsOptional, IsDateString, IsEnum, IsBoolean, IsNotEmpty, IsUU
 import { ClientType, Kinship } from '@prisma/client';
 
 export class CreateClientDto {
+    @IsString()
+    @IsOptional()
+    IDNumberPrefix?: string;
+
     @IsOptional()
     @IsString()
     dni?: string;

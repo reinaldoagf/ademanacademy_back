@@ -94,13 +94,13 @@ model Student {
 }
 
 model Client {
-  id        String   @id @default(uuid())
-  // 🎯 CAMBIO: El DNI del alumno ahora es opcional y NO unique para evitar fallos si varios alumnos no lo tienen
-  dni       String?  @db.VarChar(30)
-  firstName String   @db.VarChar(150)
-  lastName  String   @db.VarChar(150)
-  email     String?  @unique @db.VarChar(180)
-  birthDate DateTime @db.Date
+  id             String   @id @default(uuid())
+  IDNumberPrefix String?  @db.VarChar(30)
+  dni            String?  @db.VarChar(30)
+  firstName      String   @db.VarChar(150)
+  lastName       String   @db.VarChar(150)
+  email          String?  @unique @db.VarChar(180)
+  birthDate      DateTime @db.Date
 
   // 🎯 NUEVOS CAMPOS DEL ALUMNO
   address     String  @db.Text
