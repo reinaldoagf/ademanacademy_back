@@ -19,7 +19,7 @@ export class SeatingMapsService {
                 },
             },
             include: {
-                elements: true,
+                elements: true
             },
         });
     }
@@ -68,6 +68,9 @@ export class SeatingMapsService {
             where: { id },
             include: {
                 elements: true,
+                events: {
+                    include: { eventSeats: true }
+                },
             },
         });
 
