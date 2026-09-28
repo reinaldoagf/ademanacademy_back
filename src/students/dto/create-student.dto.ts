@@ -3,6 +3,9 @@ import { IsString, IsNotEmpty, IsOptional, IsDateString, IsEnum, IsUUID, IsBoole
 import { Kinship } from '@prisma/client';
 
 export class CreateStudentDto {
+    @IsString()
+    @IsOptional()
+    IDNumberPrefix?: string;
     // 🎯 CAMBIO: El DNI ahora es opcional
     @IsString()
     @IsOptional()
@@ -36,6 +39,10 @@ export class CreateStudentDto {
     @IsString()
     @IsNotEmpty()
     address: string;
+
+    @IsOptional()
+    @IsString()
+    countryCode?: string;
 
     @IsString()
     @IsOptional()

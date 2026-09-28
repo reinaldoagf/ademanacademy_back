@@ -27,12 +27,14 @@ export class StudentsService {
      */
     async create(createStudentDto: CreateStudentDto): Promise<any> {
         const {
+            IDNumberPrefix,
             dni,
             email,
             firstName,
             lastName,
             birthDate,
             address,
+            countryCode,
             phone,
             shirtSize,
             kinship,
@@ -69,12 +71,14 @@ export class StudentsService {
             // Step B: Crear el registro en 'Client' vinculado al 'Student'
             const newClient = await tx.client.create({
                 data: {
+                    IDNumberPrefix,
                     dni,
                     email,
                     firstName,
                     lastName,
                     birthDate: new Date(birthDate),
                     address,
+                    countryCode,
                     phone,
                     type: ClientType.student, // Define el tipo como estudiante
                     userId: userId || null,

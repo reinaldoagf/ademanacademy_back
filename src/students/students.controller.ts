@@ -17,7 +17,9 @@ export class StudentsController {
         @Body() createStudentDto: CreateStudentDto,
         @CurrentUser() user: any // 👈 El decorador extrae el user automáticamente
     ) {
-        return this.studentsService.create(createStudentDto);
+        // Extraemos el id de forma 100% segura y limpia
+        const userId = user?.sub;
+        return this.studentsService.create(user.isAdmin ? createStudentDto : { ...createStudentDto, userId });
     }
 
     @Get()
