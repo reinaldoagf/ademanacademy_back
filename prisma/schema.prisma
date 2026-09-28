@@ -46,6 +46,7 @@ model User {
 // 💡 MODELO: REPRESENTADOS
 model Employee {
   id                  String         @id @default(uuid())
+  IDNumberPrefix      String?        @db.VarChar(30)
   dni                 String?        @db.VarChar(30)
   firstName           String         @db.VarChar(150)
   lastName            String         @db.VarChar(150)

@@ -1,7 +1,7 @@
 // /src/costumes/dto/create-costume.dto.ts
-import { IsString, IsOptional, IsEnum, IsArray, ValidateNested, IsInt, Min } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsArray, ValidateNested, IsInt, Min, IsDateString } from 'class-validator';
 import { Type } from 'class-transformer';
-import { LockerRoomCategory, LockerRoomStatus } from '@prisma/client';
+import { LockerRoomCategory, LockerRoomStatus, PayrollStatus, TypeOfContract, TypeOfEmployee } from '@prisma/client';
 
 export class SizeStockDto {
     @IsString()
@@ -16,15 +16,42 @@ export class SizeStockDto {
 
 export class CreateEmployeeDto {
     @IsString()
-    name: string;
+    firstName: string;
+    lastName: string;
 
-    @IsOptional()
     @IsString()
+    @IsOptional()
+    IDNumberPrefix?: string;
+
+    @IsString()
+    @IsOptional()
+    dni?: string;
+
+    @IsEnum(TypeOfContract)
+    @IsOptional()
+    typeOfContract?: TypeOfContract;
+
+    @IsEnum(TypeOfEmployee)
+    @IsOptional()
+    typeOfEmployee?: TypeOfEmployee;
+
+    @IsDateString()
+    birthDate: string;
+
+    @IsString()
+    @IsOptional()
     countryCode?: string;
 
     @IsString()
     @IsOptional()
-    beat?: string;
+    phone?: string;
+
+    @IsString()
+    address: string;
+
+    @IsString()
+    @IsOptional()
+    medicalObservations?: string;
 
     @IsEnum(LockerRoomCategory)
     @IsOptional()
@@ -39,4 +66,30 @@ export class CreateEmployeeDto {
     @Type(() => SizeStockDto)
     @IsOptional()
     availableSizes?: SizeStockDto[];
+
+    @IsInt()
+    @IsOptional()
+    @Type(() => Number)
+    hoursTaughtMonth?: number;
+
+    @IsInt()
+    @IsOptional()
+    @Type(() => Number)
+    hourlyRate?: number;
+
+    @IsInt()
+    @IsOptional()
+    @Type(() => Number)
+    bonus?: number;
+
+    @IsEnum(PayrollStatus)
+    @IsOptional()
+    payrollStatus?: PayrollStatus;
+
+    userId?: string;
+
+    @IsArray()
+    @IsOptional()
+    groupIds?: string[];
+
 }

@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service'; // Ajusta la ruta a tu PrismaService
 import { Prisma, PayrollStatus, TypeOfContract, TypeOfEmployee } from '@prisma/client';
+import { CreateEmployeeDto } from './dto/create-employee.dto';
 
 // DTOs sugeridos para tipado
 export interface GetEmployeesFilterDto {
@@ -23,7 +24,7 @@ export class EmployeesService {
     constructor(private readonly prisma: PrismaService) { }
 
     // 🎯 1. CREAR EMPLEADO
-    async create(data: any) {
+    async create(data: CreateEmployeeDto) {
         try {
             // Normalizar la fecha de nacimiento si viene como string
             const birthDate = data.birthDate ? new Date(data.birthDate) : null;
@@ -33,6 +34,7 @@ export class EmployeesService {
 
             return await this.prisma.employee.create({
                 data: {
+                    IDNumberPrefix: data.IDNumberPrefix,
                     dni: data.dni,
                     firstName: data.firstName,
                     lastName: data.lastName,
