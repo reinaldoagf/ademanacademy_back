@@ -30,6 +30,10 @@ export class CreateUserDto {
   isAdmin?: boolean;
 
   @IsString()
+  @IsNotEmpty({ message: 'El prefijo es obligatorio' })
+  IDNumberPrefix: string;
+
+  @IsString()
   @IsNotEmpty()
   dni: string;
 }

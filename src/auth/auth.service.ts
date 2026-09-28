@@ -37,6 +37,7 @@ export class AuthService {
       lastName: registerDto.lastName,
       email: registerDto.email,
       phone: registerDto.phone,
+      IDNumberPrefix: registerDto.IDNumberPrefix,
       dni: registerDto.dni,
       password: hashedPassword,
       isAdmin: totalUsers === 0, // 👈 Pasado de forma segura en el servidor

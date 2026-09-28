@@ -29,7 +29,8 @@ async function main() {
     const hashedPassword = await bcrypt.hash('12345678', salt);
     const admin = await prisma.user.create({
         data: {
-            dni: 'V-12345678',
+            IDNumberPrefix: 'V',
+            dni: '12345678',
             firstName: 'Valentina',
             lastName: 'Birrot',
             email: 'admin@academia.com',
@@ -118,7 +119,8 @@ async function main() {
 
     const user = await prisma.user.create({
         data: {
-            dni: 'V-11223344',
+            IDNumberPrefix: 'V',
+            dni: '11223344',
             firstName: 'Alonso',
             lastName: 'Fermin',
             email: 'alonso.rep@gmail.com',

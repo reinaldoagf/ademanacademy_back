@@ -2,6 +2,10 @@ import { IsEmail, IsNotEmpty, IsString, MinLength, Matches } from 'class-validat
 
 export class SignupDto {
   @IsString()
+  @IsNotEmpty({ message: 'El prefijo es obligatorio' })
+  IDNumberPrefix: string;
+
+  @IsString()
   @IsNotEmpty({ message: 'El DNI es obligatorio' })
   dni: string;
 

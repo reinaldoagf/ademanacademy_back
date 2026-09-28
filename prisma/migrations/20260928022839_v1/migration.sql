@@ -1,6 +1,7 @@
 -- CreateTable
 CREATE TABLE `users` (
     `id` VARCHAR(191) NOT NULL,
+    `IDNumberPrefix` VARCHAR(30) NOT NULL,
     `dni` VARCHAR(30) NOT NULL,
     `firstName` VARCHAR(150) NOT NULL,
     `lastName` VARCHAR(150) NOT NULL,
@@ -23,6 +24,7 @@ CREATE TABLE `users` (
 -- CreateTable
 CREATE TABLE `employees` (
     `id` VARCHAR(191) NOT NULL,
+    `IDNumberPrefix` VARCHAR(30) NULL,
     `dni` VARCHAR(30) NULL,
     `firstName` VARCHAR(150) NOT NULL,
     `lastName` VARCHAR(150) NOT NULL,
@@ -62,6 +64,7 @@ CREATE TABLE `students` (
 -- CreateTable
 CREATE TABLE `clients` (
     `id` VARCHAR(191) NOT NULL,
+    `IDNumberPrefix` VARCHAR(30) NULL,
     `dni` VARCHAR(30) NULL,
     `firstName` VARCHAR(150) NOT NULL,
     `lastName` VARCHAR(150) NOT NULL,
