@@ -50,6 +50,7 @@ export class RegistrationsService {
                     },
                     student: true,
                     client: true,
+                    group: true,
                 },
             }),
             this.prisma.registration.count({ where }),
@@ -60,15 +61,7 @@ export class RegistrationsService {
 
         // Adaptamos la respuesta para que encaje perfectamente con la UI genérica
         return {
-            data: registrations.map(tx => ({
-                id: tx.id, // Máscara estética parecida a tu mock (TX-901)
-                realId: tx.id,
-                studentId: tx.studentId,
-                userId: tx.userId,
-                clientId: tx.clientId,
-                status: tx.status,
-                createdAt: tx.createdAt.toISOString().split('T')[0],
-            })),
+            data: registrations,
             meta: {
                 currentPage: page,
                 totalPages,
