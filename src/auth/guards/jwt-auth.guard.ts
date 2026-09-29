@@ -17,8 +17,9 @@ export class JwtAuthGuard implements CanActivate {
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
         const request = context.switchToHttp().getRequest<Request>();
-        const token = this.extractTokenFromHeader(request);
-
+        // const token = this.extractTokenFromHeader(request);
+        // 🎯 Extrae el token (desde cookie o header)
+        const token = this.extractToken(request);
         if (!token) {
             throw new UnauthorizedException('Token de autenticación no proporcionado');
         }
@@ -40,9 +41,30 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     /**
-     * Helper para extraer el Bearer token del Header 'Authorization'
-     */
-    private extractTokenFromHeader(request: Request): string | undefined {
+    * Intenta extraer el token de la cookie HttpOnly o del header Authorization
+    */
+    private extractToken(request: Request): string | undefined {
+        // 1. Buscar en cookies procesadas por cookie-parser
+        if (request.cookies && request.cookies['auth_token']) {
+            return request.cookies['auth_token'];
+        }
+
+        // 2. Buscar manualmente en el header 'Cookie' (Fallback sin cookie-parser)
+        if (request.headers.cookie) {
+            const cookies = request.headers.cookie
+                .split(';')
+                .map((c) => c.trim().split('='))
+                .reduce((acc, [key, val]) => {
+                    acc[key] = val;
+                    return acc;
+                }, {} as Record<string, string>);
+
+            if (cookies['auth_token']) {
+                return cookies['auth_token'];
+            }
+        }
+
+        // 3. Buscar en el header 'Authorization: Bearer <token>'
         const [type, token] = request.headers.authorization?.split(' ') ?? [];
         return type === 'Bearer' ? token : undefined;
     }

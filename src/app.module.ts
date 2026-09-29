@@ -8,6 +8,7 @@ import { UsersModule } from './users/users.module';
 import { StudentsModule } from './students/students.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { ClassroomsModule } from './classrooms/classrooms.module';
+import { BadgesModule } from './badges/badges.module';
 import { GroupsModule } from './groups/groups.module';
 import { RegistrationsModule } from './registrations/registrations.module';
 import { SchedulesModule } from './schedules/schedules.module';
@@ -41,6 +42,7 @@ import { InstructorsModule } from './instructors/instructors.module';
     StudentsModule,
     TransactionsModule,
     ClassroomsModule,
+    BadgesModule,
     GroupsModule,
     RegistrationsModule,
     SchedulesModule,

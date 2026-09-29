@@ -21,6 +21,10 @@ async function bootstrap() {
     }),
   );
   app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
+  app.enableCors({
+    origin: ['http://localhost:3001', 'http://localhost:3000'], // Dominio exacto de tu Next.js
+    credentials: true,
+  });
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();
