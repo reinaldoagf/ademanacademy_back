@@ -281,14 +281,14 @@ export class StudentsService {
         // Verificar existencia del cliente-estudiante y obtener el studentId
         const currentClient = await this.findOne(id);
 
-        // console.log({ updateStudentDto })
-
         const {
+            IDNumberPrefix,
             dni,
             firstName,
             lastName,
             birthDate,
             address,
+            countryCode,
             phone,
             shirtSize,
             kinship,
@@ -332,11 +332,13 @@ export class StudentsService {
             return await tx.client.update({
                 where: { id },
                 data: {
+                    ...(IDNumberPrefix !== undefined && { IDNumberPrefix }),
                     ...(dni !== undefined && { dni }),
                     ...(firstName && { firstName }),
                     ...(lastName && { lastName }),
                     ...(birthDate && { birthDate: new Date(birthDate) }),
                     ...(address && { address }),
+                    ...(countryCode !== undefined && { countryCode }),
                     ...(phone !== undefined && { phone }),
                     ...(userId !== undefined && { userId: userId || null }),
                     ...(groupId !== undefined && { groupId: groupId || null }),
