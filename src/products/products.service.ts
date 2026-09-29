@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service'; // Ajusta según la ubicación de tu PrismaService
 import { CreateProductDto } from './dto/create-product.dto';
+import { GetProductsFilterDto, StockFilterEnum } from './dto/get-products-filter.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Prisma } from '@prisma/client';
 import * as fs from 'fs';
@@ -43,14 +44,8 @@ export class ProductsService {
         });
     }
 
-    async findAll(params?: {
-        page?: number;
-        limit?: number;
-        search?: string;
-        categoryId?: string;
-        isActive?: boolean;
-    }) {
-        const { page = 1, limit = 10, search, categoryId, isActive } = params || {};
+    async findAll(params?: GetProductsFilterDto) {
+        const { page = 1, limit = 10, search, categoryId, isActive, stockStatus } = params || {};
         const skip = (page - 1) * limit;
 
         const where: Prisma.ProductWhereInput = {};
@@ -66,9 +61,16 @@ export class ProductsService {
             where.categoryId = categoryId;
         }
 
-        // Solo filtra por estado si es un booleano definido
+        // Filtro por estado activo/inactivo
         if (typeof isActive === 'boolean') {
             where.isActive = isActive;
+        }
+
+        // 🎯 Filtro por Stock
+        if (stockStatus === StockFilterEnum.IN_STOCK) {
+            where.currentStock = { gt: 0 };
+        } else if (stockStatus === StockFilterEnum.OUT_OF_STOCK) {
+            where.currentStock = { lte: 0 };
         }
 
         const [totalItems, data] = await Promise.all([

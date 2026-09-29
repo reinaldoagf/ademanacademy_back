@@ -22,6 +22,7 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { GetProductsFilterDto } from './dto/get-products-filter.dto';
 
 @Controller('products')
 @UseGuards(JwtAuthGuard) // 🛡️ Protege la gestión de infraestructura
@@ -60,28 +61,8 @@ export class ProductsController {
     }
 
     @Get()
-    findAll(
-        @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-        @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
-        @Query('search') search?: string,
-        @Query('categoryId') categoryId?: string,
-        @Query('isActive') isActive?: string,
-    ) {
-        let activeBool: boolean | undefined = undefined;
-
-        if (isActive === 'true') {
-            activeBool = true;
-        } else if (isActive === 'false') {
-            activeBool = false;
-        }
-
-        return this.productsService.findAll({
-            page,
-            limit,
-            search,
-            categoryId,
-            isActive: activeBool
-        });
+    async findAll(@Query() query: GetProductsFilterDto) {
+        return this.productsService.findAll(query);
     }
 
     @Get('metrics')
