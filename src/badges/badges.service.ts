@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 export class BadgesService {
     constructor(private readonly prisma: PrismaService) { }
 
-    async getBadgesSummary(): Promise<Record<string, number>> {
+    async getBadgesSummary(userId: string): Promise<Record<string, number>> {
         const [
             clientsCount,
             studentsCount,
@@ -20,7 +20,9 @@ export class BadgesService {
             uniformsCount,
             costumesCount,
             seatingChartsCount,
-            eventsCount
+            eventsCount,
+            myPaymentsCount,
+            myPaymentOrdersCount
         ] = await Promise.all([
             this.prisma.client.count(),
             this.prisma.student.count(),
@@ -36,6 +38,8 @@ export class BadgesService {
             this.prisma.costume.count(),
             this.prisma.seatingMap.count(),
             this.prisma.event.count(),
+            this.prisma.transaction.count({ where: { client: { userId: userId } } }),
+            this.prisma.paymentOrder.count({ where: { client: { userId: userId } } }),
         ]);
 
         return {
@@ -53,6 +57,8 @@ export class BadgesService {
             storeProducts: productsCount,
             seatingCharts: seatingChartsCount,
             events: eventsCount,
+            myPayments: myPaymentsCount,
+            myPaymentOrders: myPaymentOrdersCount,
         };
     }
 }
