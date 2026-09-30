@@ -84,7 +84,7 @@ model Student {
   group               Group?           @relation(fields: [groupId], references: [id], onDelete: Cascade)
   groupId             String?
   clients             Client[]
-  uniforms            StudentUniform[]
+  uniformAssignments  StudentUniform[]
   costumeAssignments  StudentCostume[]
 
   createdAt     DateTime       @default(now()) @map("createdAt")
@@ -352,19 +352,19 @@ model Registration {
 }
 
 model Uniform {
-  id             String             @id @default(uuid())
-  name           String             @unique @db.VarChar(150)
-  category       LockerRoomCategory @default(baby)
-  status         LockerRoomStatus   @default(payment_pending)
-  price          Decimal            @db.Decimal(10, 2) // Precio unitario al momento de la compra 
+  id                 String             @id @default(uuid())
+  name               String             @unique @db.VarChar(150)
+  category           LockerRoomCategory @default(baby)
+  status             LockerRoomStatus   @default(payment_pending)
+  price              Decimal            @db.Decimal(10, 2) // Precio unitario al momento de la compra 
   // Guardar el inventario por tallas en JSON sigue siendo válido si es informativo, 
   // pero lo ideal para asignaciones exactas es registrar qué talla se lleva el alumno en la tabla intermedia.
-  availableSizes Json               @default("[]")
-  images         Json               @default("[]")
+  availableSizes     Json               @default("[]")
+  images             Json               @default("[]")
   // 🎯 RELACIÓN NUEVA: Alumnos a los que se ha asignado este vestuario
-  assignments    StudentUniform[]
-  createdAt      DateTime           @default(now()) @map("createdAt")
-  updatedAt      DateTime           @updatedAt @map("updatedAt")
+  uniformAssignments StudentUniform[]
+  createdAt          DateTime           @default(now()) @map("createdAt")
+  updatedAt          DateTime           @updatedAt @map("updatedAt")
 
   @@map("uniforms")
 }
@@ -409,9 +409,9 @@ model Costume {
   price    Decimal            @db.Decimal(10, 2) // Precio unitario al momento de la compra
 
   // 🎯 RELACIÓN NUEVA: Galería de imágenes guardada como un array JSON de strings
-  images      Json             @default("[]")
+  images             Json             @default("[]")
   // 🎯 RELACIÓN NUEVA: Alumnos a los que se ha asignado este vestuario
-  assignments StudentCostume[]
+  costumeAssignments StudentCostume[]
 
   clientUniforms StudentUniform[]
 

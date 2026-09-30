@@ -1,4 +1,4 @@
-import { IsString, IsEnum, IsOptional } from 'class-validator';
+import { IsString, IsEnum, IsOptional, IsNotEmpty } from 'class-validator';
 
 export enum AssignmentSize {
     XS = 'XS',
@@ -17,10 +17,22 @@ export enum AssignmentStatus {
 
 export class AssignUniformDto {
     @IsString()
+    @IsNotEmpty({ message: 'El ID del estudiante es requerido' })
     studentId: string;
 
-    @IsEnum(AssignmentSize)
-    assignedSize: AssignmentSize;
+    @IsString()
+    @IsNotEmpty({ message: 'El ID del uniforme es requerido' })
+    uniformId: string;
+
+    @IsOptional()
+    @IsString()
+    clientId?: string;
+
+    // Usa IsString si manejas más variaciones de tallas (ej. 32, 34, S, M)
+    // o mantén IsEnum(AssignmentSize) si solo usas letras estándar.
+    @IsString()
+    @IsNotEmpty({ message: 'La talla a asignar es requerida' })
+    assignedSize: string;
 
     @IsOptional()
     @IsString()
@@ -28,7 +40,9 @@ export class AssignUniformDto {
 }
 
 export class UpdateAssignmentStatusDto {
-    @IsEnum(AssignmentStatus)
+    @IsEnum(AssignmentStatus, {
+        message: 'El estado debe ser: assigned, returned, damaged o lost',
+    })
     status: AssignmentStatus;
 
     @IsOptional()

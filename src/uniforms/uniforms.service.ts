@@ -1,5 +1,5 @@
 // /src/uniforms/uniforms.service.ts
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException, } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
@@ -9,7 +9,10 @@ import { CreateUniformDto } from './dto/create-uniform.dto';
 import { UpdateUniformDto } from './dto/update-uniform.dto';
 import { GetUniformsFilterDto } from './dto/get-uniforms-filter.dto';
 import { AssignUniformDto, UpdateAssignmentStatusDto } from './dto/assign-uniform.dto';
-
+interface SizeItem {
+    size: string;
+    quantity: number;
+}
 @Injectable()
 export class UniformsService {
     constructor(private readonly prisma: PrismaService) { }
@@ -235,25 +238,79 @@ export class UniformsService {
         });
     }
     // 🎯 ASIGNAR VESTUARIO A UN ALUMNO
-    async assignToStudent(uniformId: string, assignDto: AssignUniformDto) {
-        // Validar existencia de entidades
-        const uniform = await this.prisma.uniform.findUnique({ where: { id: uniformId } });
-        if (!uniform) throw new NotFoundException('Vestuario no encontrado.');
+    async assignToStudent(assignDto: AssignUniformDto) {
+        const { uniformId, studentId, assignedSize, observations, clientId } = assignDto;
 
-        const student = await this.prisma.student.findUnique({ where: { id: assignDto.studentId } });
-        if (!student) throw new NotFoundException('Estudiante no encontrado.');
+        // 1. Validar existencia del estudiante primero (operación de lectura fuera de la transacción)
+        const student = await this.prisma.student.findUnique({
+            where: { id: studentId },
+        });
+        if (!student) {
+            throw new NotFoundException('Estudiante no encontrado.');
+        }
 
-        // Crear asignación (to review)
-        /* return this.prisma.studentUniform.create({
-            data: {
-                uniformId,
-                studentId: assignDto.studentId,
-                assignedSize: assignDto.assignedSize,
-                observations: assignDto.observations,
-                status: 'assigned',
-            },
-            include: { student: true, uniform: true }
-        }); */
+        // 2. Ejecutar actualización de inventario y creación de asignación dentro de una transacción
+        return await this.prisma.$transaction(async (tx) => {
+            // Obtener el uniforme
+            const uniform = await tx.uniform.findUnique({
+                where: { id: uniformId },
+            });
+
+            if (!uniform) {
+                throw new NotFoundException('Vestuario no encontrado.');
+            }
+
+            // Deserializar/Parsear 'availableSizes'
+            const sizes = (uniform.availableSizes as unknown as SizeItem[]) || [];
+
+
+            // Buscar la talla solicitada
+            const sizeIndex = sizes.findIndex(
+                (item) => item.size.toUpperCase() === assignedSize.toString().toUpperCase()
+            );
+
+            if (sizeIndex === -1) {
+                throw new BadRequestException(
+                    `La talla "${assignedSize}" no está configurada para este uniforme.`
+                );
+            }
+
+            if (sizes[sizeIndex].quantity <= 0) {
+                throw new BadRequestException(
+                    `No hay disponibilidad/stock suficiente para la talla "${assignedSize}".`
+                );
+            }
+
+            // Descontar 1 unidad del inventario
+            sizes[sizeIndex].quantity -= 1;
+
+            // Actualizar el uniforme con el nuevo arreglo de tallas
+            await tx.uniform.update({
+                where: { id: uniformId },
+                data: {
+                    availableSizes: sizes as any,
+                },
+            });
+
+            // Registrar la asignación del uniforme
+            const assignment = await tx.studentUniform.create({
+                data: {
+                    uniformId,
+                    studentId,
+                    assignedSize: assignedSize.toString(),
+                    observations,
+                    clientId,
+                    status: 'assigned',
+                    assignedAt: new Date(),
+                },
+                include: {
+                    student: true,
+                    uniform: true,
+                },
+            });
+
+            return assignment;
+        });
     }
 
     // 🎯 ACTUALIZAR ESTADO DE LA ASIGNACIÓN (DEVOLVER/DAÑADO/EXTRAVIADO)
@@ -304,4 +361,6 @@ export class UniformsService {
             byStatus: statusMap,
         };
     }
+
+
 }

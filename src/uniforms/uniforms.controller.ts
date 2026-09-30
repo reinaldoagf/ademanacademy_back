@@ -136,12 +136,11 @@ export class UniformsController {
     }
 
     // 🎯 Rutas de Asignación
-    @Post(':id/assign')
-    async assignToStudent(
-        @Param('id') uniformId: string,
+    @Post('assign')
+    async assignToStudentWithParam(
         @Body() assignUniformDto: AssignUniformDto,
     ) {
-        return this.uniformsService.assignToStudent(uniformId, assignUniformDto);
+        return await this.uniformsService.assignToStudent(assignUniformDto);
     }
 
     @Patch('assignments/:assignmentId')
