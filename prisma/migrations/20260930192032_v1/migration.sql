@@ -263,10 +263,9 @@ CREATE TABLE `uniforms` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `client_uniforms` (
+CREATE TABLE `student_uniforms` (
     `id` VARCHAR(191) NOT NULL,
     `studentId` VARCHAR(191) NOT NULL,
-    `costumeId` VARCHAR(191) NULL,
     `uniformId` VARCHAR(191) NOT NULL,
     `assignedSize` VARCHAR(10) NOT NULL,
     `status` ENUM('assigned', 'returned', 'damaged', 'lost') NOT NULL DEFAULT 'assigned',
@@ -297,7 +296,7 @@ CREATE TABLE `costumes` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `client_costumes` (
+CREATE TABLE `student_costumes` (
     `id` VARCHAR(191) NOT NULL,
     `studentId` VARCHAR(191) NOT NULL,
     `costumeId` VARCHAR(191) NOT NULL,
@@ -535,25 +534,22 @@ ALTER TABLE `registrations` ADD CONSTRAINT `registrations_groupId_fkey` FOREIGN 
 ALTER TABLE `registrations` ADD CONSTRAINT `registrations_clientId_fkey` FOREIGN KEY (`clientId`) REFERENCES `clients`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `client_uniforms` ADD CONSTRAINT `client_uniforms_studentId_fkey` FOREIGN KEY (`studentId`) REFERENCES `students`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `student_uniforms` ADD CONSTRAINT `student_uniforms_studentId_fkey` FOREIGN KEY (`studentId`) REFERENCES `students`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `client_uniforms` ADD CONSTRAINT `client_uniforms_costumeId_fkey` FOREIGN KEY (`costumeId`) REFERENCES `costumes`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `student_uniforms` ADD CONSTRAINT `student_uniforms_uniformId_fkey` FOREIGN KEY (`uniformId`) REFERENCES `uniforms`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `client_uniforms` ADD CONSTRAINT `client_uniforms_uniformId_fkey` FOREIGN KEY (`uniformId`) REFERENCES `uniforms`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `student_uniforms` ADD CONSTRAINT `student_uniforms_clientId_fkey` FOREIGN KEY (`clientId`) REFERENCES `clients`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `client_uniforms` ADD CONSTRAINT `client_uniforms_clientId_fkey` FOREIGN KEY (`clientId`) REFERENCES `clients`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `student_costumes` ADD CONSTRAINT `student_costumes_studentId_fkey` FOREIGN KEY (`studentId`) REFERENCES `students`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `client_costumes` ADD CONSTRAINT `client_costumes_studentId_fkey` FOREIGN KEY (`studentId`) REFERENCES `students`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `student_costumes` ADD CONSTRAINT `student_costumes_costumeId_fkey` FOREIGN KEY (`costumeId`) REFERENCES `costumes`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `client_costumes` ADD CONSTRAINT `client_costumes_costumeId_fkey` FOREIGN KEY (`costumeId`) REFERENCES `costumes`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE `client_costumes` ADD CONSTRAINT `client_costumes_clientId_fkey` FOREIGN KEY (`clientId`) REFERENCES `clients`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `student_costumes` ADD CONSTRAINT `student_costumes_clientId_fkey` FOREIGN KEY (`clientId`) REFERENCES `clients`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `account_payables` ADD CONSTRAINT `account_payables_supplierId_fkey` FOREIGN KEY (`supplierId`) REFERENCES `Supplier`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;

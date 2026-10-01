@@ -374,9 +374,7 @@ model StudentUniform {
 
   // Relación con el Estudiante
   studentId String
-  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  costumeId String?
-  costume   Costume? @relation(fields: [costumeId], references: [id])
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   // Relación con el Vestuario
   uniformId String
@@ -396,7 +394,7 @@ model StudentUniform {
   client    Client?  @relation(fields: [clientId], references: [id])
   clientId  String?
 
-  @@map("client_uniforms")
+  @@map("student_uniforms")
 }
 
 // 👗 MODELO DE VESTUARIO (Optimizado)
@@ -412,8 +410,6 @@ model Costume {
   images             Json             @default("[]")
   // 🎯 RELACIÓN NUEVA: Alumnos a los que se ha asignado este vestuario
   costumeAssignments StudentCostume[]
-
-  clientUniforms StudentUniform[]
 
   createdAt DateTime @default(now()) @map("createdAt")
   updatedAt DateTime @updatedAt @map("updatedAt")
@@ -447,7 +443,7 @@ model StudentCostume {
   client    Client?  @relation(fields: [clientId], references: [id])
   clientId  String?
 
-  @@map("client_costumes")
+  @@map("student_costumes")
 }
 
 model Setting {

@@ -86,7 +86,7 @@ export class CostumesService {
                 take: limit,
                 orderBy: { createdAt: 'desc' },
                 include: {
-                    assignments: {
+                    costumeAssignments: {
                         include: { student: true }
                     }
                 }
@@ -120,7 +120,7 @@ export class CostumesService {
         const costume = await this.prisma.costume.findUnique({
             where: { id },
             include: {
-                assignments: {
+                costumeAssignments: {
                     include: { student: true }
                 }
             }
