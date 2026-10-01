@@ -22,7 +22,8 @@ export class BadgesService {
             seatingChartsCount,
             eventsCount,
             myPaymentsCount,
-            myPaymentOrdersCount
+            myPaymentOrdersCount,
+            myStudentUniformCount
         ] = await Promise.all([
             this.prisma.client.count(),
             this.prisma.student.count(),
@@ -40,6 +41,7 @@ export class BadgesService {
             this.prisma.event.count(),
             this.prisma.transaction.count({ where: { client: { userId: userId } } }),
             this.prisma.paymentOrder.count({ where: { client: { userId: userId } } }),
+            this.prisma.studentUniform.count({ where: { client: { userId: userId } } }),
         ]);
 
         return {
@@ -59,6 +61,7 @@ export class BadgesService {
             events: eventsCount,
             myPayments: myPaymentsCount,
             myPaymentOrders: myPaymentOrdersCount,
+            myUniforms: myStudentUniformCount,
         };
     }
 }

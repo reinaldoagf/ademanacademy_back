@@ -22,4 +22,5 @@ export class GetUniformsFilterDto {
     @IsOptional()
     @IsEnum(LockerRoomStatus)
     status?: LockerRoomStatus;
+
 }

@@ -66,6 +66,67 @@ export class UniformsService {
             throw error;
         }
     }
+    async findMyUniforms(userId: string, filters: GetUniformsFilterDto) {
+        const { page = 1, limit = 10, search } = filters;
+        const skip = (page - 1) * limit;
+        // Construcción de condiciones dinámicas de búsqueda
+        const where: any = {};
+        if (userId) {
+            where.client = {
+                userId: userId
+            };
+        }
+        if (search) {
+            where.OR = [
+                {
+                    user: {
+                        OR: [
+                            { name: { contains: search } },
+                            { email: { contains: search } },
+                            { dni: { contains: search } },
+                        ],
+                    },
+                },
+                {
+                    client: {
+                        OR: [
+                            { firstName: { contains: search } },
+                            { lastName: { contains: search } },
+                            { dni: { contains: search } },
+                        ],
+                    },
+                },
+            ];
+        }
+
+        // Ejecutar consultas en paralelo para optimizar rendimiento en BD
+        const [totalItems, data] = await Promise.all([
+            this.prisma.studentUniform.count({ where }),
+            this.prisma.studentUniform.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { createdAt: 'desc' },
+                include: {
+                    student: true,
+                    client: true,
+                    uniform: true
+                }
+            }),
+        ]);
+
+        const totalPages = Math.ceil(totalItems / limit);
+        return {
+            meta: {
+                totalItems,
+                itemCount: data.length,
+                itemsPerPage: limit,
+                totalPages,
+                currentPage: page,
+            },
+            data,
+        };
+    }
     async findAll(filters: GetUniformsFilterDto) {
         const { page = 1, limit = 10, search, category, status } = filters;
         const skip = (page - 1) * limit;

@@ -8,6 +8,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { CurrentUser } from '@/auth/decorators/current-user.decorator';
 
 @Controller('uniforms')
 @UseGuards(JwtAuthGuard)
@@ -62,6 +63,16 @@ export class UniformsController {
         return this.uniformsService.findAll(filters);
     }
 
+    @Get('my-assignments')
+    async findMyUniforms(
+        @CurrentUser() user: any, // 👈 El decorador extrae el user automáticamente
+        @Query() filters: GetUniformsFilterDto,
+    ) {
+        // Extraemos el id de forma 100% segura y limpia
+        const userId = user?.sub;
+        // Por ahora, requerimos que el usuario lo envíe o usamos el 'sub' del token si lo configuras
+        return this.uniformsService.findMyUniforms(userId, filters);
+    }
     @Get('count-by-status')
     async getCountByStatus() {
         return this.uniformsService.getCountByStatus();
