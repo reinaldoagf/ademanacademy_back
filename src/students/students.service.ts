@@ -228,7 +228,12 @@ export class StudentsService {
                             email: true,
                         },
                     },
-                    group: true,
+                    group: {
+                        include: {
+                            schedules: true,
+                            instructor: true,
+                        }
+                    },
                 },
             }),
             this.prisma.client.count({ where }),
