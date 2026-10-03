@@ -1,7 +1,7 @@
 // src/costumes/costumes.controller.ts
 import { BadRequestException, Controller, Get, Post, Body, UseInterceptors, UploadedFiles, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
 import { CostumesService } from './costumes.service';
-import { CleanupOnErrorInterceptor } from './cleanup-on-error.interceptor';
+import { CleanupOnErrorInterceptor } from '../interceptors/cleanup-on-error.interceptor';
 import { GetCostumesFilterDto } from './dto/get-costumes-filter.dto';
 import { AssignCostumeDto, UpdateAssignmentStatusDto } from './dto/assign-costume.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';

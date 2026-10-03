@@ -25,36 +25,78 @@ export class EventsService {
             }
 
             if (endDate < startDate) {
-                throw new BadRequestException('La fecha de fin no puede ser anterior a la fecha de inicio.');
+                throw new BadRequestException(
+                    'La fecha de fin no puede ser anterior a la fecha de inicio.',
+                );
             }
 
-            // Si no viene código, se puede autogenerar uno correlativo sencillo
-            let eventCode = data.code;
-            if (!eventCode) {
-                const year = startDate.getFullYear();
-                const count = await this.prisma.event.count();
-                eventCode = `EVE-${year}-${String(count + 1).padStart(2, '0')}`;
+            // Validaciones de fechas de preventa
+            let presaleStartDate: Date | undefined;
+            let presaleEndDate: Date | undefined;
+
+            if (data.presaleStartDate) {
+                presaleStartDate = new Date(data.presaleStartDate);
+                if (isNaN(presaleStartDate.getTime())) {
+                    throw new BadRequestException('La fecha de inicio de preventa no es válida.');
+                }
             }
+
+            if (data.presaleEndDate) {
+                presaleEndDate = new Date(data.presaleEndDate);
+                if (isNaN(presaleEndDate.getTime())) {
+                    throw new BadRequestException('La fecha de fin de preventa no es válida.');
+                }
+            }
+
+            if (presaleStartDate && presaleEndDate && presaleEndDate < presaleStartDate) {
+                throw new BadRequestException(
+                    'La fecha de fin de preventa no puede ser anterior a la fecha de inicio de preventa.',
+                );
+            }
+            const { images, sponsors, ...eventData } = data;
 
             return await this.prisma.event.create({
                 data: {
-                    code: eventCode,
-                    name: data.name,
-                    type: data.type ?? EventType.sample,
+                    name: eventData.name,
+                    type: eventData.type ?? EventType.sample,
                     startDate,
                     endDate,
-                    productionStatus: data.productionStatus ?? ProductionStatus.planning,
-                    description: data.description,
-                    seatingMapId: data.seatingMapId,
+                    isPresaleActive: eventData.isPresaleActive ?? false,
+                    presaleStartDate,
+                    presaleEndDate,
+                    productionStatus: eventData.productionStatus ?? ProductionStatus.planning,
+                    description: eventData.description,
+                    seatingMapId: eventData.seatingMapId,
+                    // Relaciones anidadas en la creación
+                    ...(images && images.length > 0 && {
+                        images: {
+                            create: images.map((img) => ({
+                                url: img.url,
+                                altText: img.altText,
+                                type: img.type,
+                                order: img.order ?? 0,
+                            })),
+                        },
+                    }),
+                    ...(sponsors && sponsors.length > 0 && {
+                        sponsors: {
+                            create: sponsors.map((s) => ({
+                                name: s.name,
+                                logoUrl: s.logoUrl,
+                                tier: s.tier,
+                                websiteUrl: s.websiteUrl,
+                                socialLinks: s.socialLinks ?? Prisma.DbNull,
+                            })),
+                        },
+                    }),
+                },
+                include: {
+                    images: true,
+                    sponsors: true,
+                    seatingMap: true,
                 },
             });
         } catch (error) {
-            if (
-                error instanceof Prisma.PrismaClientKnownRequestError &&
-                error.code === 'P2002'
-            ) {
-                throw new ConflictException(`Ya existe un evento registrado con el código "${data.code}".`);
-            }
             throw error;
         }
     }
@@ -90,7 +132,6 @@ export class EventsService {
             where.OR = [
                 { name: { contains: search } },
                 { seatingMap: { location: { contains: search } } },
-                { code: { contains: search } },
             ];
         }
 
@@ -102,6 +143,8 @@ export class EventsService {
                 take,
                 orderBy: { startDate: 'asc' },
                 include: {
+                    images: true,
+                    sponsors: true,
                     eventSeats: true,
                     seatingMap: { include: { elements: true } }
                 }
@@ -121,15 +164,21 @@ export class EventsService {
     }
 
     // 🎯 3. OBTENER UN EVENTO POR ID O CÓDIGO
-    async findOne(idOrCode: string) {
+    async findOne(id: string) {
         const event = await this.prisma.event.findFirst({
             where: {
-                OR: [{ id: idOrCode }, { code: idOrCode }],
+                id,
+            },
+            include: {
+                images: true,
+                sponsors: true,
+                seatingMap: { include: { elements: true } },
+                eventSeats: true,
             },
         });
 
         if (!event) {
-            throw new NotFoundException(`Evento con identificador "${idOrCode}" no encontrado.`);
+            throw new NotFoundException(`Evento con identificador "${id}" no encontrado.`);
         }
 
         return event;
@@ -139,16 +188,32 @@ export class EventsService {
     async update(id: string, updateData: UpdateEventDto) {
         await this.findOne(id); // Lanza NotFoundException si no existe
 
-        const { startDate, endDate, ...data } = updateData;
+        const {
+            startDate,
+            endDate,
+            presaleStartDate,
+            presaleEndDate,
+            images,
+            sponsors,
+            ...data
+        } = updateData;
 
         const parsedStartDate = startDate ? new Date(startDate) : undefined;
         const parsedEndDate = endDate ? new Date(endDate) : undefined;
+        const parsedPresaleStartDate = presaleStartDate ? new Date(presaleStartDate) : undefined;
+        const parsedPresaleEndDate = presaleEndDate ? new Date(presaleEndDate) : undefined;
 
         if (parsedStartDate && isNaN(parsedStartDate.getTime())) {
             throw new BadRequestException('La fecha de inicio no es válida.');
         }
         if (parsedEndDate && isNaN(parsedEndDate.getTime())) {
             throw new BadRequestException('La fecha de fin no es válida.');
+        }
+        if (parsedPresaleStartDate && isNaN(parsedPresaleStartDate.getTime())) {
+            throw new BadRequestException('La fecha de inicio de preventa no es válida.');
+        }
+        if (parsedPresaleEndDate && isNaN(parsedPresaleEndDate.getTime())) {
+            throw new BadRequestException('La fecha de fin de preventa no es válida.');
         }
 
         try {
@@ -158,6 +223,38 @@ export class EventsService {
                     ...data,
                     ...(parsedStartDate && { startDate: parsedStartDate }),
                     ...(parsedEndDate && { endDate: parsedEndDate }),
+                    ...(parsedPresaleStartDate !== undefined && { presaleStartDate: parsedPresaleStartDate }),
+                    ...(parsedPresaleEndDate !== undefined && { presaleEndDate: parsedPresaleEndDate }),
+                    // Actualización opcional de imágenes (reemplaza las imágenes existentes si se envían)
+                    ...(images && {
+                        images: {
+                            deleteMany: {}, // Limpia imágenes previas
+                            create: images.map((img) => ({
+                                url: img.url,
+                                altText: img.altText,
+                                type: img.type,
+                                order: img.order ?? 0,
+                            })),
+                        },
+                    }),
+                    // Actualización opcional de patrocinadores (reemplaza si se envían)
+                    ...(sponsors && {
+                        sponsors: {
+                            deleteMany: {}, // Limpia patrocinadores previos
+                            create: sponsors.map((s) => ({
+                                name: s.name,
+                                logoUrl: s.logoUrl,
+                                tier: s.tier,
+                                websiteUrl: s.websiteUrl,
+                                socialLinks: s.socialLinks ?? Prisma.DbNull,
+                            })),
+                        },
+                    }),
+                },
+                include: {
+                    images: true,
+                    sponsors: true,
+                    seatingMap: true,
                 },
             });
         } catch (error) {
