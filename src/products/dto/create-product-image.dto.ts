@@ -1,7 +1,7 @@
-// src/events/dto/create-event-image.dto.ts
+// src/products/dto/create-product-image.dto.ts
 import { IsString, IsOptional, IsNumber } from 'class-validator';
 
-export class CreateEventImageDto {
+export class CreateProductImageDto {
     @IsString()
     url: string;
 

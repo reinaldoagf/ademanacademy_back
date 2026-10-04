@@ -6,9 +6,10 @@ import {
     IsInt,
     Min,
     IsBoolean,
-    IsArray
+    ValidateNested,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer'; // 👈 Importar Transform
+import { CreateProductImageDto } from './create-product-image.dto';
 
 export class CreateProductDto {
     @IsString({ message: 'El nombre debe ser una cadena de texto' })
@@ -44,9 +45,10 @@ export class CreateProductDto {
     @IsOptional()
     categoryId?: string;
 
-    @IsArray()
     @IsOptional()
-    images?: string[];
+    @ValidateNested({ each: true })
+    @Type(() => CreateProductImageDto)
+    images?: CreateProductImageDto[];
 
     // 🌟 Conversión de 'true'/'false' (strings de FormData) a booleanos reales
     @Transform(({ value }) => {
@@ -57,4 +59,9 @@ export class CreateProductDto {
     @IsBoolean({ message: 'isActive debe ser un valor booleano' })
     @IsOptional()
     isActive?: boolean;
+
+    @IsBoolean({ message: 'featured debe ser un valor booleano' })
+    @IsOptional()
+    featured?: boolean;
+
 }

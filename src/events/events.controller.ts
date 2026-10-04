@@ -8,32 +8,19 @@ import {
     Delete,
     Query,
     UseGuards,
-    UseInterceptors,
-    UploadedFiles,
-    BadRequestException
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
 import { S3Service } from '../s3/s3.service';
 import { EventsService } from './events.service';
 import { GetEventsFilterDto } from './dto/get-events-filter.dto';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-events.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { CleanupOnErrorInterceptor } from '../interceptors/cleanup-on-error.interceptor';
-import { ImageRole } from '@prisma/client';
-import { CreateEventImageDto } from './dto/create-event-image.dto';
 
 @Controller('events')
 export class EventsController {
     constructor(private readonly eventsService: EventsService,
         private readonly s3Service: S3Service,) { }
-    @Post('presigned-url')
-    @UseGuards(JwtAuthGuard)
-    async getPresignedUrl(@Body() body: { fileType: string }) {
-        return this.s3Service.generatePresignedUrl(body.fileType);
-    }
+
     @Get('home')
     async getHomeEvents() {
         return this.eventsService.getHomeEvents();

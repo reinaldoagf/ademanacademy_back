@@ -1,12 +1,10 @@
 import {
     Injectable,
     NotFoundException,
-    ConflictException,
-    BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { S3Service } from '../s3/s3.service';
-import { Prisma, ProductionStatus, EventType } from '@prisma/client';
+import { Prisma, ProductionStatus } from '@prisma/client';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-events.dto';
 import { GetEventsFilterDto } from './dto/get-events-filter.dto';

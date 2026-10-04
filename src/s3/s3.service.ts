@@ -21,7 +21,7 @@ export class S3Service {
     /**
      * Genera una URL firmada para subida directa desde el Frontend
      */
-    async generatePresignedUrl(fileType: string, folder: string = 'events') {
+    async generatePresignedUrl(fileType: string, folder: string = 'uploads') {
         const fileExtension = fileType.split('/')[1] || 'jpg';
         const key = `${folder}/${uuidv4()}.${fileExtension}`;
 

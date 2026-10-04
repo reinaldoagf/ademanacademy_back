@@ -196,23 +196,39 @@ model PaymentOrder {
 }
 
 model Product {
-  id                String  @id @default(cuid())
-  name              String  @unique
-  description       String? @db.Text
-  salePrice         Decimal @db.Decimal(10, 2)
-  cost              Decimal @db.Decimal(10, 2)
-  currentStock      Int     @default(1)
-  minimumStockAlert Int     @default(1)
-  images            Json?   @default("[]") // Lista de imágenes
-  isActive          Boolean @default(true) // Control de visibilidad
-
-  categoryId String?
-  category   ProductCategory? @relation(fields: [categoryId], references: [id])
+  id                String           @id @default(cuid())
+  name              String           @unique
+  description       String?          @db.Text
+  salePrice         Decimal          @db.Decimal(10, 2)
+  cost              Decimal          @db.Decimal(10, 2)
+  currentStock      Int              @default(1)
+  minimumStockAlert Int              @default(1)
+  images            ProductImage[] // Lista de imágenes
+  isActive          Boolean          @default(true) // Control de visibilidad
+  featured          Boolean          @default(false) // Destacado
+  categoryId        String?
+  category          ProductCategory? @relation(fields: [categoryId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("products")
+}
+
+model ProductImage {
+  id      String  @id @default(uuid())
+  url     String // URL absoluta de S3 o CDN
+  key     String // Clave/Path del objeto en S3 (ej: events/abc-123.jpg)
+  altText String?
+  type    String  @default("gallery") // 'cover' | 'gallery'
+  order   Int     @default(0)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@map("product_images")
 }
 
 model ProductCategory {
