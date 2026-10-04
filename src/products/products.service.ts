@@ -264,4 +264,43 @@ export class ProductsService {
             outOfStockProducts,
         };
     }
+
+    async getFeaturedProducts() {
+        try {
+            const products = await this.prisma.product.findMany({
+                where: {
+                    featured: true,
+                    isActive: true,
+                },
+                include: {
+                    category: {
+                        select: {
+                            id: true,
+                            name: true,
+                        },
+                    },
+                    images: {
+                        orderBy: [
+                            { type: 'asc' },  // Coloca 'cover' antes que 'gallery' alfabéticamente
+                            { order: 'asc' }, // Orden numérico
+                        ],
+                    },
+                },
+                orderBy: {
+                    updatedAt: 'desc',
+                },
+                take: 10, // Límite de productos en el carrusel
+            });
+
+            // Convertimos los Decimale de Prisma a Number para evitar problemas de serialización en Next.js Client Components
+            return products.map((product) => ({
+                ...product,
+                salePrice: Number(product.salePrice),
+                cost: Number(product.cost),
+            }));
+        } catch (error) {
+            console.error('Error al obtener productos destacados:', error);
+            return [];
+        }
+    }
 }
