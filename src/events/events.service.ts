@@ -5,100 +5,55 @@ import {
     BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { S3Service } from '../s3/s3.service';
 import { Prisma, ProductionStatus, EventType } from '@prisma/client';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-events.dto';
 import { GetEventsFilterDto } from './dto/get-events-filter.dto';
 
+
 @Injectable()
 export class EventsService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService,
+        private readonly s3Service: S3Service,) { }
 
     // 🎯 1. CREAR EVENTO
-    async create(data: CreateEventDto) {
-        try {
-            const startDate = new Date(data.startDate);
-            const endDate = new Date(data.endDate);
+    async create(dto: CreateEventDto) {
+        const { images, sponsors, seatingMapId, ...eventData } = dto;
 
-            if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-                throw new BadRequestException('Las fechas del evento no son válidas.');
-            }
-
-            if (endDate < startDate) {
-                throw new BadRequestException(
-                    'La fecha de fin no puede ser anterior a la fecha de inicio.',
-                );
-            }
-
-            // Validaciones de fechas de preventa
-            let presaleStartDate: Date | undefined;
-            let presaleEndDate: Date | undefined;
-
-            if (data.presaleStartDate) {
-                presaleStartDate = new Date(data.presaleStartDate);
-                if (isNaN(presaleStartDate.getTime())) {
-                    throw new BadRequestException('La fecha de inicio de preventa no es válida.');
-                }
-            }
-
-            if (data.presaleEndDate) {
-                presaleEndDate = new Date(data.presaleEndDate);
-                if (isNaN(presaleEndDate.getTime())) {
-                    throw new BadRequestException('La fecha de fin de preventa no es válida.');
-                }
-            }
-
-            if (presaleStartDate && presaleEndDate && presaleEndDate < presaleStartDate) {
-                throw new BadRequestException(
-                    'La fecha de fin de preventa no puede ser anterior a la fecha de inicio de preventa.',
-                );
-            }
-            const { images, sponsors, ...eventData } = data;
-
-            return await this.prisma.event.create({
-                data: {
-                    name: eventData.name,
-                    type: eventData.type ?? EventType.sample,
-                    startDate,
-                    endDate,
-                    isPresaleActive: eventData.isPresaleActive ?? false,
-                    presaleStartDate,
-                    presaleEndDate,
-                    productionStatus: eventData.productionStatus ?? ProductionStatus.planning,
-                    description: eventData.description,
-                    seatingMapId: eventData.seatingMapId,
-                    // Relaciones anidadas en la creación
-                    ...(images && images.length > 0 && {
-                        images: {
-                            create: images.map((img) => ({
-                                url: img.url,
-                                altText: img.altText,
-                                type: img.type,
-                                order: img.order ?? 0,
-                            })),
-                        },
-                    }),
-                    ...(sponsors && sponsors.length > 0 && {
-                        sponsors: {
-                            create: sponsors.map((s) => ({
-                                name: s.name,
-                                logoUrl: s.logoUrl,
-                                tier: s.tier,
-                                websiteUrl: s.websiteUrl,
-                                socialLinks: s.socialLinks ?? Prisma.DbNull,
-                            })),
-                        },
-                    }),
-                },
-                include: {
-                    images: true,
-                    sponsors: true,
-                    seatingMap: true,
-                },
-            });
-        } catch (error) {
-            throw error;
-        }
+        return this.prisma.event.create({
+            data: {
+                ...eventData,
+                startDate: new Date(dto.startDate),
+                endDate: new Date(dto.endDate),
+                presaleStartDate: dto.presaleStartDate ? new Date(dto.presaleStartDate) : null,
+                presaleEndDate: dto.presaleEndDate ? new Date(dto.presaleEndDate) : null,
+                seatingMap: seatingMapId ? { connect: { id: seatingMapId } } : undefined,
+                images: images?.length
+                    ? {
+                        create: images.map((img, idx) => ({
+                            url: img.url,
+                            key: img.key,
+                            altText: img.altText || dto.name,
+                            type: idx === 0 ? 'cover' : 'gallery',
+                            order: idx,
+                        })),
+                    }
+                    : undefined,
+                sponsors: sponsors?.length
+                    ? {
+                        create: sponsors.map((s, idx) => ({
+                            name: s.name,
+                            logoUrl: s.logoUrl,
+                            tier: s.tier,
+                            websiteUrl: s.websiteUrl,
+                            socialLinks: s.socialLinks,
+                        })),
+                    }
+                    : undefined,
+            },
+            include: { images: true, sponsors: true, seatingMap: true },
+        });
     }
 
     // 🎯 2. OBTENER TODOS CON FILTROS Y PAGINACIÓN
@@ -184,88 +139,71 @@ export class EventsService {
         return event;
     }
 
+
     // 🎯 4. ACTUALIZAR EVENTO
-    async update(id: string, updateData: UpdateEventDto) {
-        await this.findOne(id); // Lanza NotFoundException si no existe
+    async update(id: string, dto: UpdateEventDto) {
+        const currentEvent = await this.prisma.event.findUnique({
+            where: { id },
+            include: { images: true },
+        });
 
-        const {
-            startDate,
-            endDate,
-            presaleStartDate,
-            presaleEndDate,
-            images,
-            sponsors,
-            ...data
-        } = updateData;
+        if (!currentEvent) throw new NotFoundException('Evento no encontrado');
 
-        const parsedStartDate = startDate ? new Date(startDate) : undefined;
-        const parsedEndDate = endDate ? new Date(endDate) : undefined;
-        const parsedPresaleStartDate = presaleStartDate ? new Date(presaleStartDate) : undefined;
-        const parsedPresaleEndDate = presaleEndDate ? new Date(presaleEndDate) : undefined;
+        const { images, sponsors, seatingMapId, ...eventData } = dto;
+        // 🎯 Limpieza de imágenes eliminadas en S3 y BD
+        if (images) {
+            const newKeys = images.map((img) => img.key);
+            const imagesToDelete = currentEvent.images.filter((img) => !newKeys.includes(img.key));
 
-        if (parsedStartDate && isNaN(parsedStartDate.getTime())) {
-            throw new BadRequestException('La fecha de inicio no es válida.');
-        }
-        if (parsedEndDate && isNaN(parsedEndDate.getTime())) {
-            throw new BadRequestException('La fecha de fin no es válida.');
-        }
-        if (parsedPresaleStartDate && isNaN(parsedPresaleStartDate.getTime())) {
-            throw new BadRequestException('La fecha de inicio de preventa no es válida.');
-        }
-        if (parsedPresaleEndDate && isNaN(parsedPresaleEndDate.getTime())) {
-            throw new BadRequestException('La fecha de fin de preventa no es válida.');
-        }
+            // 1. Borrar de S3
+            await Promise.all(imagesToDelete.map((img) => this.s3Service.deleteFile(img.key)));
 
-        try {
-            return await this.prisma.event.update({
-                where: { id },
-                data: {
-                    ...data,
-                    ...(parsedStartDate && { startDate: parsedStartDate }),
-                    ...(parsedEndDate && { endDate: parsedEndDate }),
-                    ...(parsedPresaleStartDate !== undefined && { presaleStartDate: parsedPresaleStartDate }),
-                    ...(parsedPresaleEndDate !== undefined && { presaleEndDate: parsedPresaleEndDate }),
-                    // Actualización opcional de imágenes (reemplaza las imágenes existentes si se envían)
-                    ...(images && {
-                        images: {
-                            deleteMany: {}, // Limpia imágenes previas
-                            create: images.map((img) => ({
-                                url: img.url,
-                                altText: img.altText,
-                                type: img.type,
-                                order: img.order ?? 0,
-                            })),
-                        },
-                    }),
-                    // Actualización opcional de patrocinadores (reemplaza si se envían)
-                    ...(sponsors && {
-                        sponsors: {
-                            deleteMany: {}, // Limpia patrocinadores previos
-                            create: sponsors.map((s) => ({
-                                name: s.name,
-                                logoUrl: s.logoUrl,
-                                tier: s.tier,
-                                websiteUrl: s.websiteUrl,
-                                socialLinks: s.socialLinks ?? Prisma.DbNull,
-                            })),
-                        },
-                    }),
-                },
-                include: {
-                    images: true,
-                    sponsors: true,
-                    seatingMap: true,
-                },
+            // 2. Limpiar registros anteriores de imágenes en BD para este evento
+            await this.prisma.eventImage.deleteMany({
+                where: { eventId: id },
             });
-        } catch (error) {
-            if (
-                error instanceof Prisma.PrismaClientKnownRequestError &&
-                error.code === 'P2002'
-            ) {
-                throw new ConflictException('El código de evento ya está asignado a otro registro.');
-            }
-            throw error;
         }
+
+        if (sponsors) {
+            await this.prisma.sponsor.deleteMany({
+                where: { eventId: id },
+            });
+        }
+
+        return this.prisma.event.update({
+            where: { id },
+            data: {
+                ...eventData,
+                startDate: dto.startDate ? new Date(dto.startDate) : undefined,
+                endDate: dto.endDate ? new Date(dto.endDate) : undefined,
+                presaleStartDate: dto.presaleStartDate ? new Date(dto.presaleStartDate) : null,
+                presaleEndDate: dto.presaleEndDate ? new Date(dto.presaleEndDate) : null,
+                seatingMap: seatingMapId ? { connect: { id: seatingMapId } } : undefined,
+                images: images?.length
+                    ? {
+                        create: images.map((img, idx) => ({
+                            url: img.url,
+                            key: img.key,
+                            altText: img.altText || dto.name || currentEvent.name,
+                            type: img.type || (idx === 0 ? 'cover' : 'gallery'),
+                            order: img.order ?? idx,
+                        })),
+                    }
+                    : undefined,
+                sponsors: sponsors?.length
+                    ? {
+                        create: sponsors.map((s) => ({
+                            name: s.name,
+                            logoUrl: s.logoUrl,
+                            tier: s.tier,
+                            websiteUrl: s.websiteUrl,
+                            socialLinks: s.socialLinks,
+                        })),
+                    }
+                    : undefined,
+            },
+            include: { images: true, sponsors: true, seatingMap: true },
+        });
     }
 
     // 🎯 5. ELIMINAR EVENTO (Soft delete o Delete físico)
@@ -315,5 +253,33 @@ export class EventsService {
             totalRevenue: 10,
             byStatus: statusMap,
         };
+    }
+
+    async getHomeEvents() {
+        try {
+            const events = await this.prisma.event.findMany({
+                where: {
+                    isActive: true,
+                    publishToHome: true,
+                },
+                include: {
+                    images: true,
+                    sponsors: true,
+                    seatingMap: {
+                        select: {
+                            location: true,
+                        },
+                    },
+                },
+                orderBy: {
+                    startDate: "asc",
+                },
+            });
+
+            return events;
+        } catch (error) {
+            console.error("Error al obtener eventos para la Home:", error);
+            return [];
+        }
     }
 }

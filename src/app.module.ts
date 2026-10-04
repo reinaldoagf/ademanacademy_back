@@ -2,6 +2,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { S3Module } from './s3/s3.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
@@ -28,7 +29,6 @@ import { EventSeatsModule } from './event-seats/event-seats.module';
 import { ClientsModule } from './clients/clients.module';
 import { InstructorsModule } from './instructors/instructors.module';
 
-
 @Module({
   imports: [
     // 1. Cargar variables de entorno globalmente
@@ -36,6 +36,7 @@ import { InstructorsModule } from './instructors/instructors.module';
       isGlobal: true,
     }), // Nos permite leer el JWT_SECRET de las variables de entorno
     ScheduleModule.forRoot(),
+    S3Module,
     PrismaModule, // 💡 REGÍSTRALO AQUÍ para activar su alcance global
     AuthModule,
     UsersModule,

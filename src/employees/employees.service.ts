@@ -175,7 +175,6 @@ export class EmployeesService {
 
         const { groupIds, birthDate, hourlyRate, bonus, ...data } = updateData;
 
-        // console.log({ updateData })
         try {
             return await this.prisma.employee.update({
                 where: { id },

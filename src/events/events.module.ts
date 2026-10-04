@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { EventsService } from './events.service';
 import { EventsController } from './events.controller';
+import { S3Module } from '../s3/s3.module';
 
 @Module({
     imports: [ // Nos permite leer el JWT_SECRET de las variables de entorno
@@ -13,7 +14,8 @@ import { EventsController } from './events.controller';
                 secret: configService.get<string>('JWT_SECRET'),
                 signOptions: { expiresIn: '1d' }, // El token expira en 24 horas
             }),
-        })
+        }),
+        S3Module
     ],
     controllers: [EventsController],
     providers: [EventsService],

@@ -54,9 +54,10 @@ export class CreateEventDto {
 
     // 🎯 Imágenes relacionadas
     @IsArray({ message: 'Las imágenes deben enviarse como una lista' })
+
+    @IsOptional()
     @ValidateNested({ each: true })
     @Type(() => CreateEventImageDto)
-    @IsOptional()
     images?: CreateEventImageDto[];
 
     // 🎯 Patrocinadores
