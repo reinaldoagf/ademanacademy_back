@@ -56,7 +56,10 @@ export class CreateSeatingMapElementDto {
 
 
     @IsNumber()
-    price: number;
+    presalePrice: number;
+
+    @IsNumber()
+    salePrice: number;
 
     @IsNumber()
     xMeters: number;

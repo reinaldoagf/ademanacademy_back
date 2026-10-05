@@ -695,7 +695,8 @@ model SeatingMapElement {
   macroGroupId           String?
   rotation               Float
   groupRotation          Float?
-  price                  Float
+  presalePrice           Float              @default(0.00)
+  salePrice              Float              @default(0.00)
   x                      Float?
   y                      Float?
   width                  Float?
