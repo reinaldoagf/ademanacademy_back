@@ -208,9 +208,21 @@ export class EventsService {
     async remove(id: string) {
         await this.findOne(id);
 
-        await this.prisma.event.delete({
+        const currentEvent = await this.prisma.event.delete({
             where: { id },
+            include: { images: true },
         });
+
+        // 🎯 Limpieza de imágenes eliminadas en S3 y BD
+        if (currentEvent.images.length) {
+            // 1. Borrar de S3
+            await Promise.all(currentEvent.images.map((img) => this.s3Service.deleteFile(img.key)));
+
+            // 2. Limpiar registros anteriores de imágenes en BD para este evento
+            await this.prisma.eventImage.deleteMany({
+                where: { eventId: id },
+            });
+        }
 
         return {
             message: 'Evento eliminado correctamente.',

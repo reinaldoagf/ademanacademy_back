@@ -2,6 +2,7 @@
 import { IsString, IsOptional, IsEnum, IsArray, ValidateNested, IsInt, Min, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
 import { LockerRoomCategory, LockerRoomStatus } from '@prisma/client';
+import { CreateUniformImageDto } from './create-uniform-image.dto';
 
 export class SizeStockDto {
     @IsString()
@@ -36,9 +37,10 @@ export class CreateUniformDto {
     @IsOptional()
     status?: LockerRoomStatus;
 
-    @IsString()
     @IsOptional()
-    images?: string;
+    @ValidateNested({ each: true })
+    @Type(() => CreateUniformImageDto)
+    images?: CreateUniformImageDto[];
 
     @IsArray()
     @ValidateNested({ each: true })

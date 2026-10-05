@@ -376,13 +376,29 @@ model Uniform {
   // Guardar el inventario por tallas en JSON sigue siendo válido si es informativo, 
   // pero lo ideal para asignaciones exactas es registrar qué talla se lleva el alumno en la tabla intermedia.
   availableSizes     Json               @default("[]")
-  images             Json               @default("[]")
+  images             UniformImage[] // Lista de imágenes
   // 🎯 RELACIÓN NUEVA: Alumnos a los que se ha asignado este vestuario
   uniformAssignments StudentUniform[]
   createdAt          DateTime           @default(now()) @map("createdAt")
   updatedAt          DateTime           @updatedAt @map("updatedAt")
 
   @@map("uniforms")
+}
+
+model UniformImage {
+  id      String  @id @default(uuid())
+  url     String // URL absoluta de S3 o CDN
+  key     String // Clave/Path del objeto en S3 (ej: events/abc-123.jpg)
+  altText String?
+  type    String  @default("gallery") // 'cover' | 'gallery'
+  order   Int     @default(0)
+
+  uniformId String
+  uniform   Uniform @relation(fields: [uniformId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@map("uniform_images")
 }
 
 model StudentUniform {

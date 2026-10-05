@@ -1,7 +1,5 @@
 // /src/uniforms/uniforms.service.ts
 import { Injectable, NotFoundException, ConflictException, BadRequestException, } from '@nestjs/common';
-import * as fs from 'fs';
-import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { LockerRoomStatus } from '@prisma/client';
@@ -9,13 +7,16 @@ import { CreateUniformDto } from './dto/create-uniform.dto';
 import { UpdateUniformDto } from './dto/update-uniform.dto';
 import { GetUniformsFilterDto } from './dto/get-uniforms-filter.dto';
 import { AssignUniformDto, UpdateAssignmentStatusDto } from './dto/assign-uniform.dto';
+import { S3Service } from '../s3/s3.service';
 interface SizeItem {
     size: string;
     quantity: number;
 }
 @Injectable()
 export class UniformsService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly s3Service: S3Service,) { }
 
     async create(createUniformDto: CreateUniformDto) {
         // 1. Asegúrate de que 'availableSizes' sea un objeto/array de JS real, NO un string
@@ -27,23 +28,7 @@ export class UniformsService {
                 sizes = []; // Fallback seguro
             }
         }
-
-        // 2. Asegúrate de que 'images' sea un array de JS real, NO un string JSON
-        let imagesPaths: string[] = [];
-
-        const rawImages = createUniformDto.images;
-
-        if (Array.isArray(rawImages)) {
-            imagesPaths = rawImages;
-        } else if (typeof rawImages === 'string') {
-            try {
-                const parsed = JSON.parse(rawImages);
-                imagesPaths = Array.isArray(parsed) ? parsed : [];
-            } catch (e) {
-                imagesPaths = []; // Fallback seguro si falla el JSON.parse
-            }
-        }
-
+        const { images, ...data } = createUniformDto;
         // 3. Al guardar con Prisma, pásale los objetos de JS directamente
         try {
             return await this.prisma.uniform.create({
@@ -51,7 +36,17 @@ export class UniformsService {
                     name: createUniformDto.name,
                     category: createUniformDto.category,
                     status: createUniformDto.status,
-                    images: imagesPaths,
+                    images: images?.length
+                        ? {
+                            create: images.map((img, idx) => ({
+                                url: img.url,
+                                key: img.key,
+                                altText: img.altText || createUniformDto.name,
+                                type: idx === 0 ? 'cover' : 'gallery',
+                                order: idx,
+                            })),
+                        }
+                        : undefined,
                     price: createUniformDto.price ?? 0,
                     availableSizes: createUniformDto.availableSizes as unknown as Prisma.InputJsonValue,
                 },
@@ -149,6 +144,7 @@ export class UniformsService {
                 take: limit,
                 orderBy: { createdAt: 'desc' },
                 include: {
+                    images: true,
                     uniformAssignments: {
                         include: { student: true }
                     }
@@ -156,12 +152,6 @@ export class UniformsService {
             }),
         ]);
 
-        // Rehidratar el JSON de tallas para el Front-end
-        const parsedData = data.map(item => ({
-            ...item,
-            availableSizes: typeof item.availableSizes === 'string' ? JSON.parse(item.availableSizes) : item.availableSizes,
-            images: typeof item.images === 'string' ? JSON.parse(item.images) : item.images,
-        }));
 
         return {
             meta: {
@@ -171,7 +161,10 @@ export class UniformsService {
                 totalPages: Math.ceil(totalItems / limit),
                 currentPage: page,
             },
-            data: parsedData,
+            data: data.map(e => ({
+                ...e,
+                availableSizes: typeof e.availableSizes === 'string' ? JSON.parse(e.availableSizes) : e.availableSizes,
+            }))
         };
     }
 
@@ -179,6 +172,7 @@ export class UniformsService {
         const uniform = await this.prisma.uniform.findUnique({
             where: { id },
             include: {
+                images: true,
                 uniformAssignments: {
                     include: { student: true }
                 },
@@ -191,60 +185,44 @@ export class UniformsService {
         };
     }
 
-    async update(id: string, updateData: UpdateUniformDto) {
+    async update(id: string, updateUniformDto: UpdateUniformDto) {
         // 1. Obtener el registro actual
         const currentUniform = await this.findOne(id);
         if (!currentUniform) {
             throw new NotFoundException(`Vestuario con ID ${id} no encontrado`);
         }
 
-        const { availableSizes, existingImages = [], newImages = [], ...data } = updateData;
+        const { availableSizes, images, ...data } = updateUniformDto;
 
-        // 2. Parsear las imágenes actuales que están guardadas en la Base de Datos
-        let currentDBImages: string[] = [];
-        try {
-            if (typeof currentUniform.images === 'string') {
-                currentDBImages = JSON.parse(currentUniform.images);
-            } else if (Array.isArray(currentUniform.images)) {
-                currentDBImages = currentUniform.images as string[];
-            }
-        } catch (e) {
-            console.error("Error parseando imágenes de la BD:", e);
-        }
+        // 🎯 Limpieza de imágenes eliminadas en S3 y BD
+        if (images) {
+            const newKeys = images.map((img) => img.key);
+            const imagesToDelete = currentUniform.images.filter((img) => !newKeys.includes(img.key));
 
-        // 3. Determinar cuáles imágenes fueron eliminadas en el frontend
-        // Las que existían en BD pero ya no están en las 'existingImages' enviadas
-        const imagesToDelete = currentDBImages.filter(
-            (img) => !existingImages.includes(img)
-        );
+            // 1. Borrar de S3
+            await Promise.all(imagesToDelete.map((img) => this.s3Service.deleteFile(img.key)));
 
-        // 4. Eliminar físicamente los archivos descartados del servidor
-        for (const relativePath of imagesToDelete) {
-            // El path relativo suele ser '/uploads/uniforms/archivo.jpg'
-            // Le quitamos la barra inicial si es necesario para resolverlo correctamente desde la raíz
-            const cleanPath = relativePath.startsWith('/') ? relativePath.substring(1) : relativePath;
-            const absolutePath = path.resolve(process.cwd(), cleanPath);
-
-            fs.unlink(absolutePath, (err) => {
-                if (err) {
-                    console.error(`No se pudo eliminar el archivo físico: ${absolutePath}`, err);
-                } else {
-                    console.log(`Archivo físico eliminado con éxito: ${absolutePath}`);
-                }
+            // 2. Limpiar registros anteriores de imágenes en BD para este evento
+            await this.prisma.uniformImage.deleteMany({
+                where: { uniformId: id },
             });
         }
-
-        // 5. Unificar las imágenes conservadas con las nuevas subidas
-        const updatedImagesList = [...existingImages, ...newImages];
-
-        // 6. Actualizar en la base de datos
-        // 
         return this.prisma.uniform.update({
             where: { id },
             data: {
                 ...data,
                 ...(availableSizes && { availableSizes: JSON.stringify(availableSizes) }),
-                images: JSON.stringify(updatedImagesList),
+                images: images?.length
+                    ? {
+                        create: images.map((img, idx) => ({
+                            url: img.url,
+                            key: img.key,
+                            altText: img.altText || updateUniformDto.name,
+                            type: img.type || (idx === 0 ? 'cover' : 'gallery'),
+                            order: img.order ?? idx,
+                        })),
+                    }
+                    : undefined,
             },
         });
     }
@@ -256,16 +234,7 @@ export class UniformsService {
         if (!uniform) {
             throw new NotFoundException(`El uniforme con ID "${id}" no existe.`);
         }
-        const rawJsonArray = uniform.images as unknown as string[];
-        // 2. Eliminar las imágenes físicas del servidor si existen
-        if (rawJsonArray && Array.isArray(rawJsonArray) && rawJsonArray.length) {
 
-            const images: string[] = Array.isArray(rawJsonArray)
-                ? rawJsonArray.filter((item): item is string => typeof item === 'string')
-                : [];
-
-            this.deletePhysicalFiles(images);
-        }
 
         // 3. Eliminar el registro de la base de datos
         await this.prisma.uniform.delete({ where: { id } }); // Adapta según Mongoose / TypeORM / Prisma
@@ -274,29 +243,6 @@ export class UniformsService {
             message: 'Vestuario e imágenes asociadas eliminados correctamente.',
             id,
         };
-    }
-    /**
-       * Helper privado para eliminar archivos físicamente del disco de forma segura
-       */
-    private deletePhysicalFiles(filePaths: string[]) {
-        filePaths.forEach((relativeUrlPath) => {
-            if (!relativeUrlPath) return;
-
-            // Convertimos la URL relativa (/uploads/uniforms/uniform-123.jpg) en ruta absoluta del sistema
-            // .replace(/^\//, '') remueve la barra inicial para evitar inconsistencias en path.join
-            const normalizedPath = relativeUrlPath.replace(/^\//, '');
-            const fullPath = path.join(process.cwd(), normalizedPath);
-
-            // Verificamos si el archivo existe antes de intentar borrarlo
-            if (fs.existsSync(fullPath)) {
-                try {
-                    fs.unlinkSync(fullPath);
-                } catch (error) {
-                    // Logueamos el error sin detener el proceso principal de borrado en BD
-                    console.error(`Error al eliminar la imagen en ${fullPath}:`, error);
-                }
-            }
-        });
     }
     // 🎯 ASIGNAR VESTUARIO A UN ALUMNO
     async assignToStudent(assignDto: AssignUniformDto) {

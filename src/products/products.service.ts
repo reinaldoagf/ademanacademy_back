@@ -9,8 +9,6 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { GetProductsFilterDto, StockFilterEnum } from './dto/get-products-filter.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Prisma } from '@prisma/client';
-import * as fs from 'fs';
-import * as path from 'path';
 
 export interface ProductMetricsResponse {
     inventoryValue: number;
@@ -207,8 +205,17 @@ export class ProductsService {
         }
 
         // 3. Eliminar el registro de la base de datos
-        await this.prisma.product.delete({ where: { id } });
+        const currentProduct = await this.prisma.product.delete({ where: { id }, include: { images: true } });
+        // 🎯 Limpieza de imágenes eliminadas en S3 y BD
+        if (currentProduct.images.length) {
+            // 1. Borrar de S3
+            await Promise.all(currentProduct.images.map((img) => this.s3Service.deleteFile(img.key)));
 
+            // 2. Limpiar registros anteriores de imágenes en BD para este evento
+            await this.prisma.productImage.deleteMany({
+                where: { productId: id },
+            });
+        }
         return {
             message: 'Producto e imágenes asociadas eliminados correctamente.',
             id,

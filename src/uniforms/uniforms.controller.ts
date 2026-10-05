@@ -1,13 +1,11 @@
 // src/uniforms/uniforms.controller.ts
-import { BadRequestException, Controller, Get, Post, Body, UseInterceptors, UploadedFiles, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
 import { UniformsService } from './uniforms.service';
-import { CleanupOnErrorInterceptor } from './cleanup-on-error.interceptor';
 import { GetUniformsFilterDto } from './dto/get-uniforms-filter.dto';
 import { AssignUniformDto, UpdateAssignmentStatusDto } from './dto/assign-uniform.dto';
+import { CreateUniformDto } from './dto/create-uniform.dto';
+import { UpdateUniformDto } from './dto/update-uniform.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { FilesInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
 import { CurrentUser } from '@/auth/decorators/current-user.decorator';
 
 @Controller('uniforms')
@@ -16,46 +14,11 @@ export class UniformsController {
     constructor(private readonly uniformsService: UniformsService) { }
 
     @Post()
-    @UseInterceptors(
-        FilesInterceptor('images', 10, { // Permite hasta 10 imágenes simultáneas
-            storage: diskStorage({
-                destination: './uploads/uniforms', // Asegúrate de crear esta carpeta en la raíz del backend
-                filename: (req, file, callback) => {
-                    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-                    const ext = extname(file.originalname);
-                    callback(null, `uniform-${uniqueSuffix}${ext}`);
-                },
-            }),
-            fileFilter: (req, file, callback) => {
-                if (!file.mimetype.match(/\/(jpg|jpeg|png|webp)$/)) {
-                    return callback(new Error('Solo se permiten archivos de imagen (jpg, png, webp)'), false);
-                }
-                callback(null, true);
-            },
-        }),
-        CleanupOnErrorInterceptor // 👈 🎯 SE AGREGA AQUÍ
-    )
+    @UseGuards(JwtAuthGuard) // 🛡️ Protege la gestión de infraestructura
     async create(
-        @UploadedFiles() files: Express.Multer.File[],
-        @Body() createUniformDto: any
+        @Body() createUniformDto: CreateUniformDto
     ) {
-        const filePaths = files?.map(file => `/uploads/uniforms/${file.filename}`) || [];
-
-        // Parse seguro contra fallos silenciosos de JSON
-        if (createUniformDto.availableSizes) {
-            try {
-                if (typeof createUniformDto.availableSizes === 'string') {
-                    createUniformDto.availableSizes = JSON.parse(createUniformDto.availableSizes);
-                }
-            } catch (e) {
-                throw new BadRequestException('El formato de las tallas (availableSizes) es inválido.');
-            }
-        }
-
-        return this.uniformsService.create({
-            ...createUniformDto,
-            images: filePaths, // Pasamos el array limpio al servicio
-        });
+        return this.uniformsService.create(createUniformDto);
     }
 
     @Get()
@@ -82,64 +45,14 @@ export class UniformsController {
     async findOne(@Param('id') id: string) {
         return this.uniformsService.findOne(id);
     }
-
     @Patch(':id')
-    @UseInterceptors(
-        FilesInterceptor('images', 10, {
-            storage: diskStorage({
-                destination: './uploads/uniforms',
-                filename: (req, file, callback) => {
-                    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-                    const ext = extname(file.originalname);
-                    callback(null, `uniform-${uniqueSuffix}${ext}`);
-                },
-            }),
-            fileFilter: (req, file, callback) => {
-                if (!file.mimetype.match(/\/(jpg|jpeg|png|webp)$/)) {
-                    return callback(new Error('Solo se permiten archivos de imagen (jpg, png, webp)'), false);
-                }
-                callback(null, true);
-            },
-        }),
-    )
+    @UseGuards(JwtAuthGuard) // 🛡️ Protege la gestión de infraestructura
     async update(
         @Param('id') id: string,
-        @UploadedFiles() files: Express.Multer.File[],
-        @Body() updateUniformDto: any
+        @Body() updateUniformDto: UpdateUniformDto, // o UpdateProductDto incluyendo existingImages
     ) {
-        const newFilePaths = files?.map(file => `/uploads/uniforms/${file.filename}`) || [];
-
-        // Parse de availableSizes idéntico al del create
-        if (updateUniformDto.availableSizes) {
-            try {
-                if (typeof updateUniformDto.availableSizes === 'string') {
-                    updateUniformDto.availableSizes = JSON.parse(updateUniformDto.availableSizes);
-                }
-            } catch (e) {
-                throw new BadRequestException('El formato de las tallas (availableSizes) es inválido.');
-            }
-        }
-
-        // Parse de existingImages proveniente del frontend
-        let existingImages: string[] = [];
-        if (updateUniformDto.existingImages) {
-            try {
-                if (typeof updateUniformDto.existingImages === 'string') {
-                    existingImages = JSON.parse(updateUniformDto.existingImages);
-                } else if (Array.isArray(updateUniformDto.existingImages)) {
-                    existingImages = updateUniformDto.existingImages;
-                }
-            } catch (e) {
-                throw new BadRequestException('El formato de las imágenes existentes es inválido.');
-            }
-        }
-
-        // Pasamos todo al servicio
-        return this.uniformsService.update(id, {
-            ...updateUniformDto,
-            newImages: newFilePaths,
-            existingImages,
-        });
+        // Pasamos los datos al servicio
+        return this.uniformsService.update(id, updateUniformDto);
     }
     @Delete(':id')
     async remove(@Param('id') id: string) {
