@@ -1,7 +1,8 @@
 // /src/costumes/dto/create-costume.dto.ts
-import { IsString, IsOptional, IsEnum, IsInt, Min, IsNumber } from 'class-validator';
+import { IsString, IsOptional, ValidateNested, IsEnum, IsInt, Min, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
 import { LockerRoomCategory, LockerRoomStatus } from '@prisma/client';
+import { CreateCostumeImageDto } from './create-costume-image.dto';
 
 export class SizeStockDto {
     @IsString()
@@ -36,7 +37,9 @@ export class CreateCostumeDto {
     @IsOptional()
     status?: LockerRoomStatus;
 
-    @IsString()
+
     @IsOptional()
-    images?: string;
+    @ValidateNested({ each: true })
+    @Type(() => CreateCostumeImageDto)
+    images?: CreateCostumeImageDto[];
 }

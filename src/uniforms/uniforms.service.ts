@@ -237,8 +237,17 @@ export class UniformsService {
 
 
         // 3. Eliminar el registro de la base de datos
-        await this.prisma.uniform.delete({ where: { id } }); // Adapta según Mongoose / TypeORM / Prisma
+        const currentUniform = await this.prisma.uniform.delete({ where: { id }, include: { images: true } }); // Adapta según Mongoose / TypeORM / Prisma
+        // 🎯 Limpieza de imágenes eliminadas en S3 y BD
+        if (currentUniform.images.length) {
+            // 1. Borrar de S3
+            await Promise.all(currentUniform.images.map((img) => this.s3Service.deleteFile(img.key)));
 
+            // 2. Limpiar registros anteriores de imágenes en BD para este evento
+            await this.prisma.uniformImage.deleteMany({
+                where: { uniformId: id },
+            });
+        }
         return {
             message: 'Vestuario e imágenes asociadas eliminados correctamente.',
             id,

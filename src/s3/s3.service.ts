@@ -2,13 +2,14 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { v4 as uuidv4 } from 'uuid';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class S3Service {
     private s3Client: S3Client;
     private bucketName = process.env.AWS_S3_BUCKET_NAME;
 
-    constructor() {
+    constructor(private readonly prisma: PrismaService) {
         this.s3Client = new S3Client({
             region: process.env.AWS_REGION,
             credentials: {
@@ -52,6 +53,10 @@ export class S3Service {
                     Key: key,
                 }),
             );
+            await this.prisma.productImage.deleteMany({ where: { key } });
+            await this.prisma.uniformImage.deleteMany({ where: { key } });
+            await this.prisma.costumeImage.deleteMany({ where: { key } });
+            await this.prisma.eventImage.deleteMany({ where: { key } });
         } catch (error) {
             console.error(`Error al eliminar objeto de S3 (${key}):`, error);
         }

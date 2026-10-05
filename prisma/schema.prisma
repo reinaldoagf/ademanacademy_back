@@ -218,7 +218,7 @@ model Product {
 model ProductImage {
   id      String  @id @default(uuid())
   url     String // URL absoluta de S3 o CDN
-  key     String // Clave/Path del objeto en S3 (ej: events/abc-123.jpg)
+  key     String  @unique // Clave/Path del objeto en S3 (ej: events/abc-123.jpg)
   altText String?
   type    String  @default("gallery") // 'cover' | 'gallery'
   order   Int     @default(0)
@@ -388,7 +388,7 @@ model Uniform {
 model UniformImage {
   id      String  @id @default(uuid())
   url     String // URL absoluta de S3 o CDN
-  key     String // Clave/Path del objeto en S3 (ej: events/abc-123.jpg)
+  key     String  @unique // Clave/Path del objeto en S3 (ej: events/abc-123.jpg)
   altText String?
   type    String  @default("gallery") // 'cover' | 'gallery'
   order   Int     @default(0)
@@ -439,7 +439,7 @@ model Costume {
   price    Decimal            @db.Decimal(10, 2) // Precio unitario al momento de la compra
 
   // 🎯 RELACIÓN NUEVA: Galería de imágenes guardada como un array JSON de strings
-  images             Json             @default("[]")
+  images             CostumeImage[] // Lista de imágenes
   // 🎯 RELACIÓN NUEVA: Alumnos a los que se ha asignado este vestuario
   costumeAssignments StudentCostume[]
 
@@ -447,6 +447,22 @@ model Costume {
   updatedAt DateTime @updatedAt @map("updatedAt")
 
   @@map("costumes")
+}
+
+model CostumeImage {
+  id      String  @id @default(uuid())
+  url     String // URL absoluta de S3 o CDN
+  key     String  @unique // Clave/Path del objeto en S3 (ej: events/abc-123.jpg)
+  altText String?
+  type    String  @default("gallery") // 'cover' | 'gallery'
+  order   Int     @default(0)
+
+  costumeId String
+  costume   Costume @relation(fields: [costumeId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@map("costume_images")
 }
 
 // 🤝 TABLA INTERMEDIA: Registro exacto de Asignaciones de Vestuarios
@@ -609,7 +625,7 @@ model Event {
 model EventImage {
   id      String  @id @default(uuid())
   url     String // URL absoluta de S3 o CDN
-  key     String // Clave/Path del objeto en S3 (ej: events/abc-123.jpg)
+  key     String  @unique // Clave/Path del objeto en S3 (ej: events/abc-123.jpg)
   altText String?
   type    String  @default("gallery") // 'cover' | 'gallery'
   order   Int     @default(0)
