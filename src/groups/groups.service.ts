@@ -3,10 +3,80 @@ import { PrismaService } from '../prisma/prisma.service'; // Ajusta la ruta seg�
 import { GetGroupsFilterDto } from './dto/get-groups-filter.dto';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
+import { GetGroupSlotsOptionsDto } from './dto/get-group-slots-options.dto';
 
 @Injectable()
 export class GroupsService {
     constructor(private readonly prisma: PrismaService) { }
+    async getGroupSlotsData(options?: GetGroupSlotsOptionsDto) {
+        const onlyActive = options?.onlyActive ?? true; // Por defecto true o false según prefieras
+        const groups = await this.prisma.group.findMany({
+            select: {
+                id: true,
+                name: true,
+                totalNumberOfSlots: true,
+                _count: {
+                    select: {
+                        students: onlyActive
+                            ? {
+                                where: {
+                                    // Ajusta según la relación o campo con el que filtras el estado activo
+                                    // Ejemplo A: Si los estudiantes tienen estado directo:
+                                    // status: 'ACTIVE',
+
+                                    // Ejemplo B: Si depende de sus inscripciones activas:
+                                    registrations: {
+                                        some: {
+                                            status: 'pending', // O 'approved' / 'active' según tu enum RegistrationStatus
+                                        },
+                                    },
+                                },
+                            }
+                            : true, // Cuenta todos los estudiantes sin ningún filtro
+                    },
+                },
+            },
+        });
+
+        let grandTotalSlots = 0;
+        let grandTotalOccupied = 0;
+
+        const groupMetrics = groups.map((group) => {
+            const occupiedSlots = group._count.students; // Cambiar si usas registrations
+            const totalSlots = group.totalNumberOfSlots || 1;
+            const availableSlots = Math.max(0, totalSlots - occupiedSlots);
+            const isFull = occupiedSlots >= totalSlots;
+            const occupancyPercentage = Math.round((occupiedSlots / totalSlots) * 100);
+
+            grandTotalSlots += totalSlots;
+            grandTotalOccupied += occupiedSlots;
+
+            return {
+                id: group.id,
+                name: group.name,
+                occupiedSlots,
+                totalSlots,
+                availableSlots,
+                isFull,
+                occupancyPercentage,
+            };
+        });
+
+        const overallOccupancyPercentage =
+            grandTotalSlots > 0
+                ? Math.round((grandTotalOccupied / grandTotalSlots) * 100)
+                : 0;
+
+        return {
+            data: {
+                overallOccupancyPercentage,
+                totalSlots: grandTotalSlots,
+                totalOccupied: grandTotalOccupied,
+                totalAvailable: grandTotalSlots - grandTotalOccupied,
+                groups: groupMetrics,
+            }
+        };
+    }
     async create(createGroupDto: CreateGroupDto) {
         const { classroomId, instructorId, name, categoryId, totalNumberOfSlots } = createGroupDto;
 

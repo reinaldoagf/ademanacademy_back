@@ -4,12 +4,17 @@ import { GetGroupsFilterDto } from './dto/get-groups-filter.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateGroupDto } from '@/groups/dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
+import { GetGroupSlotsOptionsDto } from './dto/get-group-slots-options.dto';
 
 @Controller('groups')
 @UseGuards(JwtAuthGuard) // 🛡️ Protege la gestión de infraestructura
 export class GroupsController {
     constructor(private readonly groupsService: GroupsService) { }
 
+    @Get('group-slots-data')
+    async getGroupSlotsData(@Query() options: GetGroupSlotsOptionsDto) {
+        return this.groupsService.getGroupSlotsData(options);
+    }
     @Post()
     @HttpCode(HttpStatus.CREATED)
     @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
