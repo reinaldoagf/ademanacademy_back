@@ -335,6 +335,17 @@ export class TransactionsService {
                     });
                 }
 
+                if (transaction.concept === 'ticket') {
+                    // 4. Pasar los Asientos a estado 'sold'
+                    const updated = await tx.eventSeat.updateMany({
+                        where: { paymentOrderId: transaction.paymentOrderId },
+                        data: {
+                            status: SeatStatus.sold,
+                            expiresAt: null,
+                        },
+                    });
+                }
+
                 return {
                     message: 'Transacción aprobada con éxito y estudiante matriculado.',
                     transaction: updatedTransaction,

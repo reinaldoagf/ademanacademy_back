@@ -766,6 +766,7 @@ model EventSeat {
  */
 
 enum ConceptType {
+  class           @map("Clase")
   monthly_payment @map("Mensualidad")
   tuition         @map("Matrícula")
   locker_room     @map("Vestuario")
@@ -861,9 +862,10 @@ enum ClassroomStatus {
 }
 
 enum RegistrationStatus {
-  approved @map("Aprobado")
-  pending  @map("Pendiente")
-  refused  @map("Rechazado")
+  pre_registered @map("Pre Registrado")
+  approved       @map("Aprobado")
+  pending        @map("Pendiente")
+  refused        @map("Rechazado")
 }
 
 enum TypeOfContract {

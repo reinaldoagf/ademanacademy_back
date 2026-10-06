@@ -187,7 +187,7 @@ export class EventSeatsService {
             });
 
             // 4. Pasar los Asientos a estado 'sold'
-            await tx.eventSeat.updateMany({
+            const updated = await tx.eventSeat.updateMany({
                 where: { paymentOrderId: paymentOrder.id },
                 data: {
                     status: SeatStatus.sold,
