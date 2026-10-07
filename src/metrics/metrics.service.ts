@@ -221,4 +221,105 @@ export class MetricsService {
             };
         }
     }
+
+    async getAcademicCalendarEvents(yearParam?: number, monthParam?: number) {
+        try {
+            const now = new Date();
+            const year = yearParam ?? now.getFullYear();
+            const month = monthParam ?? now.getMonth() + 1; // 1 - 12
+
+            const startOfMonth = new Date(year, month - 1, 1);
+            const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
+
+            // 1. Obtener Eventos Únicos/Especiales en el rango del mes
+            const events = await this.prisma.event.findMany({
+                where: {
+                    isActive: true,
+                    OR: [
+                        { startDate: { gte: startOfMonth, lte: endOfMonth } },
+                        { endDate: { gte: startOfMonth, lte: endOfMonth } },
+                    ],
+                },
+                select: {
+                    id: true,
+                    name: true,
+                    type: true,
+                    startDate: true,
+                    description: true,
+                },
+            });
+
+            // 2. Obtener los Grupos con sus Horarios Semanales y Salones
+            const groupsWithSchedules = await this.prisma.group.findMany({
+                include: {
+                    classroom: { select: { name: true } },
+                    schedules: true,
+                },
+            });
+
+            // Mapeo de días de la semana a nombres de la propiedad JSON en WeeklySchedule
+            const daysOfWeekMap = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+            const calendarEvents: Array<{
+                id: string;
+                title: string;
+                group: string;
+                time: string;
+                room: string;
+                date: string; // Formato YYYY-MM-DD
+                type: 'ensayo' | 'gala' | 'clase-abierta' | 'clase-regular';
+            }> = [];
+
+            // A) Transformar Eventos Especiales de Prisma al formato visual
+            events.forEach((evt) => {
+                const dateStr = evt.startDate.toISOString().split('T')[0];
+                calendarEvents.push({
+                    id: `evt-${evt.id}`,
+                    title: evt.name,
+                    group: 'Evento General / Academia',
+                    time: evt.startDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: true }),
+                    room: 'Sede Principal',
+                    date: dateStr,
+                    type: evt.type === 'sample' ? 'clase-abierta' : 'gala',
+                });
+            });
+
+            // B) Proyectar las Clases Recurrentes sobre los días del Mes seleccionado
+            const cursor = new Date(startOfMonth);
+            while (cursor <= endOfMonth) {
+                const dayIndex = cursor.getDay();
+                const dayName = daysOfWeekMap[dayIndex];
+                const dateStr = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`;
+
+                groupsWithSchedules.forEach((group) => {
+                    group.schedules.forEach((weeklySched) => {
+                        const rawSchedule = weeklySched.schedule as Record<string, any[]>;
+                        const dayBlocks = rawSchedule?.[dayName] || [];
+
+                        dayBlocks.forEach((block: any, idx: number) => {
+                            calendarEvents.push({
+                                id: `class-${group.id}-${dateStr}-${idx}`,
+                                title: block.label || `Clase de ${group.name}`,
+                                group: group.name,
+                                time: `${block.startTime || ''} - ${block.endTime || ''}`,
+                                room: group.classroom?.name || 'Salón General',
+                                date: dateStr,
+                                type: 'clase-regular',
+                            });
+                        });
+                    });
+                });
+
+                cursor.setDate(cursor.getDate() + 1);
+            }
+
+            return {
+                success: true,
+                data: calendarEvents,
+            };
+        } catch (error) {
+            console.error('Error al obtener cronograma académico:', error);
+            return { success: false, error: 'Error al consultar el calendario.' };
+        }
+    }
 }

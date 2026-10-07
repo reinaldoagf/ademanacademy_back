@@ -19,4 +19,12 @@ export class MetricsController {
     ) {
         return this.metricsService.getBalanceChartMetrics(startDate, endDate);
     }
+    @Get('academic-calendar-events')
+    async getAcademicCalendarEvents(
+        @Query('yearParam') yearParam?: number,
+        @Query('monthParam') monthParam?: number,
+    ) {
+        return this.metricsService.getAcademicCalendarEvents(yearParam, monthParam);
+    }
+
 }
