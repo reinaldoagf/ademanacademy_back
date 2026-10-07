@@ -14,9 +14,9 @@ export class MetricsController {
 
     @Get('balance-chart')
     async getBalanceChartMetrics(
-        @Query('year') year?: number,
-        @Query('month') month?: number
+        @Query('startDate') startDate?: string,
+        @Query('endDate') endDate?: string
     ) {
-        return this.metricsService.getBalanceChartMetrics(year, month);
+        return this.metricsService.getBalanceChartMetrics(startDate, endDate);
     }
 }

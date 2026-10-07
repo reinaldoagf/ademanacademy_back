@@ -101,31 +101,33 @@ export class MetricsService {
             };
         }
     }
+    // metrics.service.ts
 
-    async getBalanceChartMetrics(year?: number, month?: number) {
+    async getBalanceChartMetrics(startDateParam?: string, endDateParam?: string) {
         try {
             const now = new Date();
-            const selectedYear = year ?? now.getFullYear();
-            // Nota: JS usa meses 0-11. Asumimos month de 1 a 12 o por defecto el mes actual
-            const selectedMonth = month ? month - 1 : now.getMonth();
 
-            const startDate = new Date(selectedYear, selectedMonth, 1, 0, 0, 0);
-            const endDate = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
+            // Fecha Fin por defecto: Hoy a las 23:59:59.999
+            const endDate = endDateParam ? new Date(endDateParam) : new Date(now);
+            endDate.setHours(23, 59, 59, 999);
 
-            const monthName = startDate.toLocaleString("es-ES", {
-                month: "long",
-                year: "numeric",
-            });
+            // Fecha Inicio por defecto: Hace 30 días (si no se proporciona parámetro) o la fecha enviada
+            const startDate = startDateParam ? new Date(startDateParam) : new Date(now);
+            if (!startDateParam) {
+                startDate.setDate(now.getDate() - 30);
+                startDate.setHours(0, 0, 0, 0);
+            } else {
+                startDate.setHours(0, 0, 0, 0);
+            }
 
-            // 1. Obtener Transacciones aprobadas en el rango del mes (Recaudado)
+            // 1. Transacciones completadas/aprobadas en el rango
             const transactions = await this.prisma.transaction.findMany({
                 where: {
                     createdAt: {
                         gte: startDate,
                         lte: endDate,
                     },
-                    // Ajusta la condición de transacción completada según tus enums
-                    status: "approved", // O 'approved' / 'paid'
+                    status: "approved",
                 },
                 select: {
                     amount: true,
@@ -133,7 +135,7 @@ export class MetricsService {
                 },
             });
 
-            // 2. Obtener Cuentas por Cobrar (PaymentOrders pendientes)
+            // 2. Órdenes de pago pendientes en el rango
             const pendingOrders = await this.prisma.paymentOrder.findMany({
                 where: {
                     createdAt: {
@@ -148,42 +150,67 @@ export class MetricsService {
                 },
             });
 
-            // Inicializar acumuladores por semanas (Semana 1 a Semana 4)
-            const weeks = [
-                { label: "Semana 1", recaudado: 0, cuentasPorCobrar: 0 },
-                { label: "Semana 2", recaudado: 0, cuentasPorCobrar: 0 },
-                { label: "Semana 3", recaudado: 0, cuentasPorCobrar: 0 },
-                { label: "Semana 4", recaudado: 0, cuentasPorCobrar: 0 },
-            ];
+            // 3. Agrupación dinámica por DÍAS en el rango seleccionado
+            const periodsMap = new Map<string, { label: string; recaudado: number; cuentasPorCobrar: number }>();
 
-            // Helper para determinar a qué semana pertenece el día del mes
-            const getWeekIndex = (date: Date) => {
-                const day = date.getDate();
-                if (day <= 7) return 0;
-                if (day <= 14) return 1;
-                if (day <= 21) return 2;
-                return 3; // Del día 22 en adelante
+            const cursor = new Date(startDate);
+            while (cursor <= endDate) {
+                // Clave única por día: YYYY-MM-DD
+                const year = cursor.getFullYear();
+                const month = String(cursor.getMonth() + 1).padStart(2, "0");
+                const day = String(cursor.getDate()).padStart(2, "0");
+                const dayKey = `${year}-${month}-${day}`;
+
+                // Formato de etiqueta visible (ej. "07 Oct" o "07/10")
+                const label = cursor.toLocaleDateString("es-ES", {
+                    day: "2-digit",
+                    month: "short",
+                });
+
+                if (!periodsMap.has(dayKey)) {
+                    periodsMap.set(dayKey, { label, recaudado: 0, cuentasPorCobrar: 0 });
+                }
+
+                // Incrementar cursor 1 día
+                cursor.setDate(cursor.getDate() + 1);
+            }
+
+            // Helper para extraer clave YYYY-MM-DD de una fecha
+            const getDayKey = (date: Date) => {
+                const y = date.getFullYear();
+                const m = String(date.getMonth() + 1).padStart(2, "0");
+                const d = String(date.getDate()).padStart(2, "0");
+                return `${y}-${m}-${d}`;
             };
 
-            // Sumar Recaudado
+            // Acumular Recaudado por día
             transactions.forEach((tx) => {
-                const weekIdx = getWeekIndex(tx.createdAt);
-                weeks[weekIdx].recaudado += Number(tx.amount || 0);
+                const txKey = getDayKey(new Date(tx.createdAt));
+                if (periodsMap.has(txKey)) {
+                    periodsMap.get(txKey)!.recaudado += Number(tx.amount || 0);
+                }
             });
 
-            // Sumar Cuentas por Cobrar
+            // Acumular Cuentas por Cobrar por día
             pendingOrders.forEach((order) => {
-                const weekIdx = getWeekIndex(order.createdAt);
-                weeks[weekIdx].cuentasPorCobrar += Number(order.amount || 0);
+                const orderKey = getDayKey(new Date(order.createdAt));
+                if (periodsMap.has(orderKey)) {
+                    periodsMap.get(orderKey)!.cuentasPorCobrar += Number(order.amount || 0);
+                }
             });
+
+            const periods = Array.from(periodsMap.values());
 
             return {
                 success: true,
                 data: {
-                    monthName: monthName.charAt(0).toUpperCase() + monthName.slice(1),
-                    labels: weeks.map((w) => w.label),
-                    recaudadoData: weeks.map((w) => Math.round(w.recaudado * 100) / 100),
-                    cuentasPorCobrarData: weeks.map((w) => Math.round(w.cuentasPorCobrar * 100) / 100),
+                    labels: periods.map((p) => p.label),
+                    recaudadoData: periods.map((p) => Math.round(p.recaudado * 100) / 100),
+                    cuentasPorCobrarData: periods.map((p) => Math.round(p.cuentasPorCobrar * 100) / 100),
+                },
+                meta: {
+                    startDate: startDate.toISOString().split("T")[0],
+                    endDate: endDate.toISOString().split("T")[0],
                 },
             };
         } catch (error) {
