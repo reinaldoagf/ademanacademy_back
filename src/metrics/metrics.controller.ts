@@ -27,4 +27,9 @@ export class MetricsController {
         return this.metricsService.getAcademicCalendarEvents(yearParam, monthParam);
     }
 
+
+    @Get('costume-inventory')
+    async getCostumeInventoryMetrics() {
+        return this.metricsService.getCostumeInventoryMetrics();
+    }
 }

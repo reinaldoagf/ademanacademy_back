@@ -322,4 +322,67 @@ export class MetricsService {
             return { success: false, error: 'Error al consultar el calendario.' };
         }
     }
+
+    async getCostumeInventoryMetrics() {
+        try {
+            // Consultar asignaciones de vestuarios junto con el estudiante y su cliente (representante/alumno)
+            const assignments = await this.prisma.studentCostume.findMany({
+                take: 10,
+                orderBy: { createdAt: "desc" },
+                include: {
+                    costume: {
+                        select: {
+                            id: true,
+                            name: true,
+                            price: true,
+                            status: true,
+                        },
+                    },
+                    student: {
+                        include: {
+                            clients: {
+                                select: {
+                                    firstName: true,
+                                    lastName: true,
+                                },
+                                take: 1,
+                            },
+                        },
+                    },
+                },
+            });
+
+            const data = assignments.map((item) => {
+                const client = item.student?.clients?.[0];
+                const studentName = client
+                    ? `${client.firstName} ${client.lastName.charAt(0)}.`
+                    : "Sin Asignar";
+
+                // Determinar cuota pendiente en base al precio y estado del vestuario/asignación
+                const priceNum = Number(item.costume?.price || 0);
+                const isPendingPayment = item.costume?.status === "payment_pending";
+                const pendingFee = isPendingPayment ? priceNum : 0;
+
+                return {
+                    id: item.id,
+                    costumeName: item.costume?.name || "Vestuario",
+                    responsible: studentName,
+                    status: item.status, // ej: "assigned", "returned", "damaged", etc.
+                    costumeStatus: item.costume?.status,
+                    pendingFee: pendingFee,
+                };
+            });
+
+            return {
+                success: true,
+                data,
+            };
+        } catch (error) {
+            console.error("Error al obtener control de vestuarios:", error);
+            return {
+                success: false,
+                error: "No se pudo obtener el control de vestuarios.",
+            };
+        }
+    }
 }
