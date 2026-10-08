@@ -128,11 +128,10 @@ export class MetricsService {
         try {
             const now = new Date();
 
-            // Fecha Fin por defecto: Hoy a las 23:59:59.999
+            // 1. Definir rango de fechas
             const endDate = endDateParam ? new Date(endDateParam) : new Date(now);
             endDate.setHours(23, 59, 59, 999);
 
-            // Fecha Inicio por defecto: Hace 30 días (si no se proporciona parámetro) o la fecha enviada
             const startDate = startDateParam ? new Date(startDateParam) : new Date(now);
             if (!startDateParam) {
                 startDate.setDate(now.getDate() - 30);
@@ -141,8 +140,8 @@ export class MetricsService {
                 startDate.setHours(0, 0, 0, 0);
             }
 
-            // 1. Transacciones completadas/aprobadas en el rango
-            const transactions = await this.prisma.transaction.findMany({
+            // 2. INGRESOS: Transacciones aprobadas dentro del rango
+            const incomeTransactions = await this.prisma.transaction.findMany({
                 where: {
                     createdAt: {
                         gte: startDate,
@@ -156,47 +155,45 @@ export class MetricsService {
                 },
             });
 
-            // 2. Órdenes de pago pendientes en el rango
-            const pendingOrders = await this.prisma.paymentOrder.findMany({
+            console.log({ incomeTransactions })
+
+            // 3. EGRESOS: Pagos/Abonos realizados a Cuentas por Pagar (CxP) dentro del rango
+            const expensePayments = await this.prisma.payablePayment.findMany({
                 where: {
-                    createdAt: {
+                    paymentDate: {
                         gte: startDate,
                         lte: endDate,
                     },
-                    status: "pending",
                 },
                 select: {
                     amount: true,
-                    createdAt: true,
+                    paymentDate: true,
                 },
             });
 
-            // 3. Agrupación dinámica por DÍAS en el rango seleccionado
-            const periodsMap = new Map<string, { label: string; recaudado: number; cuentasPorCobrar: number }>();
+            // 4. Mapeo dinámico y llenado de días en el rango seleccionado
+            const periodsMap = new Map<string, { label: string; ingresos: number; egresos: number }>();
 
             const cursor = new Date(startDate);
             while (cursor <= endDate) {
-                // Clave única por día: YYYY-MM-DD
                 const year = cursor.getFullYear();
                 const month = String(cursor.getMonth() + 1).padStart(2, "0");
                 const day = String(cursor.getDate()).padStart(2, "0");
                 const dayKey = `${year}-${month}-${day}`;
 
-                // Formato de etiqueta visible (ej. "07 Oct" o "07/10")
                 const label = cursor.toLocaleDateString("es-ES", {
                     day: "2-digit",
                     month: "short",
                 });
 
                 if (!periodsMap.has(dayKey)) {
-                    periodsMap.set(dayKey, { label, recaudado: 0, cuentasPorCobrar: 0 });
+                    periodsMap.set(dayKey, { label, ingresos: 0, egresos: 0 });
                 }
 
-                // Incrementar cursor 1 día
                 cursor.setDate(cursor.getDate() + 1);
             }
 
-            // Helper para extraer clave YYYY-MM-DD de una fecha
+            // Helper para extraer la clave YYYY-MM-DD
             const getDayKey = (date: Date) => {
                 const y = date.getFullYear();
                 const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -204,30 +201,31 @@ export class MetricsService {
                 return `${y}-${m}-${d}`;
             };
 
-            // Acumular Recaudado por día
-            transactions.forEach((tx) => {
+            // 5. Acumular INGRESOS por día
+            incomeTransactions.forEach((tx) => {
                 const txKey = getDayKey(new Date(tx.createdAt));
                 if (periodsMap.has(txKey)) {
-                    periodsMap.get(txKey)!.recaudado += Number(tx.amount || 0);
+                    periodsMap.get(txKey)!.ingresos += Number(tx.amount || 0);
                 }
             });
 
-            // Acumular Cuentas por Cobrar por día
-            pendingOrders.forEach((order) => {
-                const orderKey = getDayKey(new Date(order.createdAt));
-                if (periodsMap.has(orderKey)) {
-                    periodsMap.get(orderKey)!.cuentasPorCobrar += Number(order.amount || 0);
+            // 6. Acumular EGRESOS por día
+            expensePayments.forEach((payment) => {
+                const paymentKey = getDayKey(new Date(payment.paymentDate));
+                if (periodsMap.has(paymentKey)) {
+                    periodsMap.get(paymentKey)!.egresos += Number(payment.amount || 0);
                 }
             });
 
             const periods = Array.from(periodsMap.values());
 
+            // 7. Retorno de la estructura adaptada
             return {
                 success: true,
                 data: {
                     labels: periods.map((p) => p.label),
-                    recaudadoData: periods.map((p) => Math.round(p.recaudado * 100) / 100),
-                    cuentasPorCobrarData: periods.map((p) => Math.round(p.cuentasPorCobrar * 100) / 100),
+                    ingresosData: periods.map((p) => Math.round(p.ingresos * 100) / 100),
+                    egresosData: periods.map((p) => Math.round(p.egresos * 100) / 100),
                 },
                 meta: {
                     startDate: startDate.toISOString().split("T")[0],
@@ -235,14 +233,13 @@ export class MetricsService {
                 },
             };
         } catch (error) {
-            console.error("Error al obtener métricas del gráfico de balance:", error);
+            console.error("Error al obtener métricas del gráfico de ingresos vs egresos:", error);
             return {
                 success: false,
-                error: "No se pudieron calcular las métricas de balance.",
+                error: "No se pudieron calcular las métricas de ingresos vs egresos.",
             };
         }
     }
-
     async getAcademicCalendarEvents(yearParam?: number, monthParam?: number) {
         try {
             const now = new Date();
