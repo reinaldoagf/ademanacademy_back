@@ -1,5 +1,5 @@
 // /src/costumes/costumes.service.ts
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { S3Service } from '../s3/s3.service';
@@ -123,8 +123,8 @@ export class CostumesService {
             await Promise.all(imagesToDelete.map((img) => this.s3Service.deleteFile(img.key)));
 
             // 2. Limpiar registros anteriores de imágenes en BD para este evento
-            await this.prisma.uniformImage.deleteMany({
-                where: { uniformId: id },
+            await this.prisma.costumeImage.deleteMany({
+                where: { costumeId: id },
             });
         }
         // 6. Actualizar en la base de datos
@@ -174,24 +174,58 @@ export class CostumesService {
         };
     }
     // 🎯 ASIGNAR VESTUARIO A UN ALUMNO
-    async assignToStudent(costumeId: string, assignDto: AssignCostumeDto) {
-        // Validar existencia de entidades
-        const costume = await this.prisma.costume.findUnique({ where: { id: costumeId } });
-        if (!costume) throw new NotFoundException('Vestuario no encontrado.');
+    async assignToStudent(assignDto: AssignCostumeDto) {
+        const { costumeId, assignments } = assignDto;
 
-        const student = await this.prisma.student.findUnique({ where: { id: assignDto.studentId } });
-        if (!student) throw new NotFoundException('Estudiante no encontrado.');
+        if (!assignments || assignments.length === 0) {
+            throw new BadRequestException('Debes agregar al menos un estudiante para realizar la asignación.');
+        }
 
-        // Crear asignación
-        return this.prisma.studentCostume.create({
-            data: {
-                costumeId,
-                studentId: assignDto.studentId,
-                assignedSize: assignDto.assignedSize,
-                observations: assignDto.observations,
-                status: 'assigned',
-            },
-            include: { student: true, costume: true }
+        // 1. Validar existencia de todos los estudiantes
+        const studentIds = assignments.map((a) => a.studentId);
+        const students = await this.prisma.student.findMany({
+            where: { id: { in: studentIds } },
+            include: { clients: true },
+        });
+
+        if (students.length !== studentIds.length) {
+            throw new NotFoundException('Uno o más estudiantes especificados no existen.');
+        }
+
+        const studentMap = new Map(students.map((s) => [s.id, s]));
+
+        // 2. Ejecutar transacción para descuento de stock y creación de registros
+        return await this.prisma.$transaction(async (tx) => {
+            const costume = await tx.costume.findUnique({
+                where: { id: costumeId },
+            });
+
+            if (!costume) {
+                throw new NotFoundException('Vestuario no encontrado.');
+            }
+
+            // Crear los registros de asignación masiva
+            const createdAssignments = await Promise.all(
+                assignments.map((item) => {
+                    const student = studentMap.get(item.studentId);
+                    return tx.studentCostume.create({
+                        data: {
+                            costumeId,
+                            studentId: item.studentId,
+                            observations: item.observations || null,
+                            clientId: student?.clients?.[0]?.id || null,
+                            status: 'assigned',
+                            assignedAt: new Date(),
+                        },
+                        include: {
+                            student: true,
+                            costume: true,
+                        },
+                    });
+                })
+            );
+
+            return createdAssignments;
         });
     }
 

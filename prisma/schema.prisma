@@ -478,7 +478,7 @@ model StudentCostume {
   costume   Costume @relation(fields: [costumeId], references: [id], onDelete: Cascade)
 
   // Datos específicos de la asignación
-  assignedSize String           @db.VarChar(10) // La talla exacta que se le entregó (ej: "M", "12")
+  assignedSize String?          @db.VarChar(10) // La talla exacta que se le entregó (ej: "M", "12")
   status       AssignmentStatus @default(assigned)
   observations String?          @db.Text // Ej: "Se entrega con detalles en encaje", "Falta tiara"
 

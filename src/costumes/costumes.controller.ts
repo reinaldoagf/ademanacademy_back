@@ -8,10 +8,10 @@ import { UpdateCostumeDto } from './dto/update-costume.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('costumes')
+@UseGuards(JwtAuthGuard) // 🛡️ Protege la gestión de infraestructura
 export class CostumesController {
     constructor(private readonly costumesService: CostumesService) { }
     @Post()
-    @UseGuards(JwtAuthGuard) // 🛡️ Protege la gestión de infraestructura
     async create(
         @Body() createCostumeDto: CreateCostumeDto
     ) {
@@ -34,7 +34,6 @@ export class CostumesController {
     }
 
     @Patch(':id')
-    @UseGuards(JwtAuthGuard) // 🛡️ Protege la gestión de infraestructura
     async update(
         @Param('id') id: string,
         @Body() updateCostumeDto: UpdateCostumeDto, // o UpdateProductDto incluyendo existingImages
@@ -48,12 +47,11 @@ export class CostumesController {
     }
 
     // 🎯 Rutas de Asignación
-    @Post(':id/assign')
+    @Post('assign')
     async assignToStudent(
-        @Param('id') costumeId: string,
         @Body() assignCostumeDto: AssignCostumeDto,
     ) {
-        return this.costumesService.assignToStudent(costumeId, assignCostumeDto);
+        return this.costumesService.assignToStudent(assignCostumeDto);
     }
 
     @Patch('assignments/:assignmentId')

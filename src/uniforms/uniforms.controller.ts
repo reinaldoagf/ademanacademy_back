@@ -14,7 +14,6 @@ export class UniformsController {
     constructor(private readonly uniformsService: UniformsService) { }
 
     @Post()
-    @UseGuards(JwtAuthGuard) // 🛡️ Protege la gestión de infraestructura
     async create(
         @Body() createUniformDto: CreateUniformDto
     ) {
@@ -46,7 +45,6 @@ export class UniformsController {
         return this.uniformsService.findOne(id);
     }
     @Patch(':id')
-    @UseGuards(JwtAuthGuard) // 🛡️ Protege la gestión de infraestructura
     async update(
         @Param('id') id: string,
         @Body() updateUniformDto: UpdateUniformDto, // o UpdateProductDto incluyendo existingImages

@@ -1,12 +1,5 @@
-import { IsString, IsEnum, IsOptional } from 'class-validator';
-
-export enum AssignmentSize {
-    XS = 'XS',
-    S = 'S',
-    M = 'M',
-    L = 'L',
-    XL = 'XL',
-}
+import { IsString, IsArray, ValidateNested, IsOptional, IsNotEmpty, IsEnum } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export enum AssignmentStatus {
     assigned = 'assigned',
@@ -15,20 +8,31 @@ export enum AssignmentStatus {
     lost = 'lost',
 }
 
-export class AssignCostumeDto {
+export class StudentAssignmentItemDto {
     @IsString()
+    @IsNotEmpty({ message: 'El ID del estudiante es requerido' })
     studentId: string;
-
-    @IsEnum(AssignmentSize)
-    assignedSize: AssignmentSize;
 
     @IsOptional()
     @IsString()
     observations?: string;
 }
 
+export class AssignCostumeDto {
+    @IsString()
+    @IsNotEmpty({ message: 'El ID del vestuario es requerido' })
+    costumeId: string;
+
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => StudentAssignmentItemDto)
+    assignments: StudentAssignmentItemDto[];
+}
+
 export class UpdateAssignmentStatusDto {
-    @IsEnum(AssignmentStatus)
+    @IsEnum(AssignmentStatus, {
+        message: 'El estado debe ser: assigned, returned, damaged o lost',
+    })
     status: AssignmentStatus;
 
     @IsOptional()
