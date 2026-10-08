@@ -6,17 +6,31 @@ export class MetricsService {
     constructor(private readonly prisma: PrismaService) { }
 
     // 🔍 READ ALL (Con paginación y filtro por nombre del salón o tipo)
-    async getAdminDashboardMetrics() {
+    async getBorrowedCostumes() {
         try {
-            // 1. Agrupar ingresos de transacciones aprobadas por concepto
-            // NOTA: Ajusta los valores ('MONTHLY_PAYMENT', 'CUSTOM_CLASS', 'EVENT_TICKET') 
-            // a los valores exactos de tu enum ConceptType en Prisma.
-
-
-
-
-
-
+            // 3. Conteo de Vestuarios Prestados
+            // Ajusta según la tabla/relación de inventario/vestuario prestado
+            const borrowedCostumes = await this.prisma.studentCostume.count({
+                where: {
+                    status: 'assigned'
+                },
+            }).catch(() => 0);
+            return {
+                data: {
+                    borrowedCostumes,
+                },
+            };
+        } catch (error) {
+            console.error('Error al obtener métricas del Dashboard:', error);
+            return {
+                data: {
+                    borrowedCostumes: 0,
+                },
+            };
+        }
+    }
+    async getActivePreInscriptions() {
+        try {
             // 2. Conteo de Preinscripciones Activas
             // Ajusta la tabla/filtro según el modelo donde guardes las preinscripciones/alumnos
             const activePreInscriptions = await this.prisma.student.count({
@@ -28,30 +42,17 @@ export class MetricsService {
                     }
                 },
             }).catch(() => 0); // Manejo defensivo por si el modelo difiere
-
-            // 3. Conteo de Vestuarios Prestados
-            // Ajusta según la tabla/relación de inventario/vestuario prestado
-            const borrowedCostumes = await this.prisma.studentCostume.count({
-                where: {
-                    status: 'assigned'
-                },
-            }).catch(() => 0);
             return {
                 data: {
                     activePreInscriptions,
-                    borrowedCostumes,
                 },
             };
         } catch (error) {
             console.error('Error al obtener métricas del Dashboard:', error);
             return {
-                incomeByConcept: {
-                    monthlyPayments: 0,
-                    customClasses: 0,
-                    specialEvents: 0,
+                data: {
+                    activePreInscriptions: 0,
                 },
-                activePreInscriptions: 0,
-                borrowedCostumes: 0,
             };
         }
     }

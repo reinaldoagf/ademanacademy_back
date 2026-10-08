@@ -10,9 +10,13 @@ export class MetricsController {
     async getRevenueByCategoryMetrics() {
         return this.metricsService.getRevenueByCategoryMetrics();
     }
-    @Get('admin-dashboard')
-    async getAdminDashboardMetrics() {
-        return this.metricsService.getAdminDashboardMetrics();
+    @Get('active-pre-inscriptions')
+    async getActivePreInscriptions() {
+        return this.metricsService.getActivePreInscriptions();
+    }
+    @Get('borrowed-costumes')
+    async getBorrowedCostumes() {
+        return this.metricsService.getBorrowedCostumes();
     }
 
     @Get('balance-chart')
