@@ -6,7 +6,10 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @UseGuards(JwtAuthGuard) // 🛡️ Protege la gestión de infraestructura
 export class MetricsController {
     constructor(private readonly metricsService: MetricsService) { }
-
+    @Get('revenue-by-category')
+    async getRevenueByCategoryMetrics() {
+        return this.metricsService.getRevenueByCategoryMetrics();
+    }
     @Get('admin-dashboard')
     async getAdminDashboardMetrics() {
         return this.metricsService.getAdminDashboardMetrics();
