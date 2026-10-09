@@ -35,6 +35,7 @@ model User {
   transactions      Transaction[]
   groups            Group[]
   registrations     Registration[]
+  notifications     Notification[]
 
   createdAt     DateTime       @default(now()) @map("createdAt")
   updatedAt     DateTime       @updatedAt @map("updatedAt")
@@ -754,6 +755,35 @@ model EventSeat {
   @@map("event_seats")
 }
 
+// ==========================================
+// MÓDULO DE NOTIFICACIONES (Realtime & WhatsApp)
+// ==========================================
+
+model Notification {
+  id      String              @id @default(uuid())
+  title   String              @db.VarChar(150)
+  message String              @db.Text
+  channel NotificationChannel @default(IN_APP)
+  status  NotificationStatus  @default(PENDING)
+
+  // Relación opcional con el Usuario destinatario
+  userId String? @db.VarChar(36)
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Número de teléfono si es enviado vía WhatsApp directamente
+  recipientPhone String? @db.VarChar(40)
+
+  // Metadatos adicionales (Ej: { orderId: "...", eventId: "..." })
+  metadata Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("notifications")
+}
+
 // ==================== ENUMS CORREGIDOS Y SEPARADOS ====================
 
 /**
@@ -933,4 +963,17 @@ enum SeatingMapItemType {
 enum ClientType {
   student        @map("Estudiante")
   representative @map("Representante")
+}
+
+enum NotificationChannel {
+  IN_APP
+  WHATSAPP
+  BOTH
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  READ
+  FAILED
 }

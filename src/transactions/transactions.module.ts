@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TransactionsService } from './transactions.service';
 import { TransactionsController } from './transactions.controller';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
     imports: [ // Nos permite leer el JWT_SECRET de las variables de entorno
@@ -13,7 +14,8 @@ import { TransactionsController } from './transactions.controller';
                 secret: configService.get<string>('JWT_SECRET'),
                 signOptions: { expiresIn: '1d' }, // El token expira en 24 horas
             }),
-        })
+        }),
+        NotificationsModule,
     ],
     controllers: [TransactionsController],
     providers: [TransactionsService],

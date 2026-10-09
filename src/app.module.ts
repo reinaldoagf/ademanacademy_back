@@ -29,6 +29,7 @@ import { EventSeatsModule } from './event-seats/event-seats.module';
 import { ClientsModule } from './clients/clients.module';
 import { InstructorsModule } from './instructors/instructors.module';
 import { MetricsModule } from './metrics/metrics.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -63,7 +64,8 @@ import { MetricsModule } from './metrics/metrics.module';
     EventSeatsModule,
     ClientsModule,
     InstructorsModule,
-    MetricsModule
+    MetricsModule,
+    NotificationsModule
   ],
 })
 export class AppModule { }

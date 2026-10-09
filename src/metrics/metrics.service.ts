@@ -155,8 +155,6 @@ export class MetricsService {
                 },
             });
 
-            console.log({ incomeTransactions })
-
             // 3. EGRESOS: Pagos/Abonos realizados a Cuentas por Pagar (CxP) dentro del rango
             const expensePayments = await this.prisma.payablePayment.findMany({
                 where: {
