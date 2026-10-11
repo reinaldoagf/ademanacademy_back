@@ -74,8 +74,13 @@ export class UsersController {
     const profileType = body.profileType;
     const representativeOccupation = body.representativeOccupation;
     const representedStudents = body.representedStudents ? JSON.parse(body.representedStudents) : undefined;
-    const payment = body.payment ? JSON.parse(body.payment) : undefined;
 
+    // Soporte tanto si viene dentro de payment como plano en el body
+    const payment = body.payment ? JSON.parse(body.payment) : undefined;
+    const isEnrolled = body.isEnrolled === 'true' || payment?.isEnrolled === true;
+    const studentId = body.studentId || payment?.studentId;
+
+    // 1. Validaciones para Representante
     if (profileType === 'representative') {
       if (!representedStudents || representedStudents.length === 0) {
         throw new BadRequestException('Como representante, debes registrar al menos a un estudiante.');
@@ -84,9 +89,16 @@ export class UsersController {
         throw new BadRequestException('Debes adjuntar el comprobante de pago.');
       }
     }
+
+    // 2. Validaciones para Estudiante
     if (profileType === 'student') {
-      if (!file) {
+      // Si NO está inscrito previamente, exigimos el comprobante de pago
+      if (!isEnrolled && !file) {
         throw new BadRequestException('Debes adjuntar el comprobante de pago.');
+      }
+      // Si está inscrito, validamos que venga el studentId
+      if (isEnrolled && !studentId) {
+        throw new BadRequestException('No se ha especificado el ID del estudiante a vincular.');
       }
     }
 
@@ -95,9 +107,26 @@ export class UsersController {
       representativeOccupation,
       representedStudents,
       payment,
+      isEnrolled,
+      studentId,
     };
-
-    // 🚀 Pasamos el objeto "file" completo al servicio
+    // 🚀 Pasamos el DTO actualizado junto al archivo al servicio
     return this.usersService.completeOnboarding(registeringUserId, completeOnboardingDto, file);
+  }
+  @Post('request-account-linking')
+  async requestAccountLinking(
+    @CurrentUser() user: any,
+    @Body() body: { email: string }
+  ) {
+    const { email } = body;
+    return this.usersService.requestAccountLinking(user.sub, email);
+  }
+  @Post('confirm-account-linking')
+  async confirmAccountLinking(
+    @CurrentUser() user: any,
+    @Body() body: { email: string, otpCode: string }
+  ) {
+    const { email, otpCode } = body;
+    return this.usersService.confirmAccountLinking(user.sub, email, otpCode);
   }
 }

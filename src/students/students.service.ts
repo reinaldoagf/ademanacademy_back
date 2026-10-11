@@ -19,9 +19,6 @@ import { ClientType, Kinship, Prisma } from '@prisma/client';
 export class StudentsService {
 
     constructor(private readonly prisma: PrismaService) { }
-
-
-
     /**
      * Crea un nuevo estudiante validando la unicidad del DNI
      */
@@ -99,8 +96,6 @@ export class StudentsService {
             return newClient;
         });
     }
-
-
     /**
      * Obtiene estudiantes con soporte para paginación, filtros por parentesco y búsqueda global
      */

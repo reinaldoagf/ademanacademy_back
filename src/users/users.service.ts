@@ -1,10 +1,12 @@
 // src/users/users.service.ts
-import { Injectable, NotFoundException, Inject, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { GetUsersFilterDto } from './dto/get-users-filter.dto';
-import { ClientType, User, Prisma } from '@prisma/client'; // 🎯 Importación nativa estándar
+import { ClientType, User, Prisma, NotificationChannel } from '@prisma/client'; // 🎯 Importación nativa estándar
+import { NotificationsService } from '@/notifications/notifications.service';
+import { MailsService } from '@/mails/mails.service';
 export type UserWithClients = Prisma.UserGetPayload<{
   include: {
     client: {
@@ -21,35 +23,66 @@ export class UsersService {
 
   constructor(
     private readonly prisma: PrismaService,
-    @Inject(PrismaService) private readonly prismaService: PrismaService
+    private mailService: MailsService,
+    private notificationsService: NotificationsService,
   ) {
-    /**
-     * 💡 ARQUITECTURA PRISMA v7:
-     * Con adaptadores de MariaDB/MySQL, los modelos no se montan directo en la raíz de la instancia del servicio.
-     * Accedemos a ellos usando el diccionario de propiedades del prototipo de Prisma de forma 100% segura.
-     */
-    this.prismaClient = this.prismaService['user'] || this.prismaService['User'];
 
-    if (!this.prismaClient) {
-      // Salvavidas dinámico por si se requiere acceder en cascada
-      this.prismaClient = (this.prismaService as any)._client?.['user'] || this.prismaService;
-    }
   }
 
   /**
    * Crea un nuevo usuario en la base de datos
    */
   async create(createUserDto: CreateUserDto): Promise<User> {
-    return await this.prismaClient.create({
-      data: createUserDto,
-    });
-  }
+    try {
+      // 1. Verificamos si ya existe un usuario con el mismo DNI
+      const existingUserByDni = await this.prisma.user.findUnique({
+        where: { dni: createUserDto.dni },
+      });
 
+      if (existingUserByDni) {
+        throw new ConflictException(`Ya existe un usuario registrado con el DNI: ${createUserDto.dni}`);
+      }
+
+      // 2. Opcional: Verificar por correo electrónico si aplica
+      const existingUserByEmail = await this.prisma.user.findUnique({
+        where: { email: createUserDto.email },
+      });
+
+      if (existingUserByEmail) {
+        throw new ConflictException(`El correo electrónico ${createUserDto.email} ya está en uso.`);
+      }
+
+      // 2. Opcional: Verificar por correo electrónico si aplica
+      const existingUserByPhone = await this.prisma.user.findUnique({
+        where: { phone: createUserDto.phone },
+      });
+
+      if (existingUserByPhone) {
+        throw new ConflictException(`El teléfono ${createUserDto.phone} ya está en uso.`);
+      }
+      return await this.prisma.user.create({
+        data: createUserDto,
+      });
+    } catch (error) {
+      // Capturamos errores específicos de Prisma
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        // P2002 es el código de Prisma para violación de restricción única (Unique constraint failed)
+        if (error.code === 'P2002') {
+          console.error({ error })
+          const target = (error.meta?.target as string[])?.join(', ') || 'campo';
+          throw new ConflictException(`Ya existe un registro con el mismo valor para: ${target}.`);
+        }
+      }
+
+      console.error('Error inesperado al crear el usuario:', error);
+      throw new InternalServerErrorException(error || error.message || 'Ocurrió un error al procesar el registro en la base de datos.');
+    }
+  }
   /**
    * Busca un usuario por su correo electrónico (Utilizado en AuthService)
    */
   async findByEmail(email: string): Promise<UserWithClients | null> {
-    const user = await this.prismaClient.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { email },
       include: {
         client: {
@@ -83,7 +116,7 @@ export class UsersService {
     }
 
     const [data, totalItems] = await Promise.all([
-      this.prismaClient.findMany({
+      this.prisma.user.findMany({
         where,
         skip,
         take: limit,
@@ -98,7 +131,7 @@ export class UsersService {
           createdAt: true,
         },
       }),
-      this.prismaClient.count({ where })
+      this.prisma.user.count({ where })
     ]);
 
     const totalPages = Math.ceil(totalItems / limit);
@@ -119,7 +152,7 @@ export class UsersService {
    * Busca un usuario por su ID único. Lanza 404 si no existe.
    */
   async findOne(id: string): Promise<User> {
-    const user = await this.prismaClient.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id },
     });
 
@@ -136,7 +169,7 @@ export class UsersService {
     // Validamos primero la existencia del registro
     await this.findOne(id);
 
-    return await this.prismaClient.update({
+    return await this.prisma.user.update({
       where: { id },
       data: updateUserDto,
     });
@@ -148,7 +181,7 @@ export class UsersService {
   async remove(id: string): Promise<{ message: string }> {
     await this.findOne(id);
 
-    await this.prismaClient.delete({
+    await this.prisma.user.delete({
       where: { id },
     });
 
@@ -159,14 +192,14 @@ export class UsersService {
    * Cuenta el total de usuarios registrados
    */
   async countAll(): Promise<number> {
-    return await this.prismaClient.count();
+    return await this.prisma.user.count();
   }
 
   async completeOnboarding(registeringUserId: string, dto: any, file?: Express.Multer.File) {
     // 1. Validaciones previas de usuario...
 
     const receiptPath = file ? file.filename : null;
-    const user = await this.prismaClient.findUnique({ where: { id: registeringUserId } });
+    const user = await this.prisma.user.findUnique({ where: { id: registeringUserId } });
 
     if (!user) {
       throw new BadRequestException('Usuario no encontrado.');
@@ -266,51 +299,74 @@ export class UsersService {
         }
         // Operación C: Si es STUDENT autónomo
         if (dto.profileType === 'student') {
-          const student = await tx.student.create({
-            data: {
-              kinship: 'other',
-              shirtSize: 'M',
-              hasExperience: false,
-              medicalObservations: null,
-            }
-          });
-          const client = await tx.client.create({
-            data: {
-              firstName: user.firstName,
-              lastName: user.lastName,
+          const existingClient = await tx.client.findFirst({
+            where: {
               dni: user.dni,
-              email: user.email,
-              birthDate: new Date(),
-              userId: registeringUserId,
-              studentId: student.id,
-              address: user.address || '',
-              phone: user.phone || null,
               type: ClientType.student,
             }
           });
-          if (dto.payment) {
-
-            await tx.transaction.create({
+          if (!existingClient) {
+            const student = await tx.student.create({
               data: {
-                registeringUserId: registeringUserId,
-                clientId: client.id,
-                concept: 'tuition',
-                amount: dto.payment.amount,
-                method: 'bank_transfer', // Define un valor por defecto o extiéndelo en tu enum
-                status: 'pending', // Queda 'pending' para auditoría manual del administrador
-                referenceNumber: dto.payment.referenceNumber || null,
-                bankName: dto.payment.bankName || null,
-                receiptPath: receiptPath
+                kinship: 'other',
+                shirtSize: 'M',
+                hasExperience: false,
+                medicalObservations: null,
               }
             });
-          }
-          await tx.registration.create({
-            data: {
-              userId: registeringUserId,
-              studentId: student.id,
-              clientId: client.id,
+            const client = await tx.client.create({
+              data: {
+                firstName: user.firstName,
+                lastName: user.lastName,
+                dni: user.dni,
+                email: user.email,
+                birthDate: new Date(),
+                userId: registeringUserId,
+                studentId: student.id,
+                address: '',
+                phone: user.phone || null,
+                type: ClientType.student,
+              }
+            });
+            await tx.registration.create({
+              data: {
+                userId: registeringUserId,
+                studentId: student.id,
+                clientId: client.id,
+              }
+            });
+            if (dto.payment) {
+
+              await tx.transaction.create({
+                data: {
+                  registeringUserId: registeringUserId,
+                  clientId: client.id,
+                  concept: 'tuition',
+                  amount: dto.payment.amount,
+                  method: 'bank_transfer', // Define un valor por defecto o extiéndelo en tu enum
+                  status: 'pending', // Queda 'pending' para auditoría manual del administrador
+                  referenceNumber: dto.payment.referenceNumber || null,
+                  bankName: dto.payment.bankName || null,
+                  receiptPath: receiptPath
+                }
+              });
             }
-          });
+          } else {
+            await tx.client.update({
+              where: {
+                id: existingClient.id,
+              },
+              data: {
+                userId: registeringUserId,
+                firstName: existingClient.firstName || user.firstName,
+                lastName: existingClient.lastName || user.lastName,
+                dni: existingClient.dni || user.dni,
+                email: existingClient.email || user.email,
+                phone: existingClient.phone || user.phone,
+              }
+            })
+          }
+
         }
 
         return {
@@ -326,5 +382,80 @@ export class UsersService {
       }
       throw new InternalServerErrorException('Error en el servidor al procesar el onboarding.');
     }
+  }
+  async requestAccountLinking(userId: string, email: string) {
+    // 1. Buscar cliente huérfano (sin usuario asignado) con ese correo
+    const user = await this.prisma.user.findFirst({
+      where: {
+        id: userId,
+        email: email,
+      },
+      include: { client: { include: { student: true } } },
+    });
+
+    if (!user) {
+      throw new BadRequestException('No se encontró un usuario con ese correo electrónico.');
+    }
+
+    if (user.client.length > 1) {
+      throw new BadRequestException('El correo electrónico está asociado a múltiples cuentas.');
+    }
+    // Por seguridad defensiva, evitamos filtrar si el correo existe o no
+
+    // 2. Generar código OTP de 6 dígitos
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    // 3. Guardar temporalmente el OTP en el cliente (puedes usar IDNumberPrefix o un campo de expiración)
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        otpCode: otpCode, // Almacenamos el PIN temporalmente,
+        otpCodeExpiry: new Date(Date.now() + 10 * 60 * 1000)
+      },
+    });
+
+    const studentFullName = `${user.firstName} ${user.lastName}`;
+
+    // 4. Enviar Correo Electrónico con el OTP
+    await this.mailService.sendOtpEmail(user.email, otpCode, studentFullName);
+
+    // 5. Opcional: Enviar también notificación por WhatsApp si tiene teléfono registrado
+    if (user.phone) {
+      const fullPhone = `${user.countryCode || ''}${user.phone}`;
+      await this.notificationsService.sendNotification({
+        recipientPhone: fullPhone,
+        title: 'Código de Vinculación',
+        message: `Hola ${user.firstName}, tu código de verificación de la academia es: ${otpCode}`,
+        channel: NotificationChannel.WHATSAPP,
+      });
+    }
+
+    return {
+      success: true,
+      message: "Se ha enviado un código de verificación a tu correo electrónico."
+    };
+  }
+  async confirmAccountLinking(userId: string, email: string, otpCode: string) {
+    // 1. Validar el cliente con el correo y el código OTP almacenado
+    const user = await this.prisma.user.findFirst({
+      where: {
+        email: email.trim(),
+        otpCode: otpCode, // Verificamos el código OTP
+      }
+    });
+
+    if (!user) {
+      throw new BadRequestException('Código inválido o expirado.');
+    }
+
+    // 2. ¡VINCULACIÓN SEGURA! Asignamos el userId de la cuenta nueva al cliente preexistente
+    const updatedUser = await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        otpCode: null,
+        otpCodeExpiry: null
+      }
+    });
+
+    return updatedUser;
   }
 }

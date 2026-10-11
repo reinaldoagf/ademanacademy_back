@@ -28,7 +28,6 @@ export class StudentsController {
     }
 
     @Get('my-represented')
-    @UseGuards(JwtAuthGuard) // 🔒 Protege la ruta y valida el Bearer Token del Header
     async getMyStudents(
         @Query() filters: GetStudentsFilterDto,
         @CurrentUser() user: any // 👈 El decorador extrae el user automáticamente
@@ -44,7 +43,6 @@ export class StudentsController {
     findOne(@Param('id', ParseUUIDPipe) id: string) {
         return this.studentsService.findOne(id);
     }
-
     @Patch(':id')
     update(@Param('id', ParseUUIDPipe) id: string, @Body() updateStudentDto: UpdateStudentDto) {
         return this.studentsService.update(id, updateStudentDto);

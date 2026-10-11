@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { S3Module } from './s3/s3.module';
+import { MailsModule } from './mails/mails.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
@@ -39,6 +40,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     }), // Nos permite leer el JWT_SECRET de las variables de entorno
     ScheduleModule.forRoot(),
     S3Module,
+    MailsModule,
     PrismaModule, // 💡 REGÍSTRALO AQUÍ para activar su alcance global
     AuthModule,
     UsersModule,
