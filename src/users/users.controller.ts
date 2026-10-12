@@ -69,7 +69,6 @@ export class UsersController {
     @Body() body: any,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    console.log({ representedStudentssssssssssssssssss: body.representedStudents })
     const registeringUserId = user?.sub;
 
     const profileType = body.profileType;

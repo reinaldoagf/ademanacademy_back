@@ -71,31 +71,22 @@ export class OrdersService {
                     student: true,
                 }
             });
-            console.log({ client })
 
             if (!client) {
                 throw new NotFoundException(`Cliente con ID "${clientId}" no encontrado.`);
             }
-            console.log({ profileType: client.user?.profileType })
-            console.log({ type: client.type })
-            console.log({ clientId })
-            console.log({ client })
-            console.log({ clientarray: JSON.stringify(client.user?.client ?? []) })
             if (client.user?.id && client.type === ClientType.Estudiante && client.user?.profileType === ProfileType.Representante) {
-                console.log(`Client type ${ClientType.Estudiante} and profile type ${ProfileType.Representante}`)
                 const representativeClient = await tx.client.findFirst({
                     where: {
                         userId: client.user?.id,
                         type: ClientType.Representante
                     }
                 })
-                console.log({ representativeClient })
                 if (!representativeClient) {
                     throw new NotFoundException(`Cliente con ID "${clientId}" no encontrado.`);
                 }
                 clientId = representativeClient.id ?? clientId;
             }
-            console.log({ clientId })
 
             // 3. Crear la Orden con sus OrderItems
             const order = await tx.order.create({
