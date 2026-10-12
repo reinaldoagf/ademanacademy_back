@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { GetUsersFilterDto } from './dto/get-users-filter.dto';
-import { ClientType, User, Prisma, NotificationChannel, ConceptType, PaymentMethod, TransactionStatus, Kinship } from '@prisma/client'; // 🎯 Importación nativa estándar
+import { ClientType, User, Prisma, NotificationChannel, ConceptType, PaymentMethod, TransactionStatus, Kinship, ProfileType } from '@prisma/client'; // 🎯 Importación nativa estándar
 import { NotificationsService } from '@/notifications/notifications.service';
 import { MailsService } from '@/mails/mails.service';
 export type UserWithClients = Prisma.UserGetPayload<{
@@ -218,7 +218,7 @@ export class UsersService {
           data: {
             profileType: dto.profileType,
             profileOnboarding: true,
-            occupation: dto.profileType === 'representative' ? dto.representativeOccupation : undefined,
+            occupation: dto.profileType === ProfileType.Representante ? dto.representativeOccupation : undefined,
           },
           select: { id: true, firstName: true, lastName: true, email: true, phone: true, profileType: true, profileOnboarding: true, occupation: true }
         });
