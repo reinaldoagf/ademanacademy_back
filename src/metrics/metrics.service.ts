@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ConceptType, EventType, RegistrationStatus, TransactionStatus, LockerRoomStatus, AssignmentStatus } from '@prisma/client';
 
 @Injectable()
 export class MetricsService {
@@ -12,7 +13,7 @@ export class MetricsService {
             // Ajusta según la tabla/relación de inventario/vestuario prestado
             const borrowedCostumes = await this.prisma.studentCostume.count({
                 where: {
-                    status: 'assigned'
+                    status: AssignmentStatus.Asignado
                 },
             }).catch(() => 0);
             return {
@@ -37,7 +38,7 @@ export class MetricsService {
                 where: {
                     registrations: {
                         some: {
-                            status: 'pre_registered'
+                            status: RegistrationStatus.Pre_Registrado
                         }
                     }
                 },
@@ -62,7 +63,7 @@ export class MetricsService {
             const incomeAggregations = await this.prisma.transaction.groupBy({
                 by: ['concept'],
                 where: {
-                    status: 'approved', // O 'approved' / 'paid' según tu TransactionStatus
+                    status: TransactionStatus.Aprobado, // O 'approved' / 'paid' según tu TransactionStatus
                 },
                 _sum: {
                     amount: true,
@@ -77,22 +78,22 @@ export class MetricsService {
             incomeAggregations.forEach((item) => {
                 const amount = Number(item._sum.amount ?? 0);
                 switch (item.concept) {
-                    case 'locker_room':
+                    case ConceptType.Vestuario:
                         lockerRoom += amount;
                         break;
-                    case 'product':
+                    case ConceptType.Producto:
                         storeSales += amount;
                         break;
-                    case 'tuition':
+                    case ConceptType.Inscripción:
                         tuition += amount;
                         break;
-                    case 'monthly_payment':
+                    case ConceptType.Mensualidad:
                         monthlyPayments += amount;
                         break;
-                    case 'class':
+                    case ConceptType.Clase:
                         customClasses += amount;
                         break;
-                    case 'ticket':
+                    case ConceptType.Entradas_Gala:
                         specialEvents += amount;
                         break;
                     default:
@@ -147,7 +148,7 @@ export class MetricsService {
                         gte: startDate,
                         lte: endDate,
                     },
-                    status: "approved",
+                    status: TransactionStatus.Aprobado,
                 },
                 select: {
                     amount: true,
@@ -296,7 +297,7 @@ export class MetricsService {
                     time: evt.startDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: true }),
                     room: 'Sede Principal',
                     date: dateStr,
-                    type: evt.type === 'sample' ? 'clase-abierta' : 'gala',
+                    type: evt.type === EventType.Muestra ? 'clase-abierta' : 'gala',
                 });
             });
 
@@ -376,7 +377,7 @@ export class MetricsService {
 
                 // Determinar cuota pendiente en base al precio y estado del vestuario/asignación
                 const priceNum = Number(item.costume?.price || 0);
-                const isPendingPayment = item.costume?.status === "payment_pending";
+                const isPendingPayment = item.costume?.status === LockerRoomStatus.Pendiente_por_Pago // item.costume?.status === "payment_pending";
                 const pendingFee = isPendingPayment ? priceNum : 0;
 
                 return {

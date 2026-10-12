@@ -21,7 +21,7 @@ export class NotificationsService {
         channel?: NotificationChannel;
         metadata?: any;
     }) {
-        const channel = dto.channel || NotificationChannel.IN_APP;
+        const channel = dto.channel || NotificationChannel.En_la_App;
 
         // A. Registrar en base de datos
         const notification = await this.prisma.notification.create({
@@ -31,13 +31,13 @@ export class NotificationsService {
                 title: dto.title,
                 message: dto.message,
                 channel,
-                status: NotificationStatus.PENDING,
+                status: NotificationStatus.Pendiente,
                 metadata: dto.metadata,
             },
         });
 
         // B. Enviar en tiempo real (In-App)
-        if (channel === NotificationChannel.IN_APP || channel === NotificationChannel.BOTH) {
+        if (channel === NotificationChannel.En_la_App || channel === NotificationChannel.Ambos) {
             if (dto.userId) {
                 this.notificationsGateway.emitToUser(dto.userId, notification);
             } else {
@@ -46,7 +46,7 @@ export class NotificationsService {
         }
 
         // C. Enviar por WhatsApp
-        if (channel === NotificationChannel.WHATSAPP || channel === NotificationChannel.BOTH) {
+        if (channel === NotificationChannel.Whatsapp || channel === NotificationChannel.Ambos) {
             if (dto.recipientPhone) {
                 await this.sendWhatsAppMessage(dto.recipientPhone, dto.message, notification.id);
             }
@@ -64,13 +64,13 @@ export class NotificationsService {
             // Actualizar estado a enviado
             await this.prisma.notification.update({
                 where: { id: notificationId },
-                data: { status: NotificationStatus.SENT },
+                data: { status: NotificationStatus.Enviado },
             });
         } catch (error) {
             this.logger.error(`Error enviando WhatsApp a ${phone}:`, error);
             await this.prisma.notification.update({
                 where: { id: notificationId },
-                data: { status: NotificationStatus.FAILED },
+                data: { status: NotificationStatus.Fallido },
             });
         }
     }
@@ -88,7 +88,7 @@ export class NotificationsService {
     async markAsRead(notificationId: string) {
         return this.prisma.notification.update({
             where: { id: notificationId },
-            data: { status: NotificationStatus.READ },
+            data: { status: NotificationStatus.Leido },
         });
     }
 }

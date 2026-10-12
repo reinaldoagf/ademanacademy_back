@@ -50,7 +50,7 @@ async function main() {
             firstName: 'Carlos',
             lastName: 'Mendoza',
             birthDate: new Date('1990-05-15'),
-            typeOfContract: TypeOfContract.fixed, // Ajusta según tus valores de Enum
+            typeOfContract: TypeOfContract.Fijo, // Ajusta según tus valores de Enum
             medicalObservations: 'Alergico a la penicilina',
             address: 'Av. Las Américas, Res. El Sol, Apto 4B, Guayana',
             countryCode: '+58',
@@ -58,7 +58,7 @@ async function main() {
             hoursTaughtMonth: 40,
             hourlyRate: 15.50,
             bonus: 50.00,
-            payrollStatus: PayrollStatus.pending,
+            payrollStatus: PayrollStatus.Pendiente,
         },
         {
             IDNumberPrefix: 'V',
@@ -66,7 +66,7 @@ async function main() {
             firstName: 'María',
             lastName: 'Rodríguez',
             birthDate: new Date('1995-10-22'),
-            typeOfContract: TypeOfContract.fixed,
+            typeOfContract: TypeOfContract.Fijo,
             medicalObservations: null,
             address: 'Calle Los Olivos, Casa #12, Puerto Ordaz',
             countryCode: '+58',
@@ -74,7 +74,7 @@ async function main() {
             hoursTaughtMonth: 32,
             hourlyRate: 18.00,
             bonus: 75.50,
-            payrollStatus: PayrollStatus.pending,
+            payrollStatus: PayrollStatus.Pendiente,
         },
         {
             IDNumberPrefix: 'V',
@@ -82,14 +82,14 @@ async function main() {
             firstName: 'Alejandro',
             lastName: 'Gómez',
             birthDate: new Date('1988-03-08'),
-            typeOfContract: TypeOfContract.fixed,
+            typeOfContract: TypeOfContract.Fijo,
             medicalObservations: 'Usual control de hipertensión ligera',
             address: 'Sector Castillito, Carrera Aripao #45',
             phone: null, // Campo opcional
             hoursTaughtMonth: 20,
             hourlyRate: 12.00,
             bonus: 30.00,
-            payrollStatus: PayrollStatus.pending,
+            payrollStatus: PayrollStatus.Pendiente,
         },
         {
             IDNumberPrefix: 'V',
@@ -97,7 +97,7 @@ async function main() {
             firstName: 'Ana',
             lastName: 'Martínez',
             birthDate: new Date('1985-12-01'),
-            typeOfContract: TypeOfContract.fixed,
+            typeOfContract: TypeOfContract.Fijo,
             medicalObservations: null,
             address: 'Urbanización Alta Vista, Torres del Core8',
             countryCode: '+58',
@@ -105,7 +105,7 @@ async function main() {
             hoursTaughtMonth: 50,
             hourlyRate: 20.00,
             bonus: 100.00,
-            payrollStatus: PayrollStatus.pending,
+            payrollStatus: PayrollStatus.Pendiente,
         },
     ];
 
@@ -128,7 +128,7 @@ async function main() {
             password: hashedPassword,
             isAdmin: false,
             profileOnboarding: true,
-            profileType: ProfileType.representative,
+            profileType: ProfileType.Representante,
             occupation: 'Ingeniero de Software',
         },
     });
@@ -141,10 +141,10 @@ async function main() {
     // 2. Crear primero el registro de Student (Representado / Alumno)
     const student1 = await prisma.student.create({
         data: {
-            shirtSize: '10',
-            kinship: Kinship.son,
+            shirtSize: 'S',
+            kinship: Kinship.Hijo,
             hasExperience: false,
-            medicalObservations: 'Ninguna',
+            medicalObservations: '',
             // groupId: 'ID_DEL_GRUPO', // Opcional si ya tienes un grupo creado
         },
     });
@@ -159,7 +159,7 @@ async function main() {
             IDNumberPrefix: 'V',
             dni: '32145678',
             phone: '0414-1234567', // Opcional
-            type: ClientType.representative, // O el tipo de cliente que corresponda
+            type: ClientType.Representante, // O el tipo de cliente que corresponda
             userId: user.id, // Enlazado a su usuario/representante
             studentId: student1.id, // 🎯 Enlazado al estudiante creado previamente
         },
@@ -173,8 +173,8 @@ async function main() {
             name: 'Salón Principal Espejos',
             address: 'Piso 1, Ala Norte',
             maxCapacity: 25,
-            type: ClassroomType.mirrors,
-            status: ClassroomStatus.active,
+            type: ClassroomType.Espejos,
+            status: ClassroomStatus.Activo,
             description: 'Salón amplio equipado con barras de ballet y espejos de cuerpo completo.',
         },
     });
@@ -184,8 +184,8 @@ async function main() {
             name: 'Módulo Urbano',
             address: 'Piso 2, Ala Sur',
             maxCapacity: 20,
-            type: ClassroomType.urban,
-            status: ClassroomStatus.active,
+            type: ClassroomType.Urbano,
+            status: ClassroomStatus.Activo,
             description: 'Salón con aislamiento acústico ideal para ritmos urbanos y breaks.',
         },
     });

@@ -7,17 +7,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service'; // Ajusta la ruta a tu PrismaService
 import { Prisma, PayrollStatus, TypeOfContract, TypeOfEmployee } from '@prisma/client';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
-
-// DTOs sugeridos para tipado
-export interface GetEmployeesFilterDto {
-    page?: number;
-    limit?: number;
-    search?: string;
-    typeOfContract?: TypeOfContract;
-    typeOfEmployee?: TypeOfEmployee;
-    payrollStatus?: PayrollStatus;
-    groupId?: string;
-}
+import { GetEmployeesFilterDto } from './dto/get-employees-filter.dto';
 
 @Injectable()
 export class EmployeesService {

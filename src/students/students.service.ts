@@ -3,18 +3,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { GetStudentsFilterDto } from './dto/get-students-filter.dto';
-import { ClientType, Kinship, Prisma } from '@prisma/client';
+import { ClientType, Prisma } from '@prisma/client';
 
-
-// Diccionario para los conceptos (por si también quieres traducirlos)
-/* export const KinshipLabel: Record<Kinship, string> = {
-    [Kinship.son]: 'Hijo',
-    [Kinship.daughter]: 'Hija',
-    [Kinship.nephew]: 'Sobrino',
-    [Kinship.niece]: 'Sobrina',
-    [Kinship.tutored]: 'Tutorado',
-    [Kinship.other]: 'Otro',
-}; */
 @Injectable()
 export class StudentsService {
 
@@ -44,7 +34,7 @@ export class StudentsService {
         // 1. Validar DNI único para estudiantes si fue enviado
         if (dni) {
             const existingStudent = await this.prisma.client.findFirst({
-                where: { dni, type: ClientType.student },
+                where: { dni, type: ClientType.Estudiante },
             });
 
             if (existingStudent) {
@@ -77,7 +67,7 @@ export class StudentsService {
                     address,
                     countryCode,
                     phone,
-                    type: ClientType.student, // Define el tipo como estudiante
+                    type: ClientType.Estudiante, // Define el tipo como estudiante
                     userId: userId || null,
                     studentId: newStudent.id, // Relación 1 a N / 1 a 1 con Student
                     groupId: groupId || null,
@@ -105,7 +95,7 @@ export class StudentsService {
 
         // 1. Condición base: Solo clientes de tipo "student"
         const where: Prisma.ClientWhereInput = {
-            type: ClientType.student,
+            type: ClientType.Estudiante,
         };
 
         // 2. Filtro opcional por userId (Representante/Usuario)
@@ -182,7 +172,7 @@ export class StudentsService {
         const targetUserId = filters.userId || userId;
 
         const where: Prisma.ClientWhereInput = {
-            type: ClientType.student,
+            type: ClientType.Estudiante,
             userId: targetUserId,
         };
 
@@ -255,7 +245,7 @@ export class StudentsService {
         const clientStudent = await this.prisma.client.findFirst({
             where: {
                 id,
-                type: ClientType.student,
+                type: ClientType.Estudiante,
             },
             include: {
                 student: {
@@ -303,7 +293,7 @@ export class StudentsService {
             const existingDni = await this.prisma.client.findFirst({
                 where: {
                     dni,
-                    type: ClientType.student,
+                    type: ClientType.Estudiante,
                     NOT: { id },
                 },
             });

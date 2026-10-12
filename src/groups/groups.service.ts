@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { RegistrationStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service'; // Ajusta la ruta según tu proyecto
 import { GetGroupsFilterDto } from './dto/get-groups-filter.dto';
 import { CreateGroupDto } from './dto/create-group.dto';
@@ -27,7 +28,7 @@ export class GroupsService {
                                     // Ejemplo B: Si depende de sus inscripciones activas:
                                     registrations: {
                                         some: {
-                                            status: 'pending', // O 'approved' / 'active' según tu enum RegistrationStatus
+                                            status: RegistrationStatus.Pendiente, // O 'approved' / 'active' según tu enum RegistrationStatus
                                         },
                                     },
                                 },

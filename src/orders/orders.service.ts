@@ -1,6 +1,6 @@
 // /src/orders/orders.service.ts
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { OrderItemConceptType, ConceptType } from '@prisma/client';
+import { OrderItemConceptType, ConceptType, PaymentOrderStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
@@ -22,7 +22,7 @@ export class OrdersService {
             // 2. Verificar y descontar el stock de los productos
             for (const item of items) {
                 // Solo verificamos stock para los ítems que sean de concepto "product"
-                if (item.concept === 'product') {
+                if (item.concept === ConceptType.Producto) {
                     // A. Obtener el producto actual dentro de la transacción
                     const product = await tx.product.findUnique({
                         where: { id: item.elementId },
@@ -96,7 +96,7 @@ export class OrdersService {
                     orderId: order.id,
                     concept: primaryConcept,
                     amount: totalAmount,
-                    status: 'pending',
+                    status: PaymentOrderStatus.Pendiente,
                 },
             });
 

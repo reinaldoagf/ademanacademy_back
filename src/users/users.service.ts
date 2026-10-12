@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { GetUsersFilterDto } from './dto/get-users-filter.dto';
-import { ClientType, User, Prisma, NotificationChannel } from '@prisma/client'; // 🎯 Importación nativa estándar
+import { ClientType, User, Prisma, NotificationChannel, ConceptType, PaymentMethod, TransactionStatus, Kinship } from '@prisma/client'; // 🎯 Importación nativa estándar
 import { NotificationsService } from '@/notifications/notifications.service';
 import { MailsService } from '@/mails/mails.service';
 export type UserWithClients = Prisma.UserGetPayload<{
@@ -230,7 +230,7 @@ export class UsersService {
             lastName: representedStudent.lastName,
             dni: representedStudent.dni || null,
             birthDate: new Date(representedStudent.birthDate),
-            type: ClientType.student,
+            type: ClientType.Estudiante,
             kinship: representedStudent.kinship,
             userId: registeringUserId,
             address: representedStudent.address,
@@ -242,7 +242,7 @@ export class UsersService {
 
 
           for (const representedStudent of representedStudents) {
-            if (representedStudent.type == ClientType.student) {
+            if (representedStudent.type == ClientType.Estudiante) {
               const student = await tx.student.create({
                 data: {
                   kinship: representedStudent.kinship,
@@ -264,7 +264,7 @@ export class UsersService {
                   dni: representedStudent.dni || null,
                   email: representedStudent.email || null,
                   birthDate: new Date(representedStudent.birthDate),
-                  type: ClientType.student,
+                  type: ClientType.Estudiante,
                   userId: registeringUserId,
                   studentId: student.id,
                   address: representedStudent.address,
@@ -279,10 +279,10 @@ export class UsersService {
                   data: {
                     registeringUserId: registeringUserId,
                     clientId: client.id,
-                    concept: 'tuition',
+                    concept: ConceptType.Inscripción,
                     amount: dto.payment.amount / representedStudents.length,
-                    method: 'bank_transfer', // Define un valor por defecto o extiéndelo en tu enum
-                    status: 'pending', // Queda 'pending' para auditoría manual del administrador
+                    method: PaymentMethod.Transferencia, // Define un valor por defecto o extiéndelo en tu enum
+                    status: TransactionStatus.Pendiente, // Queda 'pending' para auditoría manual del administrador
                     referenceNumber: dto.payment.referenceNumber || null,
                     bankName: dto.payment.bankName || null,
                     receiptPath: receiptPath
@@ -298,17 +298,17 @@ export class UsersService {
           }
         }
         // Operación C: Si es STUDENT autónomo
-        if (dto.profileType === 'student') {
+        if (dto.profileType === ClientType.Estudiante) {
           const existingClient = await tx.client.findFirst({
             where: {
               dni: user.dni,
-              type: ClientType.student,
+              type: ClientType.Estudiante,
             }
           });
           if (!existingClient) {
             const student = await tx.student.create({
               data: {
-                kinship: 'other',
+                kinship: Kinship.Otro,
                 shirtSize: 'M',
                 hasExperience: false,
                 medicalObservations: null,
@@ -325,7 +325,7 @@ export class UsersService {
                 studentId: student.id,
                 address: '',
                 phone: user.phone || null,
-                type: ClientType.student,
+                type: ClientType.Estudiante,
               }
             });
             await tx.registration.create({
@@ -341,10 +341,10 @@ export class UsersService {
                 data: {
                   registeringUserId: registeringUserId,
                   clientId: client.id,
-                  concept: 'tuition',
+                  concept: ConceptType.Inscripción,
                   amount: dto.payment.amount,
-                  method: 'bank_transfer', // Define un valor por defecto o extiéndelo en tu enum
-                  status: 'pending', // Queda 'pending' para auditoría manual del administrador
+                  method: PaymentMethod.Transferencia, // Define un valor por defecto o extiéndelo en tu enum
+                  status: TransactionStatus.Pendiente, // Queda 'pending' para auditoría manual del administrador
                   referenceNumber: dto.payment.referenceNumber || null,
                   bankName: dto.payment.bankName || null,
                   receiptPath: receiptPath
@@ -425,7 +425,7 @@ export class UsersService {
         recipientPhone: fullPhone,
         title: 'Código de Vinculación',
         message: `Hola ${user.firstName}, tu código de verificación de la academia es: ${otpCode}`,
-        channel: NotificationChannel.WHATSAPP,
+        channel: NotificationChannel.Whatsapp,
       });
     }
 

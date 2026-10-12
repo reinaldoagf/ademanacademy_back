@@ -30,7 +30,7 @@ export class AccountsPayableService {
                 amountPaid: 0,
                 amountRemaining: amountTotal,
                 dueDate: new Date(dto.dueDate),
-                status: PayableStatus.pending,
+                status: PayableStatus.Pendiente,
                 notes: dto.notes,
             },
         });
@@ -129,11 +129,11 @@ export class AccountsPayableService {
 
         let newStatus = existing.status;
         if (amountRemaining === 0) {
-            newStatus = PayableStatus.paid;
+            newStatus = PayableStatus.Pagado;
         } else if (existing.amountPaid > 0) {
-            newStatus = PayableStatus.partial;
+            newStatus = PayableStatus.Pagado_Parcialmente;
         } else {
-            newStatus = PayableStatus.pending;
+            newStatus = PayableStatus.Pendiente;
         }
 
         return await this.prisma.accountPayable.update({
@@ -154,11 +154,11 @@ export class AccountsPayableService {
     async addPayment(id: string, dto: CreatePayablePaymentDto) {
         const payable = await this.findOne(id);
 
-        if (payable.status === PayableStatus.paid) {
+        if (payable.status === PayableStatus.Pagado) {
             throw new BadRequestException('Esta cuenta por pagar ya fue saldada por completo');
         }
 
-        if (payable.status === PayableStatus.cancelled) {
+        if (payable.status === PayableStatus.Cancelada) {
             throw new BadRequestException('No se pueden registrar pagos a una cuenta cancelada');
         }
 
@@ -186,7 +186,7 @@ export class AccountsPayableService {
             const newAmountRemaining = payable.amountTotal - newAmountPaid;
 
             const newStatus =
-                newAmountRemaining === 0 ? PayableStatus.paid : PayableStatus.partial;
+                newAmountRemaining === 0 ? PayableStatus.Pagado : PayableStatus.Pagado_Parcialmente;
 
             const updatedPayable = await tx.accountPayable.update({
                 where: { id },
@@ -223,7 +223,7 @@ export class AccountsPayableService {
 
         return await this.prisma.accountPayable.update({
             where: { id },
-            data: { status: PayableStatus.cancelled },
+            data: { status: PayableStatus.Cancelada },
         });
     }
 

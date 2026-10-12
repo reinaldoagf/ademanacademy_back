@@ -4,7 +4,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { ClientPurchaseSeatsDto } from './dto/client-purchase-seats.dto';
 import { ReserveSeatsDto } from './dto/reserve-seats.dto';
-import { ConceptType, PaymentOrderStatus, SeatStatus } from '@prisma/client';
+import { ConceptType, PaymentOrderStatus, SeatStatus, PaymentMethod, TransactionStatus } from '@prisma/client';
 import { EventSeatsGateway } from './event-seats.gateway';
 
 @Injectable()
@@ -58,7 +58,7 @@ export class EventSeatsService {
                     const currentSeat = existingSeats.find((s) => s.seatingMapElementId === elementId);
 
                     if (currentSeat) {
-                        if (currentSeat.status === SeatStatus.sold) {
+                        if (currentSeat.status === SeatStatus.Pagado) {
                             throw new ConflictException(`El asiento "${elementId}" ya ha sido vendido.`);
                         }
 
@@ -66,8 +66,8 @@ export class EventSeatsService {
                         const isDifferentClient = currentSeat.clientId !== client.id;
 
                         if (
-                            (currentSeat.status === SeatStatus.reserved ||
-                                currentSeat.status === SeatStatus.payment_pending) &&
+                            (currentSeat.status === SeatStatus.Reservado ||
+                                currentSeat.status === SeatStatus.Pendiente) &&
                             (isReservationActive || currentSeat.expiresAt === null) &&
                             isDifferentClient
                         ) {
@@ -83,9 +83,9 @@ export class EventSeatsService {
                     data: {
                         registeringUserId: userId,
                         clientId: client.id,
-                        concept: ConceptType.ticket,
+                        concept: ConceptType.Entradas_Gala,
                         amount: totalAmount,
-                        status: PaymentOrderStatus.pending,
+                        status: PaymentOrderStatus.Pendiente,
                     },
                 });
 
@@ -95,10 +95,10 @@ export class EventSeatsService {
                         registeringUserId: userId,
                         clientId: client.id,
                         paymentOrderId: paymentOrder.id,
-                        concept: ConceptType.ticket,
+                        concept: ConceptType.Entradas_Gala,
                         amount: totalAmount,
-                        method: 'bank_transfer',
-                        status: 'pending',
+                        method: PaymentMethod.Transferencia,
+                        status: TransactionStatus.Pendiente,
                         bankName: bankName,
                         referenceNumber: referenceNumber,
                         receiptPath: receiptPath,
@@ -110,7 +110,7 @@ export class EventSeatsService {
                 const newElementIds = seatingMapElementIds.filter((id) => !existingElementIds.has(id));
 
                 const seatDataCommon = {
-                    status: SeatStatus.reserved, // 👈 Cambiado a 'reserved' igual que en reserveOrBuySeats
+                    status: SeatStatus.Reservado, // 👈 Cambiado a 'reserved' igual que en reserveOrBuySeats
                     reservedAt: now,
                     expiresAt: null, // O define una fecha si expira la reserva
                     userId: userId,
@@ -169,7 +169,7 @@ export class EventSeatsService {
             });
 
             if (!transaction) throw new NotFoundException('Transacción no encontrada.');
-            if (transaction.status === 'approved') throw new BadRequestException('La transacción ya fue aprobada previamente.');
+            if (transaction.status === TransactionStatus.Aprobado) throw new BadRequestException('La transacción ya fue aprobada previamente.');
 
             const paymentOrder = transaction.paymentOrder;
             if (!paymentOrder) throw new BadRequestException('La transacción no tiene una orden de pago vinculada.');
@@ -177,20 +177,20 @@ export class EventSeatsService {
             // 2. Marcar Transacción como aprobada
             await tx.transaction.update({
                 where: { id: transactionId },
-                data: { status: 'approved' },
+                data: { status: TransactionStatus.Aprobado },
             });
 
             // 3. Marcar Orden de Pago como completada
             await tx.paymentOrder.update({
                 where: { id: paymentOrder.id },
-                data: { status: 'paid' },
+                data: { status: PaymentOrderStatus.Pagada },
             });
 
             // 4. Pasar los Asientos a estado 'sold'
             const updated = await tx.eventSeat.updateMany({
                 where: { paymentOrderId: paymentOrder.id },
                 data: {
-                    status: SeatStatus.sold,
+                    status: SeatStatus.Pagado,
                     expiresAt: null,
                 },
             });
@@ -224,7 +224,7 @@ export class EventSeatsService {
         }
         const { eventId, seatingMapElementIds, status, clientId, totalAmount, reservationDurationMinutes = 10 } = dto;
         const now = new Date();
-        const expiresAt = status === SeatStatus.reserved
+        const expiresAt = status === SeatStatus.Reservado
             ? new Date(now.getTime() + reservationDurationMinutes * 60 * 1000)
             : null;
 
@@ -254,7 +254,7 @@ export class EventSeatsService {
                 const currentSeat = existingSeats.find((s) => s.seatingMapElementId === elementId);
 
                 if (currentSeat) {
-                    if (currentSeat.status === SeatStatus.sold) {
+                    if (currentSeat.status === SeatStatus.Pagado) {
                         throw new ConflictException(`El asiento "${elementId}" ya ha sido vendido.`);
                     }
 
@@ -262,7 +262,7 @@ export class EventSeatsService {
                     const isDifferentClient = currentSeat.clientId !== clientId;
 
                     if (
-                        (currentSeat.status === SeatStatus.reserved || currentSeat.status === SeatStatus.payment_pending) &&
+                        (currentSeat.status === SeatStatus.Reservado || currentSeat.status === SeatStatus.Pendiente) &&
                         isReservationActive &&
                         isDifferentClient
                     ) {
@@ -278,9 +278,9 @@ export class EventSeatsService {
                 data: {
                     registeringUserId: registeringUserId,
                     clientId: client.id,
-                    concept: ConceptType.ticket,
+                    concept: ConceptType.Entradas_Gala,
                     amount: totalAmount,
-                    status: status === SeatStatus.reserved ? PaymentOrderStatus.pending : PaymentOrderStatus.paid,
+                    status: status === SeatStatus.Reservado ? PaymentOrderStatus.Pendiente : PaymentOrderStatus.Pagada,
                 },
             });
 
@@ -329,7 +329,7 @@ export class EventSeatsService {
             });
 
             return {
-                message: status === SeatStatus.reserved
+                message: status === SeatStatus.Reservado
                     ? `Reserva realizada por ${reservationDurationMinutes} minutos`
                     : 'Compra procesada exitosamente',
                 expiresAt,
@@ -347,7 +347,7 @@ export class EventSeatsService {
         // 1. Buscar las reservas que están a punto de expirar antes de actualizarlas
         const expiredSeats = await this.prisma.eventSeat.findMany({
             where: {
-                status: SeatStatus.reserved,
+                status: SeatStatus.Reservado,
                 expiresAt: {
                     lte: now,
                 },
@@ -404,7 +404,7 @@ export class EventSeatsService {
                     id: { in: expiredIds },
                 },
                 data: {
-                    status: SeatStatus.available,
+                    status: SeatStatus.Disponible,
                     userId: null,
                     clientId: null,
                     expiresAt: null,
@@ -427,7 +427,7 @@ export class EventSeatsService {
             if (!acc[seat.eventId]) acc[seat.eventId] = [];
             acc[seat.eventId].push({
                 seatingMapElementId: seat.seatingMapElementId,
-                status: SeatStatus.available,
+                status: SeatStatus.Disponible,
             });
             return acc;
         }, {} as Record<string, Array<{ seatingMapElementId: string; status: SeatStatus }>>);

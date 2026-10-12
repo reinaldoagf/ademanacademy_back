@@ -1,6 +1,6 @@
 // src/transactions/transactions.service.ts
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
-import { SeatStatus, NotificationChannel } from '@prisma/client';
+import { SeatStatus, NotificationChannel, TransactionStatus, ConceptType, PaymentOrderStatus, RegistrationStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterTransactionDto } from './dto/register-transaction.dto';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
@@ -48,7 +48,7 @@ export class TransactionsService {
                     referenceNumber,
                     bankName,
                     receiptPath,
-                    status: 'pending',
+                    status: TransactionStatus.Pendiente,
                 },
             });
 
@@ -56,7 +56,7 @@ export class TransactionsService {
             await tx.eventSeat.updateMany({
                 where: { paymentOrderId: paymentOrder.id },
                 data: {
-                    status: SeatStatus.payment_pending,
+                    status: SeatStatus.Pendiente,
                     expiresAt: null, // Se retira la expiración porque el usuario ya pagó
                 },
             });
@@ -251,12 +251,12 @@ export class TransactionsService {
             throw new NotFoundException('La transacción especificada no existe.');
         }
 
-        if (transaction.status === 'approved') {
+        if (transaction.status === TransactionStatus.Aprobado) {
             throw new BadRequestException('Esta transacción ya ha sido aprobada previamente.');
         }
 
         // 2. Si el concepto es matrícula (tuition), obligamos a que venga un groupId
-        if (transaction.concept === 'tuition' && !groupId) {
+        if (transaction.concept === ConceptType.Inscripción && !groupId) {
             throw new BadRequestException('Para aprobar una matrícula debes asignar un grupo académico.');
         }
 
@@ -267,7 +267,7 @@ export class TransactionsService {
                 // Paso A: Actualizar el estado de la Transacción a aprobado
                 const updatedTransaction = await tx.transaction.update({
                     where: { id: transactionId },
-                    data: { status: 'approved' },
+                    data: { status: TransactionStatus.Aprobado },
                 });
 
                 // Paso B: Actualizar la Orden de Pago relacionada (si existe relación en tu esquema)
@@ -275,13 +275,13 @@ export class TransactionsService {
                     await tx.paymentOrder.update({
                         where: { id: transaction.paymentOrderId },
                         data: {
-                            status: 'paid',
+                            status: PaymentOrderStatus.Pagada,
                         },
                     });
                 }
 
                 // Paso C: Si es Matrícula, inscribimos al estudiante en el grupo asignado
-                if (transaction.concept === 'tuition' && groupId && transaction.clientId) {
+                if (transaction.concept === ConceptType.Inscripción && groupId && transaction.clientId) {
                     const group = await this.prisma.group.findUnique({
                         where: { id: groupId },
                         include: {
@@ -318,7 +318,7 @@ export class TransactionsService {
                         await tx.registration.updateMany({
                             where: { studentId: client.studentId },
                             data: {
-                                status: 'approved',
+                                status: RegistrationStatus.Aprobado,
                                 groupId: group.id
                             },
                         });
@@ -332,20 +332,20 @@ export class TransactionsService {
 
                     // 4. Actualizamos las inscripciones pendientes
                     await tx.registration.updateMany({
-                        where: { clientId: client.id, status: 'pending' },
+                        where: { clientId: client.id, status: RegistrationStatus.Pendiente },
                         data: {
-                            status: 'approved',
+                            status: RegistrationStatus.Aprobado,
                             groupId: group.id
                         }
                     });
                 }
 
-                if (transaction.concept === 'ticket') {
+                if (transaction.concept === ConceptType.Entradas_Gala) {
                     // 4. Pasar los Asientos a estado 'sold'
                     const updated = await tx.eventSeat.updateMany({
                         where: { paymentOrderId: transaction.paymentOrderId },
                         data: {
-                            status: SeatStatus.sold,
+                            status: SeatStatus.Pagado,
                             expiresAt: null,
                         },
                     });
@@ -364,7 +364,7 @@ export class TransactionsService {
                     recipientPhone: recipientPhone,      // Teléfono para WhatsApp
                     title: '¡Pago Confirmado! 🎉',
                     message: `Hola ${client?.firstName || ''}, hemos recibido con éxito tu pago de ${formattedAmount} por concepto de ${transaction.concept}.`,
-                    channel: NotificationChannel.BOTH,   // Genera Realtime In-App y envía a WhatsApp
+                    channel: NotificationChannel.Ambos,   // Genera Realtime In-App y envía a WhatsApp
                     metadata: {
                         transactionId: transaction.id,
                         amount: transaction.amount,

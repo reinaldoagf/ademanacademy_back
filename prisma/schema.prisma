@@ -56,8 +56,8 @@ model Employee {
   firstName           String         @db.VarChar(150)
   lastName            String         @db.VarChar(150)
   birthDate           DateTime       @db.Date
-  typeOfContract      TypeOfContract @default(fixed)
-  typeOfEmployee      TypeOfEmployee @default(administrative)
+  typeOfContract      TypeOfContract @default(Fijo)
+  typeOfEmployee      TypeOfEmployee @default(Administrativo)
   medicalObservations String?        @db.Text
   address             String         @db.Text
   countryCode         String?        @db.VarChar(40) // Opcional
@@ -65,7 +65,7 @@ model Employee {
   hoursTaughtMonth    Int            @default(1)
   hourlyRate          Decimal        @db.Decimal(10, 2)
   bonus               Decimal        @db.Decimal(10, 2)
-  payrollStatus       PayrollStatus  @default(pending)
+  payrollStatus       PayrollStatus  @default(Pendiente)
   // Lado que guarda la FK
   userId              String?        @unique @db.VarChar(36)
   user                User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -82,7 +82,7 @@ model Employee {
 model Student {
   id                  String           @id @default(uuid())
   shirtSize           String           @db.VarChar(10) // Ej: "12", "M"
-  kinship             Kinship          @default(son)
+  kinship             Kinship          @default(Hijo)
   medicalObservations String?          @db.Text
   hasExperience       Boolean          @default(false)
   group               Group?           @relation(fields: [groupId], references: [id], onDelete: Cascade)
@@ -121,7 +121,7 @@ model Client {
   paymentOrders PaymentOrder[]
   orders        Order[]
   orderItems    OrderItem[]
-  type          ClientType     @default(representative)
+  type          ClientType     @default(Representante)
 
   registrations Registration[]
   eventSeats    EventSeat[]
@@ -143,7 +143,7 @@ model Order {
   client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   totalAmount Decimal     @db.Decimal(10, 2)
-  status      OrderStatus @default(pending_preparation) // Estado logístico
+  status      OrderStatus @default(Pendiente) // Estado logístico
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
@@ -186,7 +186,7 @@ model PaymentOrder {
   concept ConceptType
   amount  Decimal            @db.Decimal(10, 2)
   dueDate DateTime?          @db.Date
-  status  PaymentOrderStatus @default(pending) // Estado del dinero
+  status  PaymentOrderStatus @default(Pendiente) // Estado del dinero
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -264,7 +264,7 @@ model Transaction {
   concept ConceptType
   amount  Decimal           @db.Decimal(10, 2)
   method  PaymentMethod
-  status  TransactionStatus @default(pending)
+  status  TransactionStatus @default(Pendiente)
 
   // Datos de auditoría bancaria (Opcionales pero recomendados para Transferencias/Pago Móvil)
   referenceNumber String? @db.VarChar(100)
@@ -340,7 +340,7 @@ model Classroom {
   name        String          @unique
   maxCapacity Int
   type        ClassroomType
-  status      ClassroomStatus @default(active)
+  status      ClassroomStatus @default(Activo)
   description String?
 
   // Relación inversa: Un salón puede albergar múltiples grupos
@@ -356,7 +356,7 @@ model Classroom {
 
 model Registration {
   id        String             @id @default(uuid())
-  status    RegistrationStatus @default(pending)
+  status    RegistrationStatus @default(Pendiente)
   userId    String?            @db.VarChar(36)
   user      User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
   studentId String?            @db.VarChar(36)
@@ -374,8 +374,8 @@ model Registration {
 model Uniform {
   id                 String             @id @default(uuid())
   name               String             @unique @db.VarChar(150)
-  category           LockerRoomCategory @default(baby)
-  status             LockerRoomStatus   @default(payment_pending)
+  category           LockerRoomCategory @default(Bebé)
+  status             LockerRoomStatus   @default(Pendiente_por_Pago)
   price              Decimal            @db.Decimal(10, 2) // Precio unitario al momento de la compra 
   // Guardar el inventario por tallas en JSON sigue siendo válido si es informativo, 
   // pero lo ideal para asignaciones exactas es registrar qué talla se lleva el alumno en la tabla intermedia.
@@ -418,7 +418,7 @@ model StudentUniform {
 
   // Datos específicos de la asignación
   assignedSize String           @db.VarChar(10) // La talla exacta que se le entregó (ej: "M", "12")
-  status       AssignmentStatus @default(assigned)
+  status       AssignmentStatus @default(Asignado)
   observations String?          @db.Text // Ej: "Se entrega con detalles en encaje", "Falta tiara"
 
   // Fechas de control
@@ -438,8 +438,8 @@ model Costume {
   id       String             @id @default(uuid())
   name     String             @unique @db.VarChar(150)
   beat     String?            @db.VarChar(100) // Ritmo / Temática del baile
-  category LockerRoomCategory @default(baby)
-  status   LockerRoomStatus   @default(payment_pending)
+  category LockerRoomCategory @default(Bebé)
+  status   LockerRoomStatus   @default(Pendiente_por_Pago)
   price    Decimal            @db.Decimal(10, 2) // Precio unitario al momento de la compra
 
   // 🎯 RELACIÓN NUEVA: Galería de imágenes guardada como un array JSON de strings
@@ -483,7 +483,7 @@ model StudentCostume {
 
   // Datos específicos de la asignación
   assignedSize String?          @db.VarChar(10) // La talla exacta que se le entregó (ej: "M", "12")
-  status       AssignmentStatus @default(assigned)
+  status       AssignmentStatus @default(Asignado)
   observations String?          @db.Text // Ej: "Se entrega con detalles en encaje", "Falta tiara"
 
   // Fechas de control
@@ -547,7 +547,7 @@ model AccountPayable {
   dueDate   DateTime // Fecha límite / vencimiento del pago
 
   // Estado
-  status PayableStatus @default(pending)
+  status PayableStatus @default(Pendiente)
   notes  String? // Observaciones o notas adicionales
 
   // Historial de abonos/pagos realizados
@@ -575,7 +575,7 @@ model PayablePayment {
   // Datos de la transacción
   amount          Float // Monto del abono/pago realizado
   paymentDate     DateTime      @default(now()) // Fecha en que se hizo el pago
-  method          PaymentMethod @default(mobile_payment)
+  method          PaymentMethod @default(Pago_Movil)
   referenceNumber String? // Número de referencia / depósito / transferencia
 
   // Comprobante o soporte
@@ -594,7 +594,7 @@ model PayablePayment {
 model Event {
   id               String    @id @default(uuid())
   name             String
-  type             EventType @default(sample)
+  type             EventType @default(Gala_Anual)
   startDate        DateTime // Fecha de inicio
   endDate          DateTime // Fecha de fin (puede ser igual a startDate)
   publishToHome    Boolean   @default(true) // ¿Publicar en la página principal?
@@ -603,7 +603,7 @@ model Event {
   presaleStartDate DateTime? // Inicio de preventa (opcional)
   presaleEndDate   DateTime? // Fin de preventa (opcional)
 
-  productionStatus ProductionStatus @default(planning)
+  productionStatus ProductionStatus @default(Planificación)
   description      String?          @db.Text
   isActive         Boolean          @default(true)
   ticketsSold      Float?           @default(0)
@@ -642,18 +642,12 @@ model EventImage {
   @@map("event_images")
 }
 
-enum ImageRole {
-  cover // Imagen principal / Portada
-  banner // Banner promocional
-  gallery // Galería general
-}
-
 // 🎯 NUEVO: Modelo para Patrocinadores y sus Redes Sociales
 model Sponsor {
   id         String      @id @default(uuid())
   name       String
   logoUrl    String      @db.Text
-  tier       SponsorTier @default(silver) // Nivel de patrocinio
+  tier       SponsorTier @default(Plata) // Nivel de patrocinio
   websiteUrl String?
 
   // Redes sociales estructuradas en JSON o como campos opcionales
@@ -666,13 +660,6 @@ model Sponsor {
   updatedAt DateTime @updatedAt
 
   @@map("sponsors")
-}
-
-enum SponsorTier {
-  main // Patrocinador Oficial / Presentador
-  gold // Oro
-  silver // Plata
-  bronze // Bronce
 }
 
 model SeatingMap {
@@ -691,8 +678,8 @@ model SeatingMap {
 model SeatingMapElement {
   id                     String             @id @default(uuid())
   itemID                 String // ID visual/lógico asignado desde el canvas
-  type                   SeatingMapType     @default(chair) // "tarima_pista" | "silla_vip" | etc.
-  itemType               SeatingMapItemType @default(general_chair)
+  type                   SeatingMapType     @default(Silla) // "tarima_pista" | "silla_vip" | etc.
+  itemType               SeatingMapItemType @default(Silla_General)
   name                   String
   chairNumber            String?
   groupId                String?
@@ -731,7 +718,7 @@ model EventSeat {
   seatingMapElementId String
   seatingMapElement   SeatingMapElement @relation(fields: [seatingMapElementId], references: [id], onDelete: Cascade)
 
-  status SeatStatus @default(available)
+  status SeatStatus @default(Disponible)
 
   // ⏱️ Control de los 10 minutos de reserva temporal
   reservedAt DateTime?
@@ -766,8 +753,8 @@ model Notification {
   id      String              @id @default(uuid())
   title   String              @db.VarChar(150)
   message String              @db.Text
-  channel NotificationChannel @default(IN_APP)
-  status  NotificationStatus  @default(PENDING)
+  channel NotificationChannel @default(En_la_App)
+  status  NotificationStatus  @default(Pendiente)
 
   // Relación opcional con el Usuario destinatario
   userId String? @db.VarChar(36)
@@ -789,194 +776,201 @@ model Notification {
 
 // ==================== ENUMS CORREGIDOS Y SEPARADOS ====================
 
-/**
- * enum GroupCategory {
- * baby      @map("Baby")
- * childrens @map("Infantil")
- * youth     @map("Juvenil")
- * adult     @map("Adulto")
- * }
- */
-
 enum ConceptType {
-  class           @map("Clase")
-  monthly_payment @map("Mensualidad")
-  tuition         @map("Matrícula")
-  locker_room     @map("Vestuario")
-  ticket          @map("Entradas Gala")
-  product         @map("Producto")
+  Clase
+  Mensualidad
+  Inscripción
+  Vestuario
+  Entradas_Gala
+  Producto
+  Otro
 }
 
 enum OrderItemConceptType {
-  locker_room @map("Vestuario")
-  uniform     @map("Uniforme")
-  ticket      @map("Entradas Gala")
-  product     @map("Producto")
+  Vestuario
+  Uniforme
+  Entradas_Gala
+  Producto
+  Otro
 }
 
 enum PaymentMethod {
-  bank_transfer        @map("Transferencia")
-  credit_or_debit_card @map("Tarjeta")
-  cash                 @map("Efectivo")
-  mobile_payment       @map("Pago Móvil")
-  check                @map("Cheque")
-  other                @map("Otro")
+  Transferencia
+  Tarjeta
+  Efectivo
+  Pago_Movil
+  Cheque
+  Otro
 }
 
 // 🎯 Estados específicos para la entrega física de productos
 enum OrderStatus {
-  pending_preparation @map("Pendiente por Preparar")
-  ready_for_delivery  @map("Listo para Entregar")
-  delivered           @map("Entregado")
-  canceled            @map("Cancelado")
+  Pendiente
+  Por_Entregar
+  Entregado
+  Cancelado
 }
 
 // 🎯 Estados específicos para el flujo del dinero adeudado
 enum PaymentOrderStatus {
-  pending  @map("Pendiente")
-  paid     @map("Pagada")
-  defeated @map("Vencida")
-  annulled @map("Anulada")
+  Pendiente
+  Pagada
+  Vencida
+  Anulada
 }
 
 // 🎯 Estados específicos para la verificación bancaria de la caja
 enum TransactionStatus {
-  approved @map("Aprobado")
-  pending  @map("Pendiente")
-  refused  @map("Rechazado")
+  Aprobado
+  Pendiente
+  Rechazado
 }
 
 // 🎯 Estados específicos para la entrega física de vestuarios
 enum LockerRoomStatus {
-  payment_pending @map("Pendiente por pago")
-  making          @map("Confeccionando")
-  available       @map("Disponible")
-  retired         @map("Retirado")
+  Pendiente_por_Pago
+  Confeccionando
+  Disponible
+  Retirado
 }
 
 enum AssignmentStatus {
-  assigned // Entregado al alumno
-  returned // Devuelto en buen estado
-  damaged // Devuelto con daños
-  lost // Extraviado
+  Asignado
+  Devuelto_En_Buen_Estado
+  Devuelto_Con_Daños
+  Extraviado
 }
 
 enum LockerRoomCategory {
-  baby      @map("Baby")
-  childrens @map("Infantil")
-  youth     @map("Juvenil")
-  adult     @map("Adulto")
+  Bebé
+  Infantil
+  Juvenil
+  Adulto
 }
 
 enum ProfileType {
-  representative @map("Representante")
-  student        @map("Estudiante")
+  Representante
+  Estudiante
 }
 
 enum Kinship {
-  son      @map("Hijo")
-  daughter @map("Hija")
-  nephew   @map("Sobrino")
-  niece    @map("Sobrina")
-  tutored  @map("Tutorado")
-  other    @map("Otro")
+  Hijo
+  Hija
+  Sobrino
+  Sobrina
+  Tutorado
+  Otro
 }
 
 enum ClassroomType {
-  mirrors  @map("Espejos")
-  urban    @map("Urbano")
-  free     @map("Libre")
-  theories @map("Teorias") // Prisma no recomienda caracteres con tildes en identificadores de Enum
+  Espejos
+  Urbano
+  Libre
+  Teorias
 }
 
 enum ClassroomStatus {
-  active      @map("Activo")
-  maintenance @map("Mantenimiento")
+  Activo
+  Mantenimiento
 }
 
 enum RegistrationStatus {
-  pre_registered @map("Pre Registrado")
-  approved       @map("Aprobado")
-  pending        @map("Pendiente")
-  refused        @map("Rechazado")
+  Pre_Registrado
+  Aprobado
+  Pendiente
+  Rechazado
 }
 
 enum TypeOfContract {
-  fixed      @map("Fijo")
-  per_hour   @map("Por Hora")
-  by_project @map("Por proyecto")
+  Fijo
+  Por_Hora
+  Por_Proyecto
 }
 
 enum TypeOfEmployee {
-  administrative @map("Personal Administrativo y de Gestión")
-  teaching       @map("Personal Docente y Artístico")
-  support        @map("Personal de Soporte y Operaciones")
+  Administrativo
+  Profesor
+  Soporte
+  Otro
 }
 
 enum PayrollStatus {
-  pending @map("Pendiente")
-  paid    @map("Pagado")
+  Pendiente
+  Pagado
 }
 
 // Estado de la cuenta por pagar
 enum PayableStatus {
-  pending   @map("Pendiente")
-  partial   @map("Pagado parcialmente")
-  paid      @map("Pagado")
-  cancelled @map("Anulada / Cancelada")
+  Pendiente
+  Pagado_Parcialmente
+  Pagado
+  Cancelada
 }
 
 // Enums para Tipos de Eventos y Estados de Producción
 enum EventType {
-  annual_gala @map("Gala Anual")
-  masterclass @map("Masterclass")
-  competence  @map("Competencia")
-  sample      @map("Muestra")
-  other       @map("Otro")
+  Gala_Anual
+  Masterclass
+  Competencia
+  Muestra
+  Otro
 }
 
 enum ProductionStatus {
-  planning  @map("Planificación")
-  essays    @map("Ensayos Generales")
-  completed @map("Completado")
-  sold_out  @map("Agotado")
-  cancelled @map("Cancelado")
+  Planificación
+  Ensayos_Generales
+  Completado
+  Agotado
+  Cancelado
 }
 
 enum SeatStatus {
-  available       @map("Disponible")
-  reserved        @map("Reservado")
-  payment_pending @map("Pendiente")
-  sold            @map("Pagado")
+  Disponible
+  Reservado
+  Pendiente
+  Pagado
 }
 
 enum SeatingMapType {
-  chair    @map("Silla")
-  platform @map("Tarima")
+  Silla
+  Tarima
 }
 
 enum SeatingMapItemType {
-  stage_floor       @map("Tarima pista")
-  vip_chair         @map("Silla VIP")
-  general_chair     @map("Silla general")
-  sponsor_chair     @map("Silla de patrocinante")
-  preferred_seating @map("Silla preferencial")
+  Tarima_Pista
+  Silla_VIP
+  Silla_General
+  Silla_de_Patrocinante
+  Silla_Preferencial
 }
 
 enum ClientType {
-  student        @map("Estudiante")
-  representative @map("Representante")
+  Estudiante
+  Representante
 }
 
 enum NotificationChannel {
-  IN_APP
-  WHATSAPP
-  BOTH
+  En_la_App
+  Whatsapp
+  Ambos
 }
 
 enum NotificationStatus {
-  PENDING
-  SENT
-  READ
-  FAILED
+  Pendiente
+  Enviado
+  Leido
+  Fallido
+}
+
+enum ImageRole {
+  Portada
+  Banner_Promocional
+  Galería_General
+}
+
+enum SponsorTier {
+  Patrocinador_Oficial
+  Oro
+  Plata
+  Bronce
 }

@@ -1,7 +1,7 @@
 // /src/clients/clients.service.ts
 
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, ClientType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
@@ -44,7 +44,7 @@ export class ClientsService {
                 let createdStudentId: string | null = studentId ?? null;
 
                 // 2. Si el tipo es 'student', crear el registro Student
-                if (type === 'student' && !createdStudentId) {
+                if (type === ClientType.Estudiante && !createdStudentId) {
                     const newStudent = await tx.student.create({
                         data: {
                             shirtSize: shirtSize ?? 'M',
@@ -231,7 +231,7 @@ export class ClientsService {
 
                 let finalStudentId: string | null = currentClient.studentId;
 
-                if (type === 'student') {
+                if (type === ClientType.Estudiante) {
                     if (currentClient.studentId) {
                         await tx.student.update({
                             where: { id: currentClient.studentId },
@@ -253,7 +253,7 @@ export class ClientsService {
                         });
                         finalStudentId = newStudent.id;
                     }
-                } else if (type === 'representative' && currentClient.studentId) {
+                } else if (type === ClientType.Representante && currentClient.studentId) {
                     finalStudentId = null;
                 }
 
@@ -275,7 +275,7 @@ export class ClientsService {
                     },
                 });
 
-                if (type === 'representative' && currentClient.studentId) {
+                if (type === ClientType.Representante && currentClient.studentId) {
                     await tx.student.delete({
                         where: { id: currentClient.studentId },
                     });

@@ -14,7 +14,7 @@ export class InstructorsService {
 
         // Construcción de condiciones dinámicas de búsqueda
         const where: any = {
-            typeOfEmployee: TypeOfEmployee.teaching
+            typeOfEmployee: TypeOfEmployee.Profesor
         };
 
         if (search) {

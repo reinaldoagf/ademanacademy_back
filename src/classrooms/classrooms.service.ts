@@ -1,25 +1,11 @@
 // /src/classrooms/classrooms.service.ts
 
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { ClassroomType, ClassroomStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service'; // Ajusta la ruta según tu proyecto
 import { CreateClassroomDto } from './dto/create-classroom.dto';
 import { UpdateClassroomDto } from './dto/update-classroom.dto';
 import { GetClassroomsFilterDto } from './dto/get-classrooms-filter.dto'
 
-// Diccionario para los conceptos (por si también quieres traducirlos)
-/* export const ClassroomTypeLabel: Record<ClassroomType, string> = {
-    [ClassroomType.mirrors]: 'Espejos',
-    [ClassroomType.urban]: 'Urbano',
-    [ClassroomType.free]: 'Libre',
-    [ClassroomType.theories]: 'Teorias',
-};
-
-export const ClassroomStatusLabel: Record<ClassroomStatus, string> = {
-    [ClassroomStatus.active]: 'Activo',
-    [ClassroomStatus.maintenance]: 'Mantenimiento'
-};
- */
 @Injectable()
 export class ClassroomsService {
     constructor(private readonly prisma: PrismaService) { }

@@ -1,12 +1,6 @@
 import { IsString, IsArray, ValidateNested, IsOptional, IsNotEmpty, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
-
-export enum AssignmentStatus {
-    assigned = 'assigned',
-    returned = 'returned',
-    damaged = 'damaged',
-    lost = 'lost',
-}
+import { AssignmentStatus } from '@prisma/client';
 
 export class StudentAssignmentItemDto {
     @IsString()

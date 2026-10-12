@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service'; // Ajusta la ruta según tu proyecto
 import { GetPaymentOrdersFilterDto } from './dto/get-payment-orders-filter.dto'
-import { PaymentOrderStatus } from '@prisma/client';
+import { PaymentMethod, PaymentOrderStatus, TransactionStatus } from '@prisma/client';
 
 @Injectable()
 export class PaymentOrdersService {
@@ -267,7 +267,7 @@ export class PaymentOrdersService {
         }
 
         // Validar que la orden de pago no haya sido procesada anteriormente
-        if (paymentOrder.status === 'paid') {
+        if (paymentOrder.status === PaymentOrderStatus.Pagada) {
             throw new BadRequestException('Esta orden de pago ya se encuentra registrada/pagada.');
         }
 
@@ -291,8 +291,8 @@ export class PaymentOrdersService {
                         paymentOrderId: paymentOrder.id,
                         concept: paymentOrder.concept || 'ticket',
                         amount: amount ? Number(amount) : paymentOrder.amount,
-                        method: 'bank_transfer',
-                        status: status || 'pending',
+                        method: PaymentMethod.Transferencia,
+                        status: TransactionStatus.Pendiente,
                         referenceNumber: referenceNumber || null,
                         bankName: bankName || null,
                         receiptPath: receiptPath,
@@ -304,7 +304,7 @@ export class PaymentOrdersService {
                 const approvedAggregate = await tx.transaction.aggregate({
                     where: {
                         paymentOrderId: paymentOrder.id,
-                        status: 'approved', // Solo transacciones aprobadas
+                        status: TransactionStatus.Aprobado, // Solo transacciones aprobadas
                     },
                     _sum: {
                         amount: true,
@@ -316,12 +316,12 @@ export class PaymentOrdersService {
                 const orderAmount = Number(paymentOrder.amount);
 
                 // 2. Determinar el nuevo estado de la orden de pago
-                let newOrderStatus: PaymentOrderStatus = 'pending';
+                let newOrderStatus: PaymentOrderStatus = PaymentOrderStatus.Pendiente;
 
                 if (totalApprovedAmount >= orderAmount) {
-                    newOrderStatus = 'paid'; // Se pagó completo
-                } else if (transaction.status === 'pending') {
-                    newOrderStatus = 'pending'; // Tiene transacciones pendientes por revisar
+                    newOrderStatus = PaymentOrderStatus.Pagada; // Se pagó completo
+                } else if (transaction.status === TransactionStatus.Pendiente) {
+                    newOrderStatus = PaymentOrderStatus.Pendiente; // Tiene transacciones pendientes por revisar
                 }
 
                 // Operación B: Actualizar la Orden de Pago con el estado dinámico

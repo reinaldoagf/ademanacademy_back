@@ -1,7 +1,7 @@
 // /src/costumes/costumes.service.ts
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
+import { Prisma, AssignmentStatus } from '@prisma/client';
 import { S3Service } from '../s3/s3.service';
 import { LockerRoomStatus } from '@prisma/client';
 import { CreateCostumeDto } from './dto/create-costume.dto';
@@ -214,7 +214,7 @@ export class CostumesService {
                             studentId: item.studentId,
                             observations: item.observations || null,
                             clientId: student?.clients?.[0]?.id || null,
-                            status: 'assigned',
+                            status: AssignmentStatus.Asignado,
                             assignedAt: new Date(),
                         },
                         include: {
@@ -239,7 +239,7 @@ export class CostumesService {
             data: {
                 status: dto.status,
                 observations: dto.observations,
-                ...(dto.status !== 'assigned' && { returnedAt: new Date() }),
+                ...(dto.status !== AssignmentStatus.Asignado && { returnedAt: new Date() }),
             },
         });
     }
