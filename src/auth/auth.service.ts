@@ -49,6 +49,7 @@ export class AuthService {
       email: user.email,
       isAdmin: user.isAdmin,
       dni: user.dni,
+      profileType: user.profileType,
     };
 
     // 💡 SOLUCIÓN: Extraemos password y guardamos todo lo demás en 'userWithoutPassword'
@@ -81,6 +82,7 @@ export class AuthService {
       email: user.email,
       isAdmin: user.isAdmin,
       dni: user.dni,
+      profileType: user.profileType,
     };
 
     return {
