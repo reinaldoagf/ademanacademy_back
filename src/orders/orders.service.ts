@@ -22,9 +22,7 @@ export class OrdersService {
         return await this.prisma.$transaction(async (tx) => {
             // 2. Verificar y descontar el stock de los productos
             for (const item of items) {
-                // Solo verificamos stock para los ítems que sean de concepto "product"
                 if (item.concept === ConceptType.Producto) {
-                    // A. Obtener el producto actual dentro de la transacción
                     const product = await tx.product.findUnique({
                         where: { id: item.elementId },
                     });
@@ -41,14 +39,12 @@ export class OrdersService {
                         );
                     }
 
-                    // B. Verificar disponibilidad suficiente
                     if (product.currentStock < item.quantity) {
                         throw new BadRequestException(
                             `Stock insuficiente para "${product.name}". Disponible: ${product.currentStock}, Solicitado: ${item.quantity}`,
                         );
                     }
 
-                    // C. Decrementar el stock de forma atómica
                     await tx.product.update({
                         where: { id: item.elementId },
                         data: {
@@ -60,35 +56,52 @@ export class OrdersService {
                 }
             }
 
+            // 🔍 3. Buscar al cliente original y sus relaciones con su usuario y representante
             const client = await tx.client.findUnique({
                 where: { id: clientId },
                 include: {
-                    user: {
+                    user: { // Su propio usuario vinculado
                         include: {
-                            client: true
+                            // Relación inversa configurada en el esquema: el representante del usuario
+                            representedClients: true
                         }
                     },
-                    student: true,
+                    representative: true // En caso de usar la relación directa representativeId
                 }
             });
 
             if (!client) {
                 throw new NotFoundException(`Cliente con ID "${clientId}" no encontrado.`);
             }
-            if (client.user?.id && client.type === ClientType.Estudiante && client.user?.profileType === ProfileType.Representante) {
-                const representativeClient = await tx.client.findFirst({
-                    where: {
-                        userId: client.user?.id,
-                        type: ClientType.Representante
-                    }
-                })
-                if (!representativeClient) {
-                    throw new NotFoundException(`Cliente con ID "${clientId}" no encontrado.`);
+
+            // 🔄 4. LÓGICA DE REASIGNACIÓN: Si es estudiante y tiene representante, pasamos el clientId al representante
+            if (client.type === ClientType.Estudiante) {
+                let representativeClientId: string | null = null;
+
+                // Opción A: Si está vinculado mediante el usuario representante (representativeId)
+                if (client.representativeId) {
+                    const repClient = await tx.client.findFirst({
+                        where: {
+                            userId: client.representativeId,
+                            type: ClientType.Representante
+                        }
+                    });
+                    if (repClient) representativeClientId = repClient.id;
                 }
-                clientId = representativeClient.id ?? clientId;
+
+                // Opción B: Si está vinculado a través de los clientes representados del usuario del estudiante
+                if (!representativeClientId && client.user?.representedClients?.length) {
+                    const repClient = client.user.representedClients.find(c => c.type === ClientType.Representante);
+                    if (repClient) representativeClientId = repClient.id;
+                }
+
+                // Si encontramos un representante válido, reasignamos el clientId para la orden y el pago
+                if (representativeClientId) {
+                    clientId = representativeClientId;
+                }
             }
 
-            // 3. Crear la Orden con sus OrderItems
+            // 5. Crear la Orden con sus OrderItems usando el clientId definitivo (Estudiante o Representante)
             const order = await tx.order.create({
                 data: {
                     clientId,
@@ -111,10 +124,10 @@ export class OrdersService {
                 },
             });
 
-            // 4. Determinar concepto principal para PaymentOrder
+            // 6. Determinar concepto principal para PaymentOrder
             const primaryConcept = items[0]?.concept as unknown as ConceptType;
 
-            // 5. Crear automáticamente la PaymentOrder
+            // 7. Crear automáticamente la PaymentOrder a nombre del cliente definitivo (Representante si aplica)
             const paymentOrder = await tx.paymentOrder.create({
                 data: {
                     clientId,

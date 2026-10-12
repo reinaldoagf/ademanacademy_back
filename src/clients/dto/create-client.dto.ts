@@ -48,6 +48,12 @@ export class CreateClientDto {
     userId?: string | null;
 
     @IsOptional()
+    @ValidateIf((o) => o.representativeId !== '' && o.representativeId !== null) // Solo valida UUID si no es '' ni null
+    @IsUUID('4', { message: 'representativeId debe ser un UUID válido' })
+    representativeId?: string | null;
+
+
+    @IsOptional()
     @IsUUID()
     groupId?: string;
 

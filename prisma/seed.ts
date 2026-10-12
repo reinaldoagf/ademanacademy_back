@@ -142,29 +142,66 @@ async function main() {
     const student1 = await prisma.student.create({
         data: {
             shirtSize: 'S',
-            kinship: Kinship.Hijo,
+            kinship: Kinship.Hija,
             hasExperience: false,
             medicalObservations: '',
             // groupId: 'ID_DEL_GRUPO', // Opcional si ya tienes un grupo creado
         },
     });
-
+    const student2 = await prisma.student.create({
+        data: {
+            shirtSize: 'M',
+            kinship: Kinship.Hija,
+            hasExperience: false,
+            medicalObservations: '',
+            // groupId: 'ID_DEL_GRUPO', // Opcional si ya tienes un grupo creado
+        },
+    });
     // 3. Crear el Client asignándole el studentId y userId correspondientes
     const client1 = await prisma.client.create({
         data: {
-            firstName: 'Pedrito',
+            firstName: 'Pedro',
             lastName: 'Pérez',
             birthDate: new Date('2018-05-15'),
             address: 'Alta Vista, Puerto Ordaz, Bolívar',
             IDNumberPrefix: 'V',
             dni: '32145678',
-            phone: '0414-1234567', // Opcional
+            countryCode: '+58',
+            phone: '4121234567', // Opcional
             type: ClientType.Representante, // O el tipo de cliente que corresponda
             userId: user.id, // Enlazado a su usuario/representante
+        },
+    });
+    const client2 = await prisma.client.create({
+        data: {
+            firstName: 'Jessica',
+            lastName: 'Pérez',
+            birthDate: new Date('2018-05-15'),
+            address: 'Alta Vista, Puerto Ordaz, Bolívar',
+            IDNumberPrefix: 'V',
+            dni: '32145678',
+            countryCode: '+58',
+            phone: '4141234567', // Opcional
+            type: ClientType.Estudiante, // O el tipo de cliente que corresponda
+            representativeId: user.id, // Enlazado a su usuario/representante
             studentId: student1.id, // 🎯 Enlazado al estudiante creado previamente
         },
     });
-
+    const client3 = await prisma.client.create({
+        data: {
+            firstName: 'Mariana',
+            lastName: 'Pérez',
+            birthDate: new Date('2018-05-15'),
+            address: 'Alta Vista, Puerto Ordaz, Bolívar',
+            IDNumberPrefix: 'V',
+            dni: '22145678',
+            countryCode: '+58',
+            phone: '4141234562', // Opcional
+            type: ClientType.Estudiante, // O el tipo de cliente que corresponda
+            representativeId: user.id, // Enlazado a su usuario/representante
+            studentId: student2.id, // 🎯 Enlazado al estudiante creado previamente
+        },
+    });
     // ==========================================
     // 4. CREACIÓN DE SALONES (Classrooms)
     // ==========================================

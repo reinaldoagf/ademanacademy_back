@@ -9,7 +9,7 @@ import { NotificationsService } from '@/notifications/notifications.service';
 import { MailsService } from '@/mails/mails.service';
 export type UserWithClients = Prisma.UserGetPayload<{
   include: {
-    client: {
+    ownedClients: {
       include: {
         student: true;
       };
@@ -85,7 +85,7 @@ export class UsersService {
     const user = await this.prisma.user.findUnique({
       where: { email },
       include: {
-        client: {
+        ownedClients: {
           include: {
             student: true, // Incluye la información del estudiante si existe la relación
           },
@@ -374,7 +374,7 @@ export class UsersService {
           message: 'Onboarding y reporte de pago procesados con éxito.',
           user: await tx.user.findUnique({
             where: { id: registeringUserId },
-            include: { client: true }
+            include: { ownedClients: true }
           }),
         };
 
@@ -394,14 +394,14 @@ export class UsersService {
         id: userId,
         email: email,
       },
-      include: { client: { include: { student: true } } },
+      include: { ownedClients: { include: { student: true } } },
     });
 
     if (!user) {
       throw new BadRequestException('No se encontró un usuario con ese correo electrónico.');
     }
 
-    if (user.client.length > 1) {
+    if (user.ownedClients.length > 1) {
       throw new BadRequestException('El correo electrónico está asociado a múltiples cuentas.');
     }
     // Por seguridad defensiva, evitamos filtrar si el correo existe o no

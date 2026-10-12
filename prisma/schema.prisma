@@ -34,7 +34,6 @@ model User {
   // Lado inverso de la relación 1:1
   employee          Employee?
   // Relación inversa: Un usuario puede tener muchos representados
-  client            Client[]
   transactions      Transaction[]
   groups            Group[]
   registrations     Registration[]
@@ -44,6 +43,12 @@ model User {
   updatedAt     DateTime       @updatedAt @map("updatedAt")
   eventSeats    EventSeat[]
   paymentOrders PaymentOrder[]
+  // 🎯 RELACIONES CON CLIENTES:
+  // 1. Clientes donde este usuario es el propio cliente (su propio usuario)
+  ownedClients  Client[]       @relation(name: "ClientUser")
+
+  // 2. Clientes donde este usuario actúa como representante
+  representedClients Client[] @relation(name: "ClientRepresentative")
 
   @@map("users")
 }
@@ -115,8 +120,6 @@ model Client {
   student   Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
   studentId String?
 
-  user          User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId        String?        @db.VarChar(36) // Ahora acepta NULL en MySQL si el Admin registra al estudiante directamente
   transactions  Transaction[]
   paymentOrders PaymentOrder[]
   orders        Order[]
@@ -133,6 +136,15 @@ model Client {
 
   createdAt DateTime @default(now()) @map("createdAt")
   updatedAt DateTime @updatedAt @map("updatedAt")
+  // 🎯 NUEVAS RELACIONES LIMPIAS CON USUARIOS (Ambas opcionales)
+
+  // A. El usuario propio del cliente
+  user   User?   @relation(name: "ClientUser", fields: [userId], references: [id], onDelete: Cascade)
+  userId String? @db.VarChar(36)
+
+  // B. El usuario del representante
+  representative   User?   @relation(name: "ClientRepresentative", fields: [representativeId], references: [id], onDelete: SetNull)
+  representativeId String? @db.VarChar(36)
 
   @@map("clients")
 }

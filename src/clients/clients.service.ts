@@ -16,6 +16,7 @@ export class ClientsService {
         try {
             const {
                 userId,
+                representativeId,
                 studentId,
                 groupId,
                 birthDate,
@@ -41,6 +42,22 @@ export class ClientsService {
                     }
                 }
 
+                if (representativeId) {
+                    const existingRepresentativeWithUser = await tx.client.findFirst({
+                        where: { representativeId, type: ClientType.Representante },
+                    });
+
+                    if (existingRepresentativeWithUser) {
+                        throw new BadRequestException(
+                            'El representante seleccionado ya pertenece a otro cliente.',
+                        );
+                    }
+                }
+                if (representativeId && userId && representativeId == userId) {
+                    throw new BadRequestException(
+                        "El usuario de representante seleccionado no puede ser igual al usuario vinculado al cliente.",
+                    );
+                }
                 let createdStudentId: string | null = studentId ?? null;
 
                 // 2. Si el tipo es 'student', crear el registro Student
@@ -64,6 +81,7 @@ export class ClientsService {
                         birthDate: new Date(birthDate),
                         studentId: createdStudentId,
                         ...(userId && { userId }),
+                        ...(representativeId && { representativeId }),
                         ...(groupId && { groupId }),
                     },
                     include: {
@@ -114,6 +132,14 @@ export class ClientsService {
             ];
         }
 
+        const usersSelectFields = {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+        }
+
         const [totalItems, data] = await Promise.all([
             this.prisma.client.count({ where }),
             this.prisma.client.findMany({
@@ -128,13 +154,10 @@ export class ClientsService {
                         },
                     },
                     user: {
-                        select: {
-                            id: true,
-                            firstName: true,
-                            lastName: true,
-                            email: true,
-                            phone: true,
-                        },
+                        select: usersSelectFields,
+                    },
+                    representative: {
+                        select: usersSelectFields,
                     },
                     group: true,
                 },
@@ -192,6 +215,7 @@ export class ClientsService {
         try {
             const {
                 userId,
+                representativeId,
                 studentId,
                 groupId,
                 birthDate,
@@ -227,6 +251,23 @@ export class ClientsService {
                             'El usuario seleccionado ya pertenece a otro cliente.',
                         );
                     }
+                }
+
+                if (representativeId) {
+                    const existingRepresentativeWithUser = await tx.client.findFirst({
+                        where: { representativeId, type: ClientType.Representante },
+                    });
+
+                    if (existingRepresentativeWithUser) {
+                        throw new BadRequestException(
+                            'El representante seleccionado ya pertenece a otro cliente.',
+                        );
+                    }
+                }
+                if (representativeId && userId && representativeId == userId) {
+                    throw new BadRequestException(
+                        "El usuario de representante seleccionado no puede ser igual al usuario vinculado al cliente.",
+                    );
                 }
 
                 let finalStudentId: string | null = currentClient.studentId;
@@ -266,6 +307,7 @@ export class ClientsService {
                         studentId: finalStudentId,
                         ...(birthDate && { birthDate: new Date(birthDate) }),
                         ...(userId !== undefined && { userId }),
+                        ...(representativeId !== undefined && { representativeId }),
                     },
                     include: {
                         user: {

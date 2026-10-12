@@ -77,11 +77,12 @@ CREATE TABLE `clients` (
     `countryCode` VARCHAR(40) NULL,
     `phone` VARCHAR(40) NULL,
     `studentId` VARCHAR(191) NULL,
-    `userId` VARCHAR(36) NULL,
     `type` ENUM('Estudiante', 'Representante') NOT NULL DEFAULT 'Representante',
     `groupId` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
+    `userId` VARCHAR(36) NULL,
+    `representativeId` VARCHAR(36) NULL,
 
     UNIQUE INDEX `clients_email_key`(`email`),
     PRIMARY KEY (`id`)
@@ -565,10 +566,13 @@ ALTER TABLE `students` ADD CONSTRAINT `students_groupId_fkey` FOREIGN KEY (`grou
 ALTER TABLE `clients` ADD CONSTRAINT `clients_studentId_fkey` FOREIGN KEY (`studentId`) REFERENCES `students`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE `clients` ADD CONSTRAINT `clients_groupId_fkey` FOREIGN KEY (`groupId`) REFERENCES `groups`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE `clients` ADD CONSTRAINT `clients_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `clients` ADD CONSTRAINT `clients_groupId_fkey` FOREIGN KEY (`groupId`) REFERENCES `groups`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `clients` ADD CONSTRAINT `clients_representativeId_fkey` FOREIGN KEY (`representativeId`) REFERENCES `users`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `orders` ADD CONSTRAINT `orders_clientId_fkey` FOREIGN KEY (`clientId`) REFERENCES `clients`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
