@@ -69,6 +69,7 @@ export class UsersController {
     @Body() body: any,
     @UploadedFile() file: Express.Multer.File,
   ) {
+    console.log({ representedStudentssssssssssssssssss: body.representedStudents })
     const registeringUserId = user?.sub;
 
     const profileType = body.profileType;
@@ -81,7 +82,7 @@ export class UsersController {
     const studentId = body.studentId || payment?.studentId;
 
     // 1. Validaciones para Representante
-    if (profileType === 'representative') {
+    if (profileType === 'Representante') {
       if (!representedStudents || representedStudents.length === 0) {
         throw new BadRequestException('Como representante, debes registrar al menos a un estudiante.');
       }

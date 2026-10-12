@@ -1,6 +1,6 @@
 // /src/orders/orders.service.ts
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { OrderItemConceptType, ConceptType, PaymentOrderStatus } from '@prisma/client';
+import { OrderItemConceptType, ConceptType, PaymentOrderStatus, ClientType, ProfileType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
@@ -11,7 +11,8 @@ export class OrdersService {
     constructor(private readonly prisma: PrismaService) { }
 
     async create(createOrderDto: CreateOrderDto) {
-        const { clientId, items, status } = createOrderDto;
+        let { clientId } = createOrderDto;
+        const { items, status } = createOrderDto;
 
         // 1. Calcular monto total
         const totalAmount = items.reduce((acc, item) => {
@@ -59,9 +60,42 @@ export class OrdersService {
                 }
             }
 
-            const user = await tx.user.findUnique({
+            const client = await tx.client.findUnique({
                 where: { id: clientId },
+                include: {
+                    user: {
+                        include: {
+                            client: true
+                        }
+                    },
+                    student: true,
+                }
             });
+            console.log({ client })
+
+            if (!client) {
+                throw new NotFoundException(`Cliente con ID "${clientId}" no encontrado.`);
+            }
+            console.log({ profileType: client.user?.profileType })
+            console.log({ type: client.type })
+            console.log({ clientId })
+            console.log({ client })
+            console.log({ clientarray: JSON.stringify(client.user?.client ?? []) })
+            if (client.user?.id && client.type === ClientType.Estudiante && client.user?.profileType === ProfileType.Representante) {
+                console.log(`Client type ${ClientType.Estudiante} and profile type ${ProfileType.Representante}`)
+                const representativeClient = await tx.client.findFirst({
+                    where: {
+                        userId: client.user?.id,
+                        type: ClientType.Representante
+                    }
+                })
+                console.log({ representativeClient })
+                if (!representativeClient) {
+                    throw new NotFoundException(`Cliente con ID "${clientId}" no encontrado.`);
+                }
+                clientId = representativeClient.id ?? clientId;
+            }
+            console.log({ clientId })
 
             // 3. Crear la Orden con sus OrderItems
             const order = await tx.order.create({

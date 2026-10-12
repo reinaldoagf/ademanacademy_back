@@ -220,11 +220,12 @@ export class UsersService {
             profileOnboarding: true,
             occupation: dto.profileType === ProfileType.Representante ? dto.representativeOccupation : undefined,
           },
-          select: { id: true, firstName: true, lastName: true, email: true, phone: true, profileType: true, profileOnboarding: true, occupation: true }
+          select: { id: true, firstName: true, lastName: true, email: true, phone: true, profileType: true, profileOnboarding: true, occupation: true },
+
         });
 
         // Operación B: Si es REPRESENTATIVE, insertar estudiantes
-        if (dto.profileType === 'representative' && dto.representedStudents) {
+        if (dto.profileType === ClientType.Representante && dto.representedStudents) {
           const representedStudents = dto.representedStudents.map((representedStudent) => ({
             firstName: representedStudent.firstName,
             lastName: representedStudent.lastName,
@@ -371,7 +372,10 @@ export class UsersService {
 
         return {
           message: 'Onboarding y reporte de pago procesados con éxito.',
-          user: updatedUser,
+          user: await tx.user.findUnique({
+            where: { id: registeringUserId },
+            include: { client: true }
+          }),
         };
 
       });

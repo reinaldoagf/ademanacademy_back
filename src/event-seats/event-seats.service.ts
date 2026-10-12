@@ -28,6 +28,7 @@ export class EventSeatsService {
         const user = await this.prisma.user.findFirst({
             where: { id: userId },
         });
+        console.log({ user })
         const isAdmin = user?.isAdmin ?? false;
         if (!isAdmin && dto.totalAmount <= 0) {
             throw new BadRequestException('El monto debe ser mayor a cero.');

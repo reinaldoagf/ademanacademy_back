@@ -5,7 +5,7 @@ import { Kinship } from '@prisma/client';
 
 export enum ProfileType {
     STUDENT = 'student',
-    REPRESENTATIVE = 'representative',
+    REPRESENTATIVE = 'Representante',
 }
 
 export class RepresentedStudentDto {
