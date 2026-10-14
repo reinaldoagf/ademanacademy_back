@@ -1,6 +1,8 @@
-import { Injectable, NotFoundException, ConflictException, Inject } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { ConceptType, PaymentOrderStatus, TransactionStatus, PaymentMethod, RegistrationStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { GetRegistrationsFilterDto } from './dto/get-registrations-filter.dto';
+import { CreateRegistrationDto } from './dto/create-registration.dto';
 
 @Injectable()
 export class RegistrationsService {
@@ -69,5 +71,72 @@ export class RegistrationsService {
                 itemsPerPage: limit,
             },
         };
+    }
+    async create(userId: string, dto: CreateRegistrationDto) {
+        const { payment } = dto;
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            include: {
+                ownedClients: true
+            }
+        });
+        if (!user) {
+            throw new NotFoundException(`Usuario con ID ${userId} no encontrado`);
+        }
+        const client = await this.prisma.client.findUnique({
+            where: { id: payment?.clientId },
+            include: { student: true }
+        });
+        if (!client) {
+            throw new NotFoundException(`Cliente con ID ${payment?.clientId} no encontrado`);
+        }
+        if (!payment) {
+            throw new BadRequestException('Los datos de pago son obligatorios para la inscripción.');
+        }
+
+        return await this.prisma.$transaction(async (tx) => {
+            // 1. Crear la Orden de Pago (PaymentOrder) para la inscripción
+            const paymentOrder = await tx.paymentOrder.create({
+                data: {
+                    clientId: client.id,
+                    concept: ConceptType.Inscripción,
+                    amount: payment.amount,
+                    status: PaymentOrderStatus.Pendiente,
+                    registeringUserId: user.id,
+                },
+            });
+
+            // 2. Crear la Transacción asociada con la URL directa del comprobante en S3
+            const transaction = await tx.transaction.create({
+                data: {
+                    registeringUserId: user.id,
+                    clientId: client.id,
+                    paymentOrderId: paymentOrder.id,
+                    concept: ConceptType.Inscripción,
+                    amount: payment.amount,
+                    method: PaymentMethod.Transferencia,
+                    status: TransactionStatus.Pendiente,
+                    bankName: payment.bankName,
+                    referenceNumber: payment.referenceNumber,
+                    receiptPath: payment.receiptPath, // 👈 Se guarda el enlace de S3
+                },
+            });
+
+            // 3. Crear el registro de inscripción (Registration) en estado Pendiente
+            const registration = await tx.registration.create({
+                data: {
+                    status: RegistrationStatus.Pendiente,
+                    userId: user.id,
+                    studentId: client.student?.id,
+                    clientId: client.id,
+                },
+            });
+
+            return {
+                paymentOrder,
+                transaction,
+                registration,
+            };
+        });
     }
 }

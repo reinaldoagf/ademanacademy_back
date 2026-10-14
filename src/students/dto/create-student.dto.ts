@@ -12,7 +12,7 @@ export class CreateStudentDto {
     dni?: string;
 
     @IsString()
-    @IsNotEmpty()
+    @IsNotEmpty({ message: 'El correo del afiliado es obligatorio' })
     email: string;
 
     @IsString()
@@ -24,7 +24,7 @@ export class CreateStudentDto {
     lastName: string;
 
     @IsDateString()
-    @IsNotEmpty()
+    @IsOptional()
     birthDate: string;
 
     @IsEnum(Kinship)
@@ -61,6 +61,11 @@ export class CreateStudentDto {
     @IsUUID()
     @IsOptional() // 💡 Opcional en el payload
     userId?: string;
+
+    @IsUUID()
+    @IsOptional() // 💡 Opcional en el payload
+    representativeId?: string;
+
 
     @IsUUID()
     @IsOptional() // 💡 Opcional en el payload

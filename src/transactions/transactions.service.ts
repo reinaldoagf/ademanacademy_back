@@ -263,7 +263,24 @@ export class TransactionsService {
         try {
             // Executamos en una transacción de base de datos
             return await this.prisma.$transaction(async (tx) => {
-
+                // 2. Preparar los datos del destinatario
+                const client = transaction.client;
+                const recipientPhone = client?.phone
+                    ? `${client.countryCode || ''}${client.phone}`
+                    : undefined;
+                const formattedAmount = `$${Number(transaction.amount).toFixed(2)}`;
+                const notification = {
+                    userId: client?.userId || undefined, // Destinatario específico en el App
+                    recipientPhone: recipientPhone,      // Teléfono para WhatsApp
+                    title: '¡Pago Confirmado! 🎉',
+                    message: `Hola ${client?.firstName || ''}, hemos recibido con éxito tu pago de ${formattedAmount} por concepto de "${transaction.concept}".`,
+                    channel: NotificationChannel.Ambos,   // Genera Realtime In-App y envía a WhatsApp
+                    metadata: {
+                        transactionId: transaction.id,
+                        amount: transaction.amount,
+                        concept: transaction.concept,
+                    },
+                }
                 // Paso A: Actualizar el estado de la Transacción a aprobado
                 const updatedTransaction = await tx.transaction.update({
                     where: { id: transactionId },
@@ -338,6 +355,8 @@ export class TransactionsService {
                             groupId: group.id
                         }
                     });
+
+                    notification.message = `${notification.message} La inscripción de estudiante en el grupo "${group.name}" ha sido confirmada.`
                 }
 
                 if (transaction.concept === ConceptType.Entradas_Gala) {
@@ -350,27 +369,8 @@ export class TransactionsService {
                         },
                     });
                 }
-                // 2. Preparar los datos del destinatario
-                const client = transaction.client;
-                const recipientPhone = client?.phone
-                    ? `${client.countryCode || ''}${client.phone}`
-                    : undefined;
-
-                const formattedAmount = `$${Number(transaction.amount).toFixed(2)}`;
-
                 // 3. Emitir y registrar la notificación (In-App + WhatsApp)
-                await this.notificationsService.sendNotification({
-                    userId: client?.userId || undefined, // Destinatario específico en el App
-                    recipientPhone: recipientPhone,      // Teléfono para WhatsApp
-                    title: '¡Pago Confirmado! 🎉',
-                    message: `Hola ${client?.firstName || ''}, hemos recibido con éxito tu pago de ${formattedAmount} por concepto de ${transaction.concept}.`,
-                    channel: NotificationChannel.Ambos,   // Genera Realtime In-App y envía a WhatsApp
-                    metadata: {
-                        transactionId: transaction.id,
-                        amount: transaction.amount,
-                        concept: transaction.concept,
-                    },
-                });
+                await this.notificationsService.sendNotification(notification);
                 return {
                     message: 'Transacción aprobada con éxito y estudiante matriculado.',
                     transaction: updatedTransaction,

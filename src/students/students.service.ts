@@ -27,6 +27,7 @@ export class StudentsService {
             kinship,
             medicalObservations,
             hasExperience,
+            representativeId,
             userId,
             groupId,
         } = createStudentDto;
@@ -68,6 +69,7 @@ export class StudentsService {
                     countryCode,
                     phone,
                     type: ClientType.Estudiante, // Define el tipo como estudiante
+                    representativeId: representativeId || null,
                     userId: userId || null,
                     studentId: newStudent.id, // Relación 1 a N / 1 a 1 con Student
                     groupId: groupId || null,

@@ -235,6 +235,7 @@ export class UsersService {
             kinship: representedStudent.kinship,
             userId: registeringUserId,
             address: representedStudent.address,
+            countryCode: representedStudent.countryCode || "+58",
             phone: representedStudent.phone || null,
             shirtSize: representedStudent.shirtSize,
             hasExperience: representedStudent.hasExperience,
@@ -269,6 +270,7 @@ export class UsersService {
                   userId: registeringUserId,
                   studentId: student.id,
                   address: representedStudent.address,
+                  countryCode: representedStudent.countryCode || "+58",
                   phone: representedStudent.phone || null,
                 }
               });
