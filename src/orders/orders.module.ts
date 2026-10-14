@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { OrdersService } from './orders.service';
 import { OrdersController } from './orders.controller';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
     imports: [JwtModule.registerAsync({
@@ -12,7 +13,8 @@ import { OrdersController } from './orders.controller';
             secret: configService.get<string>('JWT_SECRET'),
             signOptions: { expiresIn: '1d' }, // El token expira en 24 horas
         }),
-    })],
+    }),
+        NotificationsModule,],
     controllers: [OrdersController],
     providers: [OrdersService],
     exports: [JwtModule, OrdersService],

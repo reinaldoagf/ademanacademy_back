@@ -765,6 +765,7 @@ model Notification {
   id      String              @id @default(uuid())
   title   String              @db.VarChar(150)
   message String              @db.Text
+  link    String?             @db.VarChar(150)
   channel NotificationChannel @default(En_la_App)
   status  NotificationStatus  @default(Pendiente)
 

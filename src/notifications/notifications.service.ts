@@ -18,6 +18,7 @@ export class NotificationsService {
         recipientPhone?: string;
         title: string;
         message: string;
+        link?: string;
         channel?: NotificationChannel;
         metadata?: any;
     }) {
@@ -30,6 +31,7 @@ export class NotificationsService {
                 recipientPhone: dto.recipientPhone,
                 title: dto.title,
                 message: dto.message,
+                link: dto.link || null,
                 channel,
                 status: NotificationStatus.Pendiente,
                 metadata: dto.metadata,

@@ -1,14 +1,16 @@
 // /src/orders/orders.service.ts
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { OrderItemConceptType, ConceptType, PaymentOrderStatus, ClientType, ProfileType } from '@prisma/client';
+import { OrderItemConceptType, ConceptType, PaymentOrderStatus, ClientType, NotificationChannel } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { GetOrdersFilterDto } from './dto/get-orders-filter.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class OrdersService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService,
+        private notificationsService: NotificationsService,) { }
 
     async create(createOrderDto: CreateOrderDto) {
         let { clientId } = createOrderDto;
@@ -137,7 +139,19 @@ export class OrdersService {
                     status: PaymentOrderStatus.Pendiente,
                 },
             });
-
+            const recipientPhone = client?.phone
+                ? `${client.countryCode || ''}${client.phone}`
+                : undefined;
+            const notification = {
+                userId: client?.userId || undefined, // Destinatario específico en el App
+                recipientPhone: recipientPhone,      // Teléfono para WhatsApp
+                title: '¡Pedido Registrado! 🎉',
+                message: `Hola, hemos registrado su pedido para "${client?.firstName} ${client?.lastName}". Puede realizar el pago de la orden en el siguiente enlace:`,
+                channel: NotificationChannel.Ambos,   // Genera Realtime In-App y envía a WhatsApp
+                link: `${process.env.FRONTEND_URL || 'http://localhost:3001'}/client/payment-orders/${paymentOrder.id}`,
+            }
+            // 3. Emitir y registrar la notificación (In-App + WhatsApp)
+            await this.notificationsService.sendNotification(notification);
             return {
                 ...order,
                 paymentOrder,
