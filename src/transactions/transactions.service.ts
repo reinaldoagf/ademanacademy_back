@@ -368,11 +368,12 @@ export class TransactionsService {
                             expiresAt: null,
                         },
                     });
+                    notification.message = `${notification.message} Entradas para la Gala confirmadas.`
                 }
                 // 3. Emitir y registrar la notificación (In-App + WhatsApp)
                 await this.notificationsService.sendNotification(notification);
                 return {
-                    message: 'Transacción aprobada con éxito y estudiante matriculado.',
+                    message: notification.message || 'Transacción aprobada con éxito.',
                     transaction: updatedTransaction,
                 };
             });
