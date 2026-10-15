@@ -100,20 +100,19 @@ export class NotificationsService {
         const { page = 1, limit = 10, search, ownerFilter } = filters;
         const skip = (page - 1) * limit;
         const where: any = {};
-
         if (search) {
             where.OR = [
-                { firstName: { contains: search } },
-                { lastName: { contains: search } },
+                { title: { contains: search } },
+                { message: { contains: search } },
             ];
         }
 
         if (ownerFilter && userId) {
             where.userId = userId;
         }
-
         const notifications = await this.prisma.notification.findMany({
             take: limit,
+            where,
             skip,
             orderBy: { createdAt: 'desc' },
             include: {
