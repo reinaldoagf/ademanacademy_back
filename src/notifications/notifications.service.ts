@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { NotificationChannel, NotificationStatus } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { NotificationsGateway } from './notifications.gateway';
-import { NotificationChannel, NotificationStatus } from '@prisma/client';
+import { GetNotificationsFilterDto } from './dto/get-notifications-filter.dto';
 
 @Injectable()
 export class NotificationsService {
@@ -92,5 +93,56 @@ export class NotificationsService {
             where: { id: notificationId },
             data: { status: NotificationStatus.Leido },
         });
+    }
+
+    // 5. Admin - Obtener notificaciones (para el dashboard)
+    async findAll(userId: string, filters: GetNotificationsFilterDto) {
+        const { page = 1, limit = 10, search, ownerFilter } = filters;
+        const skip = (page - 1) * limit;
+        const where: any = {};
+
+        if (search) {
+            where.OR = [
+                { firstName: { contains: search } },
+                { lastName: { contains: search } },
+            ];
+        }
+
+        if (ownerFilter && userId) {
+            where.userId = userId;
+        }
+
+        const notifications = await this.prisma.notification.findMany({
+            take: limit,
+            skip,
+            orderBy: { createdAt: 'desc' },
+            include: {
+                // Traemos el usuario para saber quién la recibió
+                user: {
+                    select: {
+                        id: true,
+                        email: true,
+                        firstName: true,
+                        lastName: true,
+                        ownedClients: { select: { firstName: true, lastName: true, email: true } },
+                        representedClients: { select: { firstName: true, lastName: true, email: true } }
+                    }
+                }
+            }
+        });
+
+        const totalItems = await this.prisma.notification.count();
+        const totalPages = Math.ceil(totalItems / limit);
+
+        return {
+            data: notifications,
+            meta: {
+                currentPage: page,
+                itemsPerPage: limit,
+                totalItems,
+                totalPages,
+                itemCount: notifications.length,
+            }
+        };
     }
 }
