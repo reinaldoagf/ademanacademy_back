@@ -85,7 +85,7 @@ export class UsersController {
       if (!representedStudents || representedStudents.length === 0) {
         throw new BadRequestException('Como representante, debes registrar al menos a un estudiante.');
       }
-      if (!file) {
+      if (representedStudents.filter(e => !e.activeInscription).length > 0 && !file) {
         throw new BadRequestException('Debes adjuntar el comprobante de pago.');
       }
     }

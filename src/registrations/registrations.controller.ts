@@ -18,7 +18,6 @@ export class RegistrationsController {
         @CurrentUser() user: any,
         @Body() createRegistrationDto: CreateRegistrationDto,
     ) {
-        console.log({ createRegistrationDto })
         const registeringUserId = user.sub;
         return this.registrationsService.create(registeringUserId, createRegistrationDto);
     }

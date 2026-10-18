@@ -230,6 +230,7 @@ export class UsersService {
             firstName: representedStudent.firstName,
             lastName: representedStudent.lastName,
             dni: representedStudent.dni || null,
+            email: representedStudent.email || null,
             birthDate: new Date(representedStudent.birthDate),
             type: ClientType.Estudiante,
             kinship: representedStudent.kinship,
@@ -239,9 +240,9 @@ export class UsersService {
             phone: representedStudent.phone || null,
             shirtSize: representedStudent.shirtSize,
             hasExperience: representedStudent.hasExperience,
+            activeInscription: representedStudent.activeInscription,
             medicalObservations: representedStudent.medicalObservations || null,
           }));
-
 
           for (const representedStudent of representedStudents) {
             if (representedStudent.type == ClientType.Estudiante) {
@@ -275,7 +276,7 @@ export class UsersService {
                 }
               });
               // 🎯 Operación D: Flujo e inserción de la información de Pago (Matrícula)
-              if (dto.payment) {
+              if (dto.payment && dto.payment.amount / representedStudents.filter(e => !e.activeInscription).length > 0 && !representedStudent.activeInscription) {
 
                 // 2. Crear el registro de la transacción enviada por el usuario
                 await tx.transaction.create({
@@ -283,7 +284,7 @@ export class UsersService {
                     registeringUserId: registeringUserId,
                     clientId: client.id,
                     concept: ConceptType.Inscripción,
-                    amount: dto.payment.amount / representedStudents.length,
+                    amount: dto.payment.amount / representedStudents.filter(e => !e.activeInscription).length,
                     method: PaymentMethod.Transferencia, // Define un valor por defecto o extiéndelo en tu enum
                     status: TransactionStatus.Pendiente, // Queda 'pending' para auditoría manual del administrador
                     referenceNumber: dto.payment.referenceNumber || null,
@@ -295,6 +296,28 @@ export class UsersService {
 
 
               }
+            }
+          }
+
+          if (representedStudents.filter(e => e.activeInscription).length > 0) {
+            // Crear las inscripciones
+
+            const studentsFullNames = representedStudents.filter(e => e.activeInscription).map(e => `${e.firstName} ${e.lastName}`);
+
+            const adminUsers = await tx.user.findMany({
+              where: {
+                isAdmin: true,
+              }
+            });
+            for (const adminUser of adminUsers) {
+              await this.notificationsService.sendNotification({
+                userId: adminUser.id, // Destinatario específico en el App
+                recipientPhone: undefined,      // Teléfono para WhatsApp
+                title: '¡Pedido Registrado! 🎉',
+                message: `Hola, se registró una inscripción de un representante para el(los) alumno(s): ${studentsFullNames.join(', ')}, el/los cual/es se encuentra/n activo/s en la academia. Por favor revise la información y asigne el grupo al/los estudiante(s).`,
+                channel: NotificationChannel.Ambos,   // Genera Realtime In-App y envía a WhatsApp
+                link: `${process.env.FRONTEND_URL || 'http://localhost:3001'}/admin/students`,
+              });
             }
 
 
