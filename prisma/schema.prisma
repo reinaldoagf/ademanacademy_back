@@ -525,17 +525,19 @@ model Setting {
 }
 
 model Supplier {
-  id    String  @id @default(uuid())
-  name  String
-  dni   String  @unique
-  email String?
-  phone String?
+  id        String  @id @default(uuid())
+  firstName String
+  lastName  String
+  dni       String  @unique
+  email     String?
+  phone     String?
 
   // Relación con sus Cuentas por Pagar
   payables AccountPayable[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  fixedExpenses FixedExpense[]
 }
 
 // ==========================================
@@ -788,6 +790,32 @@ model Notification {
   @@index([userId])
   @@index([status])
   @@map("notifications")
+}
+
+model FixedExpense {
+  id          String           @id @default(uuid())
+  title       String           @db.VarChar(150)
+  description String?          @db.Text
+  amount      Float // Monto del abono/pago realizado
+  frequency   ExpenseFrequency @default(Mensual) // Frecuencia de repetición
+  nextDueDate DateTime         @db.Date // Próxima fecha en que se genera la cuenta por pagar
+  isActive    Boolean          @default(true)
+
+  // Proveedor opcional asociado al gasto fijo
+  supplierId String?   @db.VarChar(36)
+  supplier   Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("fixed_expenses")
+}
+
+enum ExpenseFrequency {
+  Semanal
+  Quincenal
+  Mensual
+  Anual
 }
 
 // ==================== ENUMS CORREGIDOS Y SEPARADOS ====================

@@ -86,6 +86,7 @@ export class CreateEmployeeDto {
     @IsOptional()
     payrollStatus?: PayrollStatus;
 
+    @IsOptional()
     userId?: string;
 
     @IsArray()

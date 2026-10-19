@@ -31,6 +31,7 @@ import { ClientsModule } from './clients/clients.module';
 import { InstructorsModule } from './instructors/instructors.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { FixedExpensesModule } from './fixed-expenses/fixed-expenses.module';
 
 @Module({
   imports: [
@@ -67,7 +68,8 @@ import { NotificationsModule } from './notifications/notifications.module';
     ClientsModule,
     InstructorsModule,
     MetricsModule,
-    NotificationsModule
+    NotificationsModule,
+    FixedExpensesModule
   ],
 })
 export class AppModule { }
