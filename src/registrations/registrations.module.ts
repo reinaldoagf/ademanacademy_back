@@ -3,7 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RegistrationsService } from './registrations.service';
 import { RegistrationsController } from './registrations.controller';
-
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
     imports: [ // Nos permite leer el JWT_SECRET de las variables de entorno
@@ -14,7 +14,8 @@ import { RegistrationsController } from './registrations.controller';
                 secret: configService.get<string>('JWT_SECRET'),
                 signOptions: { expiresIn: '1d' }, // El token expira en 24 horas
             }),
-        })
+        }),
+        NotificationsModule,
     ],
     controllers: [RegistrationsController],
     providers: [RegistrationsService],

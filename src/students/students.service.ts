@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { GetStudentsFilterDto } from './dto/get-students-filter.dto';
-import { ClientType, Prisma } from '@prisma/client';
+import { ClientType, PaymentOrderStatus, ConceptType, Prisma } from '@prisma/client';
 
 @Injectable()
 export class StudentsService {
@@ -84,6 +84,28 @@ export class StudentsService {
                     group: true,
                 },
             });
+
+
+            if (groupId) {
+                // 🎯 4. CREAR AUTOMÁTICAMENTE LA PRIMERA ORDEN DE PAGO DE MENSUALIDAD
+                // Calculamos la fecha de vencimiento (Ej: 30 días a partir de hoy, o el primer mes de clases)
+                const nextMonthDueDate = new Date();
+                nextMonthDueDate.setDate(nextMonthDueDate.getDate() + 30);
+
+                // Opcional: Define el monto de la mensualidad (puedes sacarlo de una configuración o pasarlo en el DTO)
+                const monthlyFeeAmount = 50.00; // Reemplaza esto con el monto real de tu mensualidad o configuración
+                const initialMonthlyOrder = await tx.paymentOrder.create({
+                    data: {
+                        clientId: newClient.id,
+                        studentId: newClient.studentId, // 👈 Vinculada al alumno correcto
+                        concept: ConceptType.Mensualidad,
+                        amount: monthlyFeeAmount,
+                        dueDate: nextMonthDueDate, // 👈 Se programará para dentro de 30 días
+                        status: PaymentOrderStatus.Pendiente,
+                        registeringUserId: userId,
+                    },
+                });
+            }
 
             return newClient;
         });
@@ -308,7 +330,10 @@ export class StudentsService {
         return await this.prisma.$transaction(async (tx) => {
             // A. Actualizar datos en la tabla 'Student' si existe la relación
             if (currentClient.studentId) {
-                await tx.student.update({
+                const currentStudent = await tx.student.findFirst({
+                    where: { id: currentClient.studentId },
+                });
+                const studentUpdate = await tx.student.update({
                     where: { id: currentClient.studentId },
                     data: {
                         ...(shirtSize && { shirtSize }),
@@ -318,6 +343,27 @@ export class StudentsService {
                         ...(groupId !== undefined && { groupId: groupId || null }),
                     },
                 });
+                //Si el estudiante cambia de grupo, eliminamos su asistencia
+                if (groupId && !currentStudent?.groupId) {
+                    // 🎯 4. CREAR AUTOMÁTICAMENTE LA PRIMERA ORDEN DE PAGO DE MENSUALIDAD
+                    // Calculamos la fecha de vencimiento (Ej: 30 días a partir de hoy, o el primer mes de clases)
+                    const nextMonthDueDate = new Date();
+                    nextMonthDueDate.setDate(nextMonthDueDate.getDate() + 30);
+
+                    // Opcional: Define el monto de la mensualidad (puedes sacarlo de una configuración o pasarlo en el DTO)
+                    const monthlyFeeAmount = 50.00; // Reemplaza esto con el monto real de tu mensualidad o configuración
+                    const initialMonthlyOrder = await tx.paymentOrder.create({
+                        data: {
+                            clientId: currentClient.id,
+                            studentId: currentClient.studentId, // 👈 Vinculada al alumno correcto
+                            concept: ConceptType.Mensualidad,
+                            amount: monthlyFeeAmount,
+                            dueDate: nextMonthDueDate, // 👈 Se programará para dentro de 30 días
+                            status: PaymentOrderStatus.Pendiente,
+                            registeringUserId: userId,
+                        },
+                    });
+                }
             }
 
             // B. Actualizar datos en la tabla 'Client'

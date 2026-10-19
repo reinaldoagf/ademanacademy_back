@@ -317,7 +317,7 @@ export class TransactionsService {
                     // 1. Buscamos el cliente para obtener su relación con el estudiante
                     const client = await tx.client.findUnique({
                         where: { id: transaction.clientId },
-                        select: { id: true, studentId: true }
+                        select: { id: true, studentId: true },
                     });
 
                     if (!client) {
@@ -337,6 +337,24 @@ export class TransactionsService {
                             data: {
                                 status: RegistrationStatus.Aprobado,
                                 groupId: group.id
+                            },
+                        });
+                        // 🎯 4. CREAR AUTOMÁTICAMENTE LA PRIMERA ORDEN DE PAGO DE MENSUALIDAD
+                        // Calculamos la fecha de vencimiento (Ej: 30 días a partir de hoy, o el primer mes de clases)
+                        const nextMonthDueDate = new Date();
+                        nextMonthDueDate.setDate(nextMonthDueDate.getDate() + 30);
+
+                        // Opcional: Define el monto de la mensualidad (puedes sacarlo de una configuración o pasarlo en el DTO)
+                        const monthlyFeeAmount = 50.00; // Reemplaza esto con el monto real de tu mensualidad o configuración
+                        const initialMonthlyOrder = await tx.paymentOrder.create({
+                            data: {
+                                clientId: client.id,
+                                studentId: client.studentId, // 👈 Vinculada al alumno correcto
+                                concept: ConceptType.Mensualidad,
+                                amount: monthlyFeeAmount,
+                                dueDate: nextMonthDueDate, // 👈 Se programará para dentro de 30 días
+                                status: PaymentOrderStatus.Pendiente,
+                                registeringUserId: transaction.registeringUserId,
                             },
                         });
                     }

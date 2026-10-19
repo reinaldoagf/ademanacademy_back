@@ -99,6 +99,7 @@ model Student {
   createdAt     DateTime       @default(now()) @map("createdAt")
   updatedAt     DateTime       @updatedAt @map("updatedAt")
   registrations Registration[]
+  paymentOrders PaymentOrder[]
 
   @@map("students")
 }
@@ -185,15 +186,17 @@ model OrderItem {
 // =========================================================================
 
 model PaymentOrder {
-  id       String  @id @default(cuid())
-  clientId String? @db.VarChar(36)
-  client   Client? @relation(fields: [clientId], references: [id], onDelete: Cascade)
-
+  id        String   @id @default(cuid())
+  clientId  String?  @db.VarChar(36)
+  client    Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  // 🎯 NUEVO: Relación opcional con el estudiante específico de esta mensualidad/pago
+  studentId String?  @db.VarChar(36)
+  student   Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
   // 🔗 Conexión opcional con Pedidos: 
   // - Si viene de la tienda, se conecta a un 'OrderId'.
   // - Si es una mensualidad automática del sistema, 'orderId' queda NULL porque no nace de una compra.
-  orderId String? @unique @db.VarChar(255)
-  order   Order?  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId   String?  @unique @db.VarChar(255)
+  order     Order?   @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   concept ConceptType
   amount  Decimal            @db.Decimal(10, 2)
