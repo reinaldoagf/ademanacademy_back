@@ -22,6 +22,6 @@ export class CreateGroupDto {
     classroomId: string;
 
     @IsString()
-    @IsNotEmpty({ message: 'Debes asignar un instructor responsable.' })
-    instructorId: string;
+    @IsOptional()
+    instructorId?: string;
 }

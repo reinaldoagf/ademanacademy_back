@@ -85,8 +85,11 @@ export class GroupsService {
         const classroomExists = await this.prisma.classroom.findUnique({ where: { id: classroomId } });
         if (!classroomExists) throw new NotFoundException(`El salón no existe.`);
 
-        const instructorExists = await this.prisma.employee.findUnique({ where: { id: instructorId } });
-        if (!instructorExists) throw new NotFoundException(`El instructor no existe.`);
+        // Validar instructor solo si viene informado y no está vacío
+        if (instructorId && instructorId.trim() !== '') {
+            const instructorExists = await this.prisma.employee.findUnique({ where: { id: instructorId } });
+            if (!instructorExists) throw new NotFoundException(`El instructor no existe.`);
+        }
 
         if (totalNumberOfSlots > classroomExists.maxCapacity) {
             throw new BadRequestException(`Los cupos superan la capacidad máxima del salón.`);
@@ -98,33 +101,33 @@ export class GroupsService {
                 name,
                 totalNumberOfSlots,
 
-                // 🌟 CORRECCIÓN CRÍTICA: Inicializa la relación Uno a Muchos
                 schedules: {
                     create: [
                         {
-                            classroomId: classroomId, // Vincula el salón al horario actual
-                            // El campo 'schedule' tomará el valor JSON por defecto configurado en tu schema.prisma
+                            classroomId: classroomId,
                         }
                     ]
                 },
 
-                // Conexiones de llaves foráneas a nivel estructural
                 category: {
                     connect: { id: categoryId },
                 },
                 classroom: {
                     connect: { id: classroomId },
                 },
-                instructor: {
-                    connect: { id: instructorId },
-                },
+                // 🌟 Conectamos el instructor solo si existe y es válido, de lo contrario Prisma lo omite (queda null)
+                ...(instructorId && instructorId.trim() !== '' && {
+                    instructor: {
+                        connect: { id: instructorId },
+                    },
+                }),
             },
             include: {
                 category: true,
                 classroom: true,
                 instructor: true,
                 students: true,
-                schedules: true, // Incluye la grilla en la respuesta de retorno si lo necesitas
+                schedules: true,
             },
         });
     }
@@ -202,23 +205,19 @@ export class GroupsService {
         });
         if (!currentGroup) throw new NotFoundException(`El grupo con ID "${id}" no existe.`);
 
-        // Determinar cuál salón se usará para validar las capacidades
-        // (el nuevo si viene en el DTO, o el que ya tiene el grupo asignado)
         let targetClassroom: any = null;
         const finalClassroomId = classroomId || currentGroup.classroomId;
 
         if (finalClassroomId) {
             targetClassroom = await this.prisma.classroom.findUnique({
-                where: { id: finalClassroomId }, include: {
-                    groups: true
-                }
+                where: { id: finalClassroomId },
+                include: { groups: true }
             });
             if (!targetClassroom) throw new NotFoundException(`El salón especificado no existe.`);
         }
 
-
-        // 2. Validaciones si se modifica el instructor
-        if (instructorId) {
+        // 2. Validaciones si se modifica el instructor (si viene provisto y no está vacío)
+        if (instructorId && instructorId.trim() !== '') {
             const instructorExists = await this.prisma.employee.findUnique({ where: { id: instructorId } });
             if (!instructorExists) throw new NotFoundException(`El instructor especificado no existe.`);
         }
@@ -233,7 +232,6 @@ export class GroupsService {
         return await this.prisma.group.update({
             where: { id },
             data: {
-                // Valores directos (actualiza solo si se envían en el DTO)
                 ...(name && { name }),
                 ...(totalNumberOfSlots !== undefined && { totalNumberOfSlots }),
 
@@ -242,7 +240,6 @@ export class GroupsService {
                     classroom: {
                         connect: { id: classroomId }
                     },
-                    // 🌟 CRÍTICO: Si el salón del grupo cambia, actualizamos el salón de sus horarios asociados
                     schedules: {
                         updateMany: {
                             where: { groupId: id },
@@ -251,20 +248,24 @@ export class GroupsService {
                     }
                 }),
 
-                // Relación con Instructor
+                // Relación con Category
                 ...(categoryId && {
                     category: {
                         connect: { id: categoryId }
                     }
                 }),
-                // Relación con Instructor
-                ...(instructorId && {
-                    instructor: {
-                        connect: { id: instructorId }
-                    }
+
+                // 🌟 Relación con Instructor flexible: 
+                // - Si envían un ID válido, lo conecta.
+                // - Si envían una cadena vacía o null, desvincula el instructor usando 'disconnect: true'.
+                ...(instructorId !== undefined && {
+                    instructor: instructorId && instructorId.trim() !== ''
+                        ? { connect: { id: instructorId } }
+                        : { disconnect: true }
                 })
             },
             include: {
+                category: true,
                 classroom: true,
                 instructor: true,
                 students: true,
