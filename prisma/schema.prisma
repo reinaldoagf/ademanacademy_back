@@ -544,7 +544,7 @@ model Supplier {
 // CUENTAS POR PAGAR (Facturas/Deudas de la empresa)
 // ==========================================
 model AccountPayable {
-  id            String    @id @default(uuid())
+  id            String    @id @default(cuid())
   // Relación con Proveedor
   supplierId    String?
   supplier      Supplier? @relation(fields: [supplierId], references: [id])

@@ -2,7 +2,7 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '@/prisma/prisma.service';
-import { Prisma, PayableStatus, NotificationChannel, NotificationStatus } from '@prisma/client';
+import { Prisma, PayableStatus, NotificationChannel, ExpenseFrequency } from '@prisma/client';
 import { GetFixedExpensesFilterDto } from './dto/get-fixed-expenses-filter.dto';
 import { CreateFixedExpenseDto } from './dto/create-fixed-expense.dto';
 import { UpdateFixedExpenseDto } from './dto/update-fixed-expense.dto';
@@ -142,16 +142,16 @@ export class FixedExpensesService {
                 // C. Calcular la Siguiente Fecha (nextDueDate) basada en la frecuencia del gasto fijo
                 const nextDate = new Date(expense.nextDueDate);
                 switch (expense.frequency) {
-                    case 'Semanal':
+                    case ExpenseFrequency.Semanal:
                         nextDate.setDate(nextDate.getDate() + 7);
                         break;
-                    case 'Quincenal':
+                    case ExpenseFrequency.Quincenal:
                         nextDate.setDate(nextDate.getDate() + 15);
                         break;
-                    case 'Mensual':
+                    case ExpenseFrequency.Mensual:
                         nextDate.setMonth(nextDate.getMonth() + 1);
                         break;
-                    case 'Anual':
+                    case ExpenseFrequency.Anual:
                         nextDate.setFullYear(nextDate.getFullYear() + 1);
                         break;
                 }
@@ -177,7 +177,7 @@ export class FixedExpensesService {
                         title: 'Nueva Cuenta por Pagar Generada 💳',
                         message: `Se ha generado automáticamente la cuenta por pagar para el gasto fijo "${expense.title}" por un monto de $${expense.amount}. Vence el ${paymentDueDate.toLocaleDateString('es-ES')}.`,
                         channel: NotificationChannel.En_la_App,
-                        link: `/admin/account-payables`, // Enlace directo a la cuenta por pagar en el panel admin
+                        link: `/admin/accounts-payable/${accountPayable.id}`, // Enlace directo a la cuenta por pagar en el panel admin
                     });
                 }
             });
