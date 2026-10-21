@@ -1,7 +1,7 @@
 // src/special-rehearsals/special-rehearsals.service.ts
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { Prisma, PayableStatus, NotificationChannel, ExpenseFrequency } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { CreateSpecialRehearsalDto } from './dto/create-special-rehearsal.dto';
 import { UpdateSpecialRehearsalDto } from './dto/update-special-rehearsal.dto';
 import { GetSpecialRehearsalFilterDto } from './dto/get-special-rehearsals-filter.dto';
@@ -79,7 +79,6 @@ export class SpecialRehearsalsService {
     // --- CRUD ---
 
     async create(dto: CreateSpecialRehearsalDto) {
-        console.log({ dto });
         const { classroomId, date, startTime, endTime, studentIds, ...rest } = dto;
 
         // Si se envió un salón, verificar que exista
@@ -131,7 +130,11 @@ export class SpecialRehearsalsService {
             this.prisma.specialRehearsal.findMany({
                 include: {
                     classroom: true,
-                    students: true,
+                    students: {
+                        include: {
+                            clients: true
+                        }
+                    },
                 },
                 orderBy: { date: 'desc' },
                 where,
@@ -164,7 +167,6 @@ export class SpecialRehearsalsService {
     }
 
     async update(id: string, dto: UpdateSpecialRehearsalDto) {
-        console.log({ dto });
         const current = await this.findOne(id);
 
         const targetClassroom = dto.classroomId !== undefined ? dto.classroomId : current.classroomId;
