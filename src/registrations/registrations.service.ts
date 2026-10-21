@@ -130,7 +130,7 @@ export class RegistrationsService {
                     status: TransactionStatus.Pendiente,
                     bankName: payment.bankName,
                     referenceNumber: payment.referenceNumber,
-                    receiptPath: payment.receiptPath, // 👈 Se guarda el enlace de S3
+                    //receiptPath: payment.receiptPath, // 👈 Se guarda el enlace de S3 // (TODO: subida de imagen)
                 },
             });
 

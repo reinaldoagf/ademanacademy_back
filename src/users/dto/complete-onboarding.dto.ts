@@ -1,90 +1,79 @@
 // src/users/dto/complete-onboarding.dto.ts
-import { IsEnum, IsNotEmpty, IsString, IsArray, ValidateNested, IsOptional, IsDateString, IsBoolean, IsNumber } from 'class-validator';
+import {
+    IsString,
+    IsNotEmpty,
+    IsOptional,
+    IsBoolean,
+    IsNumber,
+    IsArray,
+    ValidateNested,
+    IsObject,
+} from 'class-validator';
 import { Type } from 'class-transformer';
-import { Kinship } from '@prisma/client';
 
-export enum ProfileType {
-    STUDENT = 'student',
-    REPRESENTATIVE = 'Representante',
-}
-
-export class RepresentedStudentDto {
-    @IsString()
-    id: string;
-
-    @IsString()
-    @IsNotEmpty({ message: 'El nombre del estudiante es obligatorio.' })
-    firstName: string;
-
-    @IsString()
-    @IsNotEmpty({ message: 'El apellido del estudiante es obligatorio.' })
-    lastName: string;
-
-    // 🎯 CAMBIO: El DNI del alumno ahora es opcional
-    @IsString()
-    @IsOptional()
-    dni?: string;
-
-    @IsDateString({}, { message: 'La fecha de nacimiento debe ser una fecha válida.' })
-    birthDate: string;
-
-    @IsEnum(Kinship)
-    @IsOptional()
-    kinship?: Kinship;
-
-    // 🎯 NUEVOS CAMPOS DEL ALUMNO INTEGRADOS
-    @IsString()
-    @IsNotEmpty({ message: 'La dirección de habitación es obligatoria.' })
-    address: string;
-
-    @IsString()
-    @IsOptional()
-    phone?: string;
-
-    @IsString()
-    @IsNotEmpty({ message: 'La talla de franela es obligatoria.' })
-    shirtSize: string;
-
-    @IsBoolean({ message: 'El campo de experiencia debe ser un valor booleano.' })
-    @IsNotEmpty()
-    hasExperience: boolean;
-
-    @IsString()
-    @IsOptional()
-    medicalObservations?: string;
-
-}
-export class PaymentDto {
+// Sub-DTO para los datos de pago
+class PaymentDto {
     @IsOptional()
     @IsString()
     bankName?: string;
 
     @IsOptional()
     @IsString()
-    reference?: string;
+    referenceNumber?: string;
 
-    @IsNotEmpty()
-    @IsNumber()
-    amount: number;
-}
-export class CompleteOnboardingDto {
-    @IsEnum(ProfileType, { message: 'El rol seleccionado no es válido.' })
-    @IsNotEmpty()
-    profileType: ProfileType;
-
-    // 🎯 NUEVO: Ocupación obligatoria para el perfil de Representante
-    @IsString()
     @IsOptional()
+    @IsNumber()
+    amount?: number;
+
+    @IsOptional()
+    @IsBoolean()
+    isEnrolled?: boolean;
+
+    @IsOptional()
+    @IsString()
+    studentId?: string;
+}
+
+// Sub-DTO para la imagen del comprobante en S3
+class S3ImageDto {
+    @IsString()
+    @IsNotEmpty({ message: 'La URL de la imagen es obligatoria.' })
+    url!: string;
+
+    @IsString()
+    @IsNotEmpty({ message: 'La clave (key) de la imagen es obligatoria.' })
+    key!: string;
+}
+
+export class CompleteOnboardingDto {
+    @IsString()
+    @IsNotEmpty({ message: 'El tipo de perfil es obligatorio.' })
+    profileType: string;
+
+    @IsBoolean()
+    isEnrolled!: boolean;
+
+    @IsOptional()
+    @IsString()
+    studentId?: string;
+
+    @IsOptional()
+    @IsString()
     representativeOccupation?: string;
 
+    @IsArray({ message: 'Los estudiantes representados deben enviarse en un arreglo.' })
     @IsOptional()
-    @IsArray()
-    @ValidateNested({ each: true })
-    @Type(() => RepresentedStudentDto)
-    clients?: RepresentedStudentDto[];
+    representedStudents?: any[]; // Puedes tiparlo con tu entidad Student si lo prefieres
 
     @IsOptional()
+    @IsObject()
     @ValidateNested()
     @Type(() => PaymentDto)
-    payment?: PaymentDto;
+    payment?: PaymentDto | null;
+
+    @IsOptional()
+    @IsObject()
+    @ValidateNested()
+    @Type(() => S3ImageDto)
+    imageOfPaymentReceipt?: S3ImageDto | null;
 }

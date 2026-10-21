@@ -47,7 +47,7 @@ export class TransactionsService {
                     method,
                     referenceNumber,
                     bankName,
-                    receiptPath,
+                    //receiptPath,
                     status: TransactionStatus.Pendiente,
                 },
             });
@@ -79,10 +79,10 @@ export class TransactionsService {
                 method: createTransactionDto.method,
                 referenceNumber: createTransactionDto.referenceNumber,
                 bankName: createTransactionDto.bankName,
-                receiptPath: createTransactionDto.receiptPath || null,
+                //receiptPath: createTransactionDto.receiptPath || null,
                 status: createTransactionDto.status,
             },
-            include: { registeringUser: true, client: { include: { student: true, user: true } } },
+            include: { imageOfPaymentReceipt: true, registeringUser: true, client: { include: { student: true, user: true } } },
         });
     }
 
@@ -174,6 +174,7 @@ export class TransactionsService {
                             student: true,
                         }
                     },
+                    imageOfPaymentReceipt: true,
                 },
             }),
             this.prisma.transaction.count({ where }),
@@ -190,7 +191,7 @@ export class TransactionsService {
                 concept: tx.concept,
                 amount: Number(tx.amount),
                 method: tx.method,
-                receiptPath: tx.receiptPath,
+                //receiptPath: tx.receiptPath, // (TODO: subida de imagen)
                 createdAt: tx.createdAt.toISOString().split('T')[0],
                 status: tx.status,
             })),
@@ -216,6 +217,7 @@ export class TransactionsService {
                         user: true
                     }
                 },
+                imageOfPaymentReceipt: true,
             },
         });
         if (!transaction) {

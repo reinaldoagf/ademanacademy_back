@@ -28,7 +28,7 @@ export class CreateTransactionDto {
 
     @IsString()
     @IsOptional()
-    receiptPath: string;
+    receiptPath: string; // (TODO: subida de imagen)
 
     @IsEnum(PaymentMethod, { message: 'El método de pago no es válido.' })
     method: PaymentMethod;

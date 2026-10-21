@@ -24,7 +24,7 @@ class PaymentDto {
 
     @IsString()
     @IsNotEmpty()
-    receiptPath!: string; // 👈 URL de S3 generada en el cliente
+    receiptPath!: string; // 👈 URL de S3 generada en el cliente // (TODO: subida de imagen)
 
     @IsOptional()
     @IsBoolean()

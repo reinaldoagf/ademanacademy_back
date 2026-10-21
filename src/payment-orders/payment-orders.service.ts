@@ -271,7 +271,7 @@ export class PaymentOrdersService {
             throw new BadRequestException('Esta orden de pago ya se encuentra registrada/pagada.');
         }
 
-        const receiptPath = file ? file.filename : null;
+        const receiptPath = file ? file.filename : null; // (TODO: subida de imagen)
 
         try {
             // 2. Transacción de Prisma para guardar la transacción y actualizar la orden de pago
@@ -295,7 +295,7 @@ export class PaymentOrdersService {
                         status: TransactionStatus.Pendiente,
                         referenceNumber: referenceNumber || null,
                         bankName: bankName || null,
-                        receiptPath: receiptPath,
+                        //receiptPath: receiptPath, (TODO: subida de imagen)
                     },
                 });
 

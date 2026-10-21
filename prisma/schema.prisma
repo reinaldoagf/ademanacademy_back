@@ -284,14 +284,29 @@ model Transaction {
   status  TransactionStatus @default(Pendiente)
 
   // Datos de auditoría bancaria (Opcionales pero recomendados para Transferencias/Pago Móvil)
-  referenceNumber String? @db.VarChar(100)
-  bankName        String? @db.VarChar(100)
-  receiptPath     String? @db.VarChar(255)
+  referenceNumber       String?                @db.VarChar(100)
+  bankName              String?                @db.VarChar(100)
+  //receiptPath     String? @db.VarChar(255)
+  imageOfPaymentReceipt ImageOfPaymentReceipt? // Lista de imágenes
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("transactions")
+}
+
+model ImageOfPaymentReceipt {
+  id      String  @id @default(uuid())
+  url     String // URL absoluta de S3 o CDN
+  key     String  @unique // Clave/Path del objeto en S3 (ej: events/abc-123.jpg)
+  altText String?
+
+  transactionId String      @unique
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@map("image_of_payment_receipts")
 }
 
 model WeeklySchedule {

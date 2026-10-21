@@ -46,5 +46,5 @@ export class RegisterTransactionDto {
     @IsOptional()
     @IsString({ message: 'La ruta/URL del comprobante debe ser una cadena de texto.' })
     @MaxLength(255, { message: 'La ruta del comprobante no puede exceder 255 caracteres.' })
-    receiptPath?: string;
+    receiptPath?: string; // (TODO: subida de imagen)
 }

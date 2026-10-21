@@ -24,5 +24,5 @@ export class ClientPurchaseSeatsDto {
 
     @IsOptional()
     @IsString()
-    receiptPath?: string;
+    receiptPath?: string; // (TODO: subida de imagen)
 }

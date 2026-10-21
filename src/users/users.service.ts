@@ -7,6 +7,7 @@ import { GetUsersFilterDto } from './dto/get-users-filter.dto';
 import { ClientType, User, Prisma, NotificationChannel, ConceptType, PaymentMethod, TransactionStatus, Kinship, ProfileType } from '@prisma/client'; // 🎯 Importación nativa estándar
 import { NotificationsService } from '@/notifications/notifications.service';
 import { MailsService } from '@/mails/mails.service';
+import { CompleteOnboardingDto } from './dto/complete-onboarding.dto';
 export type UserWithClients = Prisma.UserGetPayload<{
   include: {
     ownedClients: {
@@ -195,10 +196,11 @@ export class UsersService {
     return await this.prisma.user.count();
   }
 
-  async completeOnboarding(registeringUserId: string, dto: any, file?: Express.Multer.File) {
+  async completeOnboarding(registeringUserId: string, dto: CompleteOnboardingDto) {
     // 1. Validaciones previas de usuario...
+    console.log({ dto })
 
-    const receiptPath = file ? file.filename : null;
+    const imageOfPaymentReceipt = dto.imageOfPaymentReceipt;
     const user = await this.prisma.user.findUnique({ where: { id: registeringUserId } });
 
     if (!user) {
@@ -216,7 +218,7 @@ export class UsersService {
         const updatedUser = await tx.user.update({
           where: { id: registeringUserId },
           data: {
-            profileType: dto.profileType,
+            profileType: dto.profileType as ProfileType,
             profileOnboarding: true,
             occupation: dto.profileType === ProfileType.Representante ? dto.representativeOccupation : undefined,
           },
@@ -276,7 +278,7 @@ export class UsersService {
                 }
               });
               // 🎯 Operación D: Flujo e inserción de la información de Pago (Matrícula)
-              if (dto.payment && dto.payment.amount / representedStudents.filter(e => !e.activeInscription).length > 0 && !representedStudent.activeInscription) {
+              if (dto.payment && dto.payment?.amount && dto.payment?.amount / representedStudents.filter(e => !e.activeInscription).length > 0 && !representedStudent.activeInscription) {
 
                 // 2. Crear el registro de la transacción enviada por el usuario
                 await tx.transaction.create({
@@ -289,7 +291,11 @@ export class UsersService {
                     status: TransactionStatus.Pendiente, // Queda 'pending' para auditoría manual del administrador
                     referenceNumber: dto.payment.referenceNumber || null,
                     bankName: dto.payment.bankName || null,
-                    receiptPath: receiptPath
+                    imageOfPaymentReceipt: imageOfPaymentReceipt
+                      ? {
+                        create: imageOfPaymentReceipt,
+                      }
+                      : undefined,
                   }
                 });
 
@@ -368,12 +374,16 @@ export class UsersService {
                   registeringUserId: registeringUserId,
                   clientId: client.id,
                   concept: ConceptType.Inscripción,
-                  amount: dto.payment.amount,
+                  amount: dto.payment.amount ?? 0,
                   method: PaymentMethod.Transferencia, // Define un valor por defecto o extiéndelo en tu enum
                   status: TransactionStatus.Pendiente, // Queda 'pending' para auditoría manual del administrador
                   referenceNumber: dto.payment.referenceNumber || null,
                   bankName: dto.payment.bankName || null,
-                  receiptPath: receiptPath
+                  imageOfPaymentReceipt: imageOfPaymentReceipt
+                    ? {
+                      create: imageOfPaymentReceipt,
+                    }
+                    : undefined,
                 }
               });
             }

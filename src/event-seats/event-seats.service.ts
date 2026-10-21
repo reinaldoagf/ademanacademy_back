@@ -101,7 +101,7 @@ export class EventSeatsService {
                         status: TransactionStatus.Pendiente,
                         bankName: bankName,
                         referenceNumber: referenceNumber,
-                        receiptPath: receiptPath,
+                        //receiptPath: receiptPath, (TODO: subida de imagen)
                     },
                 });
 
