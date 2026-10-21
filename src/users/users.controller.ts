@@ -45,7 +45,6 @@ export class UsersController {
     @Body() body: CompleteOnboardingDto,
   ) {
     const registeringUserId = user?.sub;
-    console.log({ body })
     const { profileType, isEnrolled, studentId, payment, representedStudents, representativeOccupation, imageOfPaymentReceipt } = body
 
     // 1. Validaciones para Representante

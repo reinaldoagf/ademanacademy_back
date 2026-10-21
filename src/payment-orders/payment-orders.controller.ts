@@ -1,11 +1,10 @@
-import { Controller, Get, Post, Body, Patch, Param, Query, Delete, HttpCode, HttpStatus, UseGuards, BadRequestException, UseInterceptors, UploadedFile } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { Controller, Get, Post, Body, Param, Query, UseGuards, BadRequestException } from '@nestjs/common';
 import { PaymentOrdersService } from './payment-orders.service';
 import { GetPaymentOrdersFilterDto } from './dto/get-payment-orders-filter.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '@/auth/decorators/current-user.decorator';
+import { TransactionStatus } from '@prisma/client';
+import { RecordPaymentOrderDto } from './dto/record-payment-order.dto';
 
 @Controller('payment-orders')
 @UseGuards(JwtAuthGuard) // 🛡️ Protege la gestión de infraestructura
@@ -43,36 +42,15 @@ export class PaymentOrdersController {
         return this.paymentOrdersService.findOne(id);
     }
 
-
     @Post(':id/record')
-    @UseInterceptors(
-        FileInterceptor('receiptFile', {
-            storage: diskStorage({
-                // 📂 Carpeta donde se guardarán los archivos en la raíz de tu proyecto NestJS
-                destination: './uploads/receipts',
-                filename: (req, file, callback) => {
-                    // ✨ Generamos un nombre único: timestamp + caracteres aleatorios + extensión original
-                    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-                    const ext = extname(file.originalname);
-                    callback(null, `receipt-${uniqueSuffix}${ext}`);
-                },
-            }),
-            // Opcional: Validar que solo suban imágenes o PDFs
-            fileFilter: (req, file, callback) => {
-                if (!file.mimetype.match(/\/(jpg|jpeg|png|pdf)$/)) {
-                    return callback(new BadRequestException('Solo se permiten archivos JPG, PNG o PDF.'), false);
-                }
-                callback(null, true);
-            },
-        }),
-    )
-    async completeOnboarding(@Param('id') id: string,
+    async completeOnboarding(
+        @Param('id') id: string,
         @CurrentUser() user: any,
-        @Body() body: any,
-        @UploadedFile() file: Express.Multer.File,
+        @Body() body: RecordPaymentOrderDto,
     ) {
+        const { imageOfPaymentReceipt } = body
 
-        if (!file && user.isAdmin === false) {
+        if (!imageOfPaymentReceipt && user.isAdmin === false) {
             throw new BadRequestException('Debes adjuntar el comprobante de pago.');
         }
 
@@ -80,13 +58,13 @@ export class PaymentOrdersController {
             id,
             referenceNumber: body.referenceNumber,
             bankName: body.bankName,
-            amount: parseFloat(body.amount),
-            file,
+            amount: body.amount ?? 0,
+            imageOfPaymentReceipt,
             userId: user.sub,
-            status: user.isAdmin === true ? 'approved' : 'pending',
+            status: user.isAdmin === true ? TransactionStatus.Aprobado : TransactionStatus.Pendiente,
         };
 
         // 🚀 Pasamos el objeto "file" completo al servicio
-        return this.paymentOrdersService.record(dto, file);
+        return this.paymentOrdersService.record(dto);
     }
 }

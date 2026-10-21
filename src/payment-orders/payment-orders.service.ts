@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service'; // Ajusta la ruta según tu proyecto
 import { GetPaymentOrdersFilterDto } from './dto/get-payment-orders-filter.dto'
 import { PaymentMethod, PaymentOrderStatus, TransactionStatus } from '@prisma/client';
+import { RecordPaymentOrderDto } from './dto/record-payment-order.dto';
 
 @Injectable()
 export class PaymentOrdersService {
@@ -239,8 +240,8 @@ export class PaymentOrdersService {
         return paymentOrder;
     }
 
-    async record(dto: any, file?: Express.Multer.File) {
-        const { id, referenceNumber, bankName, amount, status, userId } = dto;
+    async record(dto: RecordPaymentOrderDto) {
+        const { id, referenceNumber, bankName, amount, imageOfPaymentReceipt, status, userId } = dto;
 
         // 1. Buscar la orden de pago existente con sus relaciones
         const paymentOrder = await this.prisma.paymentOrder.findUnique({
@@ -271,7 +272,6 @@ export class PaymentOrdersService {
             throw new BadRequestException('Esta orden de pago ya se encuentra registrada/pagada.');
         }
 
-        const receiptPath = file ? file.filename : null; // (TODO: subida de imagen)
 
         try {
             // 2. Transacción de Prisma para guardar la transacción y actualizar la orden de pago
@@ -292,10 +292,14 @@ export class PaymentOrdersService {
                         concept: paymentOrder.concept || 'ticket',
                         amount: amount ? Number(amount) : paymentOrder.amount,
                         method: PaymentMethod.Transferencia,
-                        status: TransactionStatus.Pendiente,
+                        status: status || TransactionStatus.Pendiente,
                         referenceNumber: referenceNumber || null,
                         bankName: bankName || null,
-                        //receiptPath: receiptPath, (TODO: subida de imagen)
+                        imageOfPaymentReceipt: imageOfPaymentReceipt
+                            ? {
+                                create: imageOfPaymentReceipt,
+                            }
+                            : undefined,
                     },
                 });
 
