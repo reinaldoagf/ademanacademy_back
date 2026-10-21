@@ -96,10 +96,12 @@ model Student {
   uniformAssignments  StudentUniform[]
   costumeAssignments  StudentCostume[]
 
-  createdAt     DateTime       @default(now()) @map("createdAt")
-  updatedAt     DateTime       @updatedAt @map("updatedAt")
-  registrations Registration[]
-  paymentOrders PaymentOrder[]
+  createdAt          DateTime          @default(now()) @map("createdAt")
+  updatedAt          DateTime          @updatedAt @map("updatedAt")
+  registrations      Registration[]
+  paymentOrders      PaymentOrder[]
+  specialRehearsal   SpecialRehearsal? @relation(fields: [specialRehearsalId], references: [id])
+  specialRehearsalId String?
 
   @@map("students")
 }
@@ -363,8 +365,9 @@ model Classroom {
   // Relación inversa añadida: Un salón puede tener muchos horarios registrados
   schedules WeeklySchedule[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  specialRehearsals SpecialRehearsal[]
 
   @@map("classrooms")
 }
@@ -809,6 +812,30 @@ model FixedExpense {
   updatedAt DateTime @updatedAt
 
   @@map("fixed_expenses")
+}
+
+model SpecialRehearsal {
+  id          String   @id @default(uuid())
+  title       String   @db.VarChar(150)
+  description String?  @db.Text
+  date        DateTime @db.Date // Fecha específica del ensayo (ej: 2026-06-15)
+  startTime   String   @db.VarChar(10) // "14:30"
+  endTime     String   @db.VarChar(10) // "16:00"
+
+  // 🌟 Opcional: Salón dentro de la academia (si se realiza en las instalaciones)
+  classroomId String?
+  classroom   Classroom? @relation(fields: [classroomId], references: [id], onDelete: SetNull)
+  // 🌟 Nuevo: Ubicación libre en texto si es fuera de la academia
+  location    String?    @db.VarChar(255)
+  // Estudiantes participantes en el ensayo especial
+  students    Student[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+  @@index([classroomId])
+  @@map("special_rehearsals")
 }
 
 enum ExpenseFrequency {

@@ -1,5 +1,5 @@
 // /back/src/fixed-expenses/fixed-expenses.service.ts
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, ConsoleLogger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '@/prisma/prisma.service';
 import { Prisma, PayableStatus, NotificationChannel, ExpenseFrequency } from '@prisma/client';
@@ -42,7 +42,8 @@ export class FixedExpensesService {
             where.OR = [
                 { title: { contains: search } },
                 { description: { contains: search } },
-                { supplier: { name: { contains: search } } },
+                { supplier: { firstName: { contains: search } } },
+                { supplier: { lastName: { contains: search } } },
             ];
         }
         const [totalItems, data] = await Promise.all([
@@ -126,7 +127,7 @@ export class FixedExpensesService {
                 const accountPayable = await tx.accountPayable.create({
                     data: {
                         supplierId: expense.supplierId || null,
-                        supplierName: expense.supplier?.name || 'Proveedor General / Interno',
+                        supplierName: expense.supplier?.firstName + ' ' + expense.supplier?.lastName || 'Proveedor General / Interno',
                         supplierDni: expense.supplier?.dni || 'N/A',
                         concept: `Gasto Fijo: ${expense.title} (${expense.frequency})`,
                         amountTotal: Number(expense.amount),
