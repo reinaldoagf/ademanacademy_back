@@ -1,5 +1,15 @@
-import { IsArray, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsNotEmpty, IsNumber, IsOptional, IsString, IsObject, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+// Sub-DTO para la imagen del comprobante en S3 (reutilizable)
+class S3ImageDto {
+    @IsString()
+    @IsNotEmpty({ message: 'La URL del comprobante es obligatoria.' })
+    url!: string;
 
+    @IsString()
+    @IsNotEmpty({ message: 'La clave (key) del comprobante es obligatoria.' })
+    key!: string;
+}
 export class ClientPurchaseSeatsDto {
     @IsString()
     @IsNotEmpty()
@@ -23,6 +33,8 @@ export class ClientPurchaseSeatsDto {
     referenceNumber: string;
 
     @IsOptional()
-    @IsString()
-    receiptPath?: string; // (TODO: subida de imagen)
+    @IsObject()
+    @ValidateNested()
+    @Type(() => S3ImageDto)
+    imageOfPaymentReceipt?: S3ImageDto | null;
 }

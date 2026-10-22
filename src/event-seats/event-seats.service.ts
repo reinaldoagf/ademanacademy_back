@@ -16,14 +16,7 @@ export class EventSeatsService {
     ) { }
     async clientPurchaseSeats(
         userId: string,
-        dto: {
-            eventId: string;
-            seatingMapElementIds: string[];
-            totalAmount: number;
-            bankName: string;
-            referenceNumber: string;
-        },
-        receiptPath: string, // 'receipt-1790488217862-902425808.jpeg'
+        dto: ClientPurchaseSeatsDto,
     ) {
         const user = await this.prisma.user.findFirst({
             where: { id: userId },
@@ -32,7 +25,7 @@ export class EventSeatsService {
         if (!isAdmin && dto.totalAmount <= 0) {
             throw new BadRequestException('El monto debe ser mayor a cero.');
         }
-        const { eventId, seatingMapElementIds, totalAmount, bankName, referenceNumber } = dto;
+        const { eventId, seatingMapElementIds, totalAmount, bankName, referenceNumber, imageOfPaymentReceipt } = dto;
         const now = new Date();
 
         return await this.prisma.$transaction(
@@ -101,7 +94,11 @@ export class EventSeatsService {
                         status: TransactionStatus.Pendiente,
                         bankName: bankName,
                         referenceNumber: referenceNumber,
-                        //receiptPath: receiptPath, (TODO: subida de imagen)
+                        imageOfPaymentReceipt: imageOfPaymentReceipt
+                            ? {
+                                create: imageOfPaymentReceipt,
+                            }
+                            : undefined,
                     },
                 });
 

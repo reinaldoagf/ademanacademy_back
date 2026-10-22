@@ -197,8 +197,6 @@ export class UsersService {
   }
 
   async completeOnboarding(registeringUserId: string, dto: CompleteOnboardingDto) {
-    // 1. Validaciones previas de usuario...
-    console.log({ dto })
 
     const imageOfPaymentReceipt = dto.imageOfPaymentReceipt;
     const user = await this.prisma.user.findUnique({ where: { id: registeringUserId } });
