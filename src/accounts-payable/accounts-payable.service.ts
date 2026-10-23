@@ -40,7 +40,7 @@ export class AccountsPayableService {
      * Obtener lista paginada y filtrada de Cuentas por Pagar
      */
     async findAll(filters: FilterAccountPayableDto) {
-        const { page = 1, limit = 10, search, status } = filters;
+        const { page = 1, limit = 10, search, status, sortBy = 'dueDate', sortOrder = 'asc' } = filters;
         const skip = (page - 1) * limit;
 
         const where: Prisma.AccountPayableWhereInput = {};
@@ -57,13 +57,16 @@ export class AccountsPayableService {
                 { invoiceNumber: { contains: search } },
             ];
         }
-
+        // 🌟 Validación de seguridad para los campos de ordenamiento permitidos
+        const validSortFields = ['createdAt', 'dueDate'];
+        const sortField = validSortFields.includes(sortBy) ? sortBy : 'dueDate';
+        const orderDirection = sortOrder === 'desc' ? 'desc' : 'asc';
         const [data, totalItems] = await Promise.all([
             this.prisma.accountPayable.findMany({
                 where,
                 skip,
                 take: limit,
-                orderBy: { dueDate: 'asc' },
+                orderBy: { [sortField]: orderDirection },
                 include: {
                     _count: {
                         select: { payments: true },

@@ -80,7 +80,7 @@ export class CreateEmployeeDto {
     @IsInt()
     @IsOptional()
     @Type(() => Number)
-    bonus?: number;
+    baseSalary?: number;
 
     @IsEnum(PayrollStatus)
     @IsOptional()

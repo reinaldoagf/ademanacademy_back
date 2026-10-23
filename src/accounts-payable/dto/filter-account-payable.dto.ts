@@ -1,4 +1,4 @@
-import { IsOptional, IsEnum, IsString, IsInt, Min } from 'class-validator';
+import { IsOptional, IsEnum, IsString, IsInt, IsIn, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PayableStatus } from '@prisma/client';
 
@@ -22,4 +22,12 @@ export class FilterAccountPayableDto {
     @IsOptional()
     @IsEnum(PayableStatus, { message: 'Estado de cuenta por pagar no válido' })
     status?: PayableStatus;
+
+    @IsOptional()
+    @IsIn(['createdAt', 'dueDate'])
+    sortBy?: 'createdAt' | 'dueDate';
+
+    @IsOptional()
+    @IsIn(['asc', 'desc'])
+    sortOrder?: 'asc' | 'desc';
 }

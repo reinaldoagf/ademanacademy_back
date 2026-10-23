@@ -5,7 +5,7 @@ import {
     BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service'; // Ajusta la ruta a tu PrismaService
-import { Prisma, PayrollStatus, TypeOfContract, TypeOfEmployee } from '@prisma/client';
+import { Prisma, PayrollStatus, TypeOfContract, TypeOfEmployee, ExpenseFrequency } from '@prisma/client';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { GetEmployeesFilterDto } from './dto/get-employees-filter.dto';
 
@@ -21,8 +21,28 @@ export class EmployeesService {
             if (!birthDate || isNaN(birthDate.getTime())) {
                 throw new BadRequestException('La fecha de nacimiento (birthDate) no es válida.');
             }
+            /*             model FixedExpense {
+              id          String           @id @default(uuid())
+              title       String           @db.VarChar(150)
+              description String?          @db.Text
+              amount      Float // Monto del abono/pago realizado
+              frequency   ExpenseFrequency @default(Mensual) // Frecuencia de repetición
+              nextDueDate DateTime         @db.Date // Próxima fecha en que se genera la cuenta por pagar
+              isActive    Boolean          @default(true)
+            
+              // Proveedor opcional asociado al gasto fijo
+              supplierId String?   @db.VarChar(36)
+              supplier   Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+              // 🌟 Empleado opcional (para gastos fijos de nómina)
+              employeeId String?   @db.VarChar(36)
+              employee   Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+              createdAt  DateTime  @default(now())
+              updatedAt  DateTime  @updatedAt
+            
+              @@map("fixed_expenses")
+            } */
 
-            return await this.prisma.employee.create({
+            const employee = await this.prisma.employee.create({
                 data: {
                     IDNumberPrefix: data.IDNumberPrefix,
                     dni: data.dni,
@@ -37,7 +57,7 @@ export class EmployeesService {
                     phone: data.phone,
                     hoursTaughtMonth: data.hoursTaughtMonth ?? 1,
                     hourlyRate: new Prisma.Decimal(data.hourlyRate ?? 0),
-                    bonus: new Prisma.Decimal(data.bonus ?? 0),
+                    baseSalary: new Prisma.Decimal(data.baseSalary ?? 0),
                     payrollStatus: data.payrollStatus,
                     userId: data.userId || null,
                     // Si envías un arreglo de IDs de grupos, puedes conectarlos
@@ -53,7 +73,22 @@ export class EmployeesService {
                     },
                     groups: true,
                 },
-            });
+            })
+
+            if (employee) {
+                await this.prisma.fixedExpense.create({
+                    data: {
+                        title: "Nómina",
+                        description: `Sueldo de ${employee.firstName} ${employee.lastName}`,
+                        amount: Number(employee.baseSalary),
+                        frequency: ExpenseFrequency.Mensual,
+                        nextDueDate: new Date(),
+                        employeeId: employee.id,
+                    }
+                })
+            }
+
+            return employee;
         } catch (error) {
             // Manejo específico del error de restricción única de Prisma (P2002)
             if (
@@ -161,9 +196,30 @@ export class EmployeesService {
     // 🎯 4. ACTUALIZAR EMPLEADO
     async update(id: string, updateData: any) {
         // 1. Verificar si el empleado existe
-        await this.findOne(id);
-
-        const { groupIds, birthDate, hourlyRate, bonus, ...data } = updateData;
+        const currentEmployee = await this.findOne(id);
+        const { groupIds, birthDate, hourlyRate, baseSalary, ...data } = updateData;
+        if (currentEmployee?.baseSalary != baseSalary) {
+            const fixedExpense = await this.prisma.fixedExpense.updateMany({
+                where: {
+                    employeeId: currentEmployee.id,
+                },
+                data: {
+                    amount: Number(baseSalary),
+                }
+            })
+            if (!fixedExpense.count) {
+                await this.prisma.fixedExpense.create({
+                    data: {
+                        title: "Sueldo",
+                        description: `Sueldo de ${currentEmployee.firstName} ${currentEmployee.lastName}`,
+                        amount: Number(baseSalary),
+                        frequency: ExpenseFrequency.Mensual,
+                        nextDueDate: new Date(),
+                        employeeId: currentEmployee.id,
+                    }
+                })
+            }
+        }
 
         try {
             return await this.prisma.employee.update({
@@ -172,7 +228,7 @@ export class EmployeesService {
                     ...data,
                     ...(birthDate && { birthDate: new Date(birthDate) }),
                     ...(hourlyRate !== undefined && { hourlyRate: new Prisma.Decimal(hourlyRate) }),
-                    ...(bonus !== undefined && { bonus: new Prisma.Decimal(bonus) }),
+                    ...(baseSalary !== undefined && { baseSalary: new Prisma.Decimal(baseSalary) }),
                     // Actualización de relación de grupos en caso de enviarse
                     ...(groupIds && Array.isArray(groupIds) && {
                         groups: {

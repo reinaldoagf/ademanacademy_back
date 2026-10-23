@@ -67,9 +67,10 @@ model Employee {
   address             String         @db.Text
   countryCode         String?        @db.VarChar(40) // Opcional
   phone               String?        @db.VarChar(40) // Opcional
+  // 🌟 CAMPOS DE NÓMINA
+  baseSalary          Decimal?       @db.Decimal(10, 2) // Salario base para empleados Fijos
   hoursTaughtMonth    Int            @default(1)
   hourlyRate          Decimal        @db.Decimal(10, 2)
-  bonus               Decimal        @db.Decimal(10, 2)
   payrollStatus       PayrollStatus  @default(Pendiente)
   // Lado que guarda la FK
   userId              String?        @unique @db.VarChar(36)
@@ -77,8 +78,9 @@ model Employee {
 
   groups Group[]
 
-  createdAt DateTime @default(now()) @map("createdAt")
-  updatedAt DateTime @updatedAt @map("updatedAt")
+  createdAt     DateTime       @default(now()) @map("createdAt")
+  updatedAt     DateTime       @updatedAt @map("updatedAt")
+  fixedExpenses FixedExpense[]
 
   @@map("employees")
 }
@@ -822,9 +824,11 @@ model FixedExpense {
   // Proveedor opcional asociado al gasto fijo
   supplierId String?   @db.VarChar(36)
   supplier   Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  // 🌟 Empleado opcional (para gastos fijos de nómina)
+  employeeId String?   @db.VarChar(36)
+  employee   Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   @@map("fixed_expenses")
 }

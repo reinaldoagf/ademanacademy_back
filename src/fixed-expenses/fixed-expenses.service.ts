@@ -2,7 +2,7 @@
 import { Injectable, NotFoundException, Logger, ConsoleLogger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '@/prisma/prisma.service';
-import { Prisma, PayableStatus, NotificationChannel, ExpenseFrequency } from '@prisma/client';
+import { Prisma, PayableStatus, NotificationChannel, ExpenseFrequency, TypeOfContract } from '@prisma/client';
 import { GetFixedExpensesFilterDto } from './dto/get-fixed-expenses-filter.dto';
 import { CreateFixedExpenseDto } from './dto/create-fixed-expense.dto';
 import { UpdateFixedExpenseDto } from './dto/update-fixed-expense.dto';
@@ -109,7 +109,10 @@ export class FixedExpensesService {
                     lte: today,
                 },
             },
-            include: { supplier: true },
+            include: {
+                supplier: true,
+                employee: true // 🌟 Incluimos la relación con empleado
+            },
         });
 
         if (dueExpenses.length === 0) {
@@ -119,20 +122,45 @@ export class FixedExpensesService {
 
         for (const expense of dueExpenses) {
             await this.prisma.$transaction(async (tx) => {
-                // A. Calcular fecha límite de pago de la cuenta por pagar (ej: 7 días de plazo a partir de hoy)
+                let calculatedAmount = Number(expense.amount);
+                let beneficiaryName = 'Proveedor General / Interno';
+                let beneficiaryDni = expense.supplier?.dni || 'N/A';
+                let conceptPrefix = `Gasto Fijo: ${expense.title}`;
+
+                // 🌟 2. Si el gasto fijo está asociado a un empleado, calculamos el monto según su contrato
+                if (expense.employee) {
+                    const emp = expense.employee;
+
+                    if (emp.typeOfContract === TypeOfContract.Por_Hora) {
+                        const hours = Number(emp.hoursTaughtMonth || 0);
+                        const rate = Number(emp.hourlyRate || 0);
+                        calculatedAmount = (hours * rate);
+                    } else if (emp.typeOfContract === TypeOfContract.Fijo) {
+                        const base = Number(emp.baseSalary || 0);
+                        calculatedAmount = base;
+                    }
+
+                    beneficiaryName = `${emp.firstName} ${emp.lastName}`;
+                    beneficiaryDni = emp.dni || 'N/A';
+                    conceptPrefix = `Nómina (${emp.typeOfContract}): ${expense.title} - ${beneficiaryName}`;
+                } else if (expense.supplier) {
+                    beneficiaryName = `${expense.supplier.firstName} ${expense.supplier.lastName}`;
+                }
+
+                // A. Calcular fecha límite de pago (ej: 7 días de plazo a partir de hoy)
                 const paymentDueDate = new Date(today);
                 paymentDueDate.setDate(paymentDueDate.getDate() + 7);
 
-                // B. Crear la Cuenta por Pagar (AccountPayable)
+                // B. Crear la Cuenta por Pagar / Orden de Pago
                 const accountPayable = await tx.accountPayable.create({
                     data: {
                         supplierId: expense.supplierId || null,
-                        supplierName: expense.supplier?.firstName + ' ' + expense.supplier?.lastName || 'Proveedor General / Interno',
-                        supplierDni: expense.supplier?.dni || 'N/A',
-                        concept: `Gasto Fijo: ${expense.title} (${expense.frequency})`,
-                        amountTotal: Number(expense.amount),
+                        supplierName: beneficiaryName,
+                        supplierDni: beneficiaryDni,
+                        concept: `${conceptPrefix} (${expense.frequency})`,
+                        amountTotal: calculatedAmount,
                         amountPaid: 0,
-                        amountRemaining: Number(expense.amount),
+                        amountRemaining: calculatedAmount,
                         issueDate: today,
                         dueDate: paymentDueDate,
                         status: PayableStatus.Pendiente,
@@ -140,7 +168,7 @@ export class FixedExpensesService {
                     },
                 });
 
-                // C. Calcular la Siguiente Fecha (nextDueDate) basada en la frecuencia del gasto fijo
+                // C. Calcular la Siguiente Fecha (nextDueDate) basada en la frecuencia
                 const nextDate = new Date(expense.nextDueDate);
                 switch (expense.frequency) {
                     case ExpenseFrequency.Semanal:
@@ -157,16 +185,18 @@ export class FixedExpensesService {
                         break;
                 }
 
-                // D. Actualizar el gasto fijo con la nueva fecha para el siguiente ciclo
+                // D. Actualizar el gasto fijo con la nueva fecha y el último monto calculado
                 await tx.fixedExpense.update({
                     where: { id: expense.id },
-                    data: { nextDueDate: nextDate },
+                    data: {
+                        nextDueDate: nextDate,
+                        amount: calculatedAmount // Mantiene actualizado el registro histórico
+                    },
                 });
 
-                this.logger.log(`[CUENTA POR PAGAR GENERADA] Creada para "${expense.title}" por monto de $${expense.amount}`);
+                this.logger.log(`[ORDEN DE PAGO GENERADA] Creada para "${expense.title}" por monto de $${calculatedAmount}`);
 
                 // E. Notificar a los Administradores
-                // Buscamos a todos los usuarios administradores del sistema para notificarles
                 const admins = await tx.user.findMany({
                     where: { isAdmin: true },
                 });
@@ -175,10 +205,10 @@ export class FixedExpensesService {
                     await this.notificationsService.sendNotification({
                         userId: admin.id,
                         recipientPhone: admin.phone,
-                        title: 'Nueva Cuenta por Pagar Generada 💳',
-                        message: `Se ha generado automáticamente la cuenta por pagar para el gasto fijo "${expense.title}" por un monto de $${expense.amount}. Vence el ${paymentDueDate.toLocaleDateString('es-ES')}.`,
+                        title: 'Nueva Orden de Pago / Nómina Generada 💳',
+                        message: `Se ha generado automáticamente la orden de pago para "${expense.title}" (${beneficiaryName}) por un monto de $${calculatedAmount}. Vence el ${paymentDueDate.toLocaleDateString('es-ES')}.`,
                         channel: NotificationChannel.En_la_App,
-                        link: `/admin/accounts-payable/${accountPayable.id}`, // Enlace directo a la cuenta por pagar en el panel admin
+                        link: `/admin/accounts-payable/${accountPayable.id}`,
                     });
                 }
             });
