@@ -1,6 +1,7 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { MetricsService } from './metrics.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '@/auth/decorators/current-user.decorator';
 
 @Controller('metrics')
 @UseGuards(JwtAuthGuard) // 🛡️ Protege la gestión de infraestructura
@@ -28,10 +29,12 @@ export class MetricsController {
     }
     @Get('academic-calendar-events')
     async getAcademicCalendarEvents(
+        @CurrentUser() user: any,
+        @Query('myCalendar') myCalendar?: boolean,
         @Query('yearParam') yearParam?: number,
         @Query('monthParam') monthParam?: number,
     ) {
-        return this.metricsService.getAcademicCalendarEvents(yearParam, monthParam);
+        return this.metricsService.getAcademicCalendarEvents({ ...user, id: user.sub }, myCalendar, yearParam, monthParam);
     }
 
 

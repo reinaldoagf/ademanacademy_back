@@ -61,9 +61,10 @@ export class UsersService {
       if (existingUserByPhone) {
         throw new ConflictException(`El teléfono ${createUserDto.phone} ya está en uso.`);
       }
-      return await this.prisma.user.create({
+      const user = await this.prisma.user.create({
         data: createUserDto,
       });
+      return user;
     } catch (error) {
       // Capturamos errores específicos de Prisma
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -325,6 +326,28 @@ export class UsersService {
             }
 
 
+          }
+
+          const existingClient = await tx.client.findFirst({
+            where: {
+              userId: user.id,
+              type: ClientType.Representante,
+            }
+          });
+          if (!existingClient) {
+            await tx.client.create({
+              data: {
+                firstName: user.firstName,
+                lastName: user.lastName,
+                dni: user.dni,
+                email: user.email,
+                birthDate: new Date(),
+                userId: registeringUserId,
+                address: '',
+                phone: user.phone || null,
+                type: ClientType.Representante,
+              }
+            });
           }
         }
         // Operación C: Si es STUDENT autónomo

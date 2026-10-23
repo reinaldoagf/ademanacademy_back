@@ -1,6 +1,7 @@
+// src/metrics/metrics.service.ts
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ConceptType, EventType, RegistrationStatus, TransactionStatus, LockerRoomStatus, AssignmentStatus } from '@prisma/client';
+import { ConceptType, EventType, RegistrationStatus, TransactionStatus, LockerRoomStatus, AssignmentStatus, User } from '@prisma/client';
 
 @Injectable()
 export class MetricsService {
@@ -239,7 +240,12 @@ export class MetricsService {
             };
         }
     }
-    async getAcademicCalendarEvents(yearParam?: number, monthParam?: number) {
+    async getAcademicCalendarEvents(
+        user: User,
+        myCalendar?: boolean,
+        yearParam?: number,
+        monthParam?: number,
+    ) {
         try {
             const now = new Date();
             const year = yearParam ?? now.getFullYear();
@@ -248,7 +254,34 @@ export class MetricsService {
             const startOfMonth = new Date(year, month - 1, 1);
             const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
 
-            // 1. Obtener Eventos Únicos/Especiales en el rango del mes
+            // Determinar si debemos filtrar por usuario (Si no es admin, o si explícitamente pide myCalendar)
+            const shouldFilterByUser = !user?.isAdmin || myCalendar === true;
+            let userStudentIds: string[] = [];
+            let userGroupIds: string[] = [];
+
+            if (shouldFilterByUser && user) {
+                // 🌟 Buscamos los estudiantes vinculados al usuario:
+                // 1. Donde el usuario sea el propio cliente (ej: perfil Estudiante)
+                // 2. Donde el usuario sea el representante (ej: perfil Representante con múltiples hijos/representados)
+                const clients = await this.prisma.client.findMany({
+                    where: {
+                        OR: [
+                            { userId: user.id },
+                            { representativeId: user.id },
+                        ],
+                        studentId: { not: null },
+                    },
+                    select: {
+                        studentId: true,
+                        student: { select: { groupId: true } },
+                    },
+                });
+
+                userStudentIds = clients.map((c) => c.studentId).filter(Boolean) as string[];
+                userGroupIds = clients.map((c) => c.student?.groupId).filter(Boolean) as string[];
+            }
+
+            // 1. Obtener Eventos Especiales (Galas / Muestras)
             const events = await this.prisma.event.findMany({
                 where: {
                     isActive: true,
@@ -256,6 +289,18 @@ export class MetricsService {
                         { startDate: { gte: startOfMonth, lte: endOfMonth } },
                         { endDate: { gte: startOfMonth, lte: endOfMonth } },
                     ],
+                    ...(shouldFilterByUser && user ? {
+                        eventSeats: {
+                            some: {
+                                client: {
+                                    OR: [
+                                        { userId: user.id },
+                                        { representativeId: user.id },
+                                    ],
+                                },
+                            },
+                        },
+                    } : {}),
                 },
                 select: {
                     id: true,
@@ -266,15 +311,40 @@ export class MetricsService {
                 },
             });
 
-            // 2. Obtener los Grupos con sus Horarios Semanales y Salones
+            // 🌟 2. Obtener Ensayos Especiales (SpecialRehearsals) filtrando por los estudiantes del usuario o de sus representados
+            const specialRehearsals = await this.prisma.specialRehearsal.findMany({
+                where: {
+                    date: {
+                        gte: startOfMonth,
+                        lte: endOfMonth,
+                    },
+                    ...(shouldFilterByUser ? {
+                        students: {
+                            some: {
+                                id: { in: userStudentIds }, // Incluye ensayos donde participe cualquiera de los representados
+                            },
+                        },
+                    } : {}),
+                },
+                include: {
+                    classroom: { select: { name: true } },
+                    students: { select: { id: true } },
+                },
+            });
+
+            // 3. Obtener Clases Regulares de los Grupos
             const groupsWithSchedules = await this.prisma.group.findMany({
+                where: {
+                    ...(shouldFilterByUser ? {
+                        id: { in: userGroupIds },
+                    } : {}),
+                },
                 include: {
                     classroom: { select: { name: true } },
                     schedules: true,
                 },
             });
 
-            // Mapeo de días de la semana a nombres de la propiedad JSON en WeeklySchedule
             const daysOfWeekMap = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 
             const calendarEvents: Array<{
@@ -283,11 +353,11 @@ export class MetricsService {
                 group: string;
                 time: string;
                 room: string;
-                date: string; // Formato YYYY-MM-DD
+                date: string;
                 type: 'ensayo' | 'gala' | 'clase-abierta' | 'clase-regular';
             }> = [];
 
-            // A) Transformar Eventos Especiales de Prisma al formato visual
+            // A) Transformar Eventos Generales
             events.forEach((evt) => {
                 const dateStr = evt.startDate.toISOString().split('T')[0];
                 calendarEvents.push({
@@ -301,7 +371,21 @@ export class MetricsService {
                 });
             });
 
-            // B) Proyectar las Clases Recurrentes sobre los días del Mes seleccionado
+            // B) Transformar Ensayos Especiales
+            specialRehearsals.forEach((rehearsal) => {
+                const dateStr = rehearsal.date.toISOString().split('T')[0];
+                calendarEvents.push({
+                    id: `rehearsal-${rehearsal.id}`,
+                    title: rehearsal.title,
+                    group: 'Ensayo Especial',
+                    time: `${rehearsal.startTime} - ${rehearsal.endTime}`,
+                    room: rehearsal.classroom?.name || rehearsal.location || 'Ubicación Externa',
+                    date: dateStr,
+                    type: 'ensayo',
+                });
+            });
+
+            // C) Proyectar Clases Regulares
             const cursor = new Date(startOfMonth);
             while (cursor <= endOfMonth) {
                 const dayIndex = cursor.getDay();
