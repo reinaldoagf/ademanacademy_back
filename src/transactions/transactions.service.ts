@@ -17,7 +17,7 @@ export class TransactionsService {
 
 
     async registerPaymentTransaction(registeringUserId: string, dto: RegisterTransactionDto) {
-        const { paymentOrderId, referenceNumber, bankName, receiptPath, amount, method } = dto;
+        const { paymentOrderId, referenceNumber, bankName, imageOfPaymentReceipt, amount, method } = dto;
         const now = new Date();
 
         return await this.prisma.$transaction(async (tx) => {
@@ -47,7 +47,11 @@ export class TransactionsService {
                     method,
                     referenceNumber,
                     bankName,
-                    //receiptPath,
+                    imageOfPaymentReceipt: imageOfPaymentReceipt
+                        ? {
+                            create: imageOfPaymentReceipt,
+                        }
+                        : undefined,
                     status: TransactionStatus.Pendiente,
                 },
             });
@@ -79,8 +83,12 @@ export class TransactionsService {
                 method: createTransactionDto.method,
                 referenceNumber: createTransactionDto.referenceNumber,
                 bankName: createTransactionDto.bankName,
-                //receiptPath: createTransactionDto.receiptPath || null,
                 status: createTransactionDto.status,
+                imageOfPaymentReceipt: createTransactionDto.imageOfPaymentReceipt
+                    ? {
+                        create: createTransactionDto.imageOfPaymentReceipt,
+                    }
+                    : undefined,
             },
             include: { imageOfPaymentReceipt: true, registeringUser: true, client: { include: { student: true, user: true } } },
         });
@@ -191,7 +199,7 @@ export class TransactionsService {
                 concept: tx.concept,
                 amount: Number(tx.amount),
                 method: tx.method,
-                //receiptPath: tx.receiptPath, // (TODO: subida de imagen)
+                imageOfPaymentReceipt: tx.imageOfPaymentReceipt,
                 createdAt: tx.createdAt.toISOString().split('T')[0],
                 status: tx.status,
             })),
@@ -231,7 +239,14 @@ export class TransactionsService {
         await this.findOne(id); // Lanza 404 si no existe
         return this.prisma.transaction.update({
             where: { id },
-            data: updateTransactionDto,
+            data: {
+                ...updateTransactionDto,
+                imageOfPaymentReceipt: updateTransactionDto.imageOfPaymentReceipt
+                    ? {
+                        create: updateTransactionDto.imageOfPaymentReceipt,
+                    }
+                    : undefined,
+            },
         });
     }
 
@@ -347,8 +362,8 @@ export class TransactionsService {
                         nextMonthDueDate.setDate(nextMonthDueDate.getDate() + 30);
 
                         // Opcional: Define el monto de la mensualidad (puedes sacarlo de una configuración o pasarlo en el DTO)
-                        const monthlyFeeAmount = 50.00; // Reemplaza esto con el monto real de tu mensualidad o configuración
-                        const initialMonthlyOrder = await tx.paymentOrder.create({
+                        const monthlyFeeAmount = 50.00; // (TODO): Reemplaza esto con el monto real de tu mensualidad o configuración
+                        await tx.paymentOrder.create({
                             data: {
                                 clientId: client.id,
                                 studentId: client.studentId, // 👈 Vinculada al alumno correcto

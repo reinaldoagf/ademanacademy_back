@@ -6,11 +6,22 @@ import {
     IsEnum,
     IsPositive,
     MinLength,
-    MaxLength
+    MaxLength,
+    IsObject,
+    ValidateNested
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PaymentMethod } from '@prisma/client';
+// Sub-DTO para la imagen del comprobante en S3 (reutilizable)
+class S3ImageDto {
+    @IsString()
+    @IsNotEmpty({ message: 'La URL del comprobante es obligatoria.' })
+    url!: string;
 
+    @IsString()
+    @IsNotEmpty({ message: 'La clave (key) del comprobante es obligatoria.' })
+    key!: string;
+}
 export class RegisterTransactionDto {
     @IsNotEmpty({ message: 'El ID de la orden de pago es obligatorio.' })
     @IsString({ message: 'El ID de la orden de pago debe ser una cadena de texto.' })
@@ -44,7 +55,8 @@ export class RegisterTransactionDto {
     bankName?: string;
 
     @IsOptional()
-    @IsString({ message: 'La ruta/URL del comprobante debe ser una cadena de texto.' })
-    @MaxLength(255, { message: 'La ruta del comprobante no puede exceder 255 caracteres.' })
-    receiptPath?: string; // (TODO: subida de imagen)
+    @IsObject()
+    @ValidateNested()
+    @Type(() => S3ImageDto)
+    imageOfPaymentReceipt?: S3ImageDto | null;
 }

@@ -84,7 +84,7 @@ export class RegistrationsService {
         };
     }
     async create(userId: string, dto: CreateRegistrationDto) {
-        const { payment } = dto;
+        const { payment, } = dto;
         const user = await this.prisma.user.findUnique({
             where: { id: userId },
             include: {
@@ -130,7 +130,12 @@ export class RegistrationsService {
                     status: TransactionStatus.Pendiente,
                     bankName: payment.bankName,
                     referenceNumber: payment.referenceNumber,
-                    //receiptPath: payment.receiptPath, // 👈 Se guarda el enlace de S3 // (TODO: subida de imagen)
+                    imageOfPaymentReceipt: payment.imageOfPaymentReceipt
+                        ? {
+                            create: payment.imageOfPaymentReceipt,
+                        }
+                        : undefined,
+
                 },
             });
 

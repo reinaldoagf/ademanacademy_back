@@ -1,7 +1,17 @@
 // src/transactions/dto/create-transaction.dto.ts
-import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, IsObject, ValidateNested } from 'class-validator';
 import { ConceptType, PaymentMethod, TransactionStatus } from '@prisma/client';
+import { Type } from 'class-transformer';
+// Sub-DTO para la imagen del comprobante en S3 (reutilizable)
+class S3ImageDto {
+    @IsString()
+    @IsNotEmpty({ message: 'La URL del comprobante es obligatoria.' })
+    url!: string;
 
+    @IsString()
+    @IsNotEmpty({ message: 'La clave (key) del comprobante es obligatoria.' })
+    key!: string;
+}
 export class CreateTransactionDto {
     @IsString()
     @IsNotEmpty({ message: 'El ID del cliente es obligatorio.' })
@@ -26,9 +36,11 @@ export class CreateTransactionDto {
     @IsNotEmpty({ message: 'El nombre del banco es obligatorio.' })
     bankName: string;
 
-    @IsString()
     @IsOptional()
-    receiptPath: string; // (TODO: subida de imagen)
+    @IsObject()
+    @ValidateNested()
+    @Type(() => S3ImageDto)
+    imageOfPaymentReceipt?: S3ImageDto | null;
 
     @IsEnum(PaymentMethod, { message: 'El método de pago no es válido.' })
     method: PaymentMethod;

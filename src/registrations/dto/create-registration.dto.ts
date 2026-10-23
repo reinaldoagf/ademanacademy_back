@@ -6,9 +6,19 @@ import {
     IsBoolean,
     ValidateNested,
     IsNotEmpty,
+    IsObject
 } from 'class-validator';
 import { Type } from 'class-transformer';
+// Sub-DTO para la imagen del comprobante en S3 (reutilizable)
+class S3ImageDto {
+    @IsString()
+    @IsNotEmpty({ message: 'La URL del comprobante es obligatoria.' })
+    url!: string;
 
+    @IsString()
+    @IsNotEmpty({ message: 'La clave (key) del comprobante es obligatoria.' })
+    key!: string;
+}
 class PaymentDto {
     @IsString()
     @IsNotEmpty()
@@ -22,9 +32,11 @@ class PaymentDto {
     @Type(() => Number)
     amount!: number;
 
-    @IsString()
-    @IsNotEmpty()
-    receiptPath!: string; // 👈 URL de S3 generada en el cliente // (TODO: subida de imagen)
+    @IsOptional()
+    @IsObject()
+    @ValidateNested()
+    @Type(() => S3ImageDto)
+    imageOfPaymentReceipt?: S3ImageDto | null;
 
     @IsOptional()
     @IsBoolean()
