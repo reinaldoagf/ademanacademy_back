@@ -523,6 +523,7 @@ model StudentCostume {
 
   // Fechas de control
   assignedAt DateTime  @default(now()) // Cuándo se le dio
+  returnDate DateTime? @db.Date
   returnedAt DateTime? // Cuándo lo devolvió (si aplica)
 
   createdAt DateTime @default(now())
@@ -925,6 +926,7 @@ enum LockerRoomStatus {
 }
 
 enum AssignmentStatus {
+  Listo_Para_Entregar
   Asignado
   Devuelto_En_Buen_Estado
   Devuelto_Con_Daños

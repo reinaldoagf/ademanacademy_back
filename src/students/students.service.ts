@@ -188,7 +188,7 @@ export class StudentsService {
    * Obtiene únicamente los estudiantes que pertenecen al usuario autenticado (userId)
    * con soporte para paginación, filtros por parentesco y búsqueda global
    */
-    async findByUserId(userId: string, filters: GetStudentsFilterDto) {
+    async findByRepresentativeId(userId: string, filters: GetStudentsFilterDto) {
         const { page = 1, limit = 10, search, kinship } = filters;
         const skip = (page - 1) * limit;
 
@@ -197,7 +197,7 @@ export class StudentsService {
 
         const where: Prisma.ClientWhereInput = {
             type: ClientType.Estudiante,
-            userId: targetUserId,
+            representativeId: targetUserId,
         };
 
         // 2. Filtro por parentesco (reside en la relación 'student')

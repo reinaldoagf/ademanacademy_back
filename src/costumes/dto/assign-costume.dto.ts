@@ -1,4 +1,4 @@
-import { IsString, IsArray, ValidateNested, IsOptional, IsNotEmpty, IsEnum } from 'class-validator';
+import { IsString, IsArray, ValidateNested, IsOptional, IsNotEmpty, IsEnum, IsDate } from 'class-validator';
 import { Type } from 'class-transformer';
 import { AssignmentStatus } from '@prisma/client';
 
@@ -10,6 +10,15 @@ export class StudentAssignmentItemDto {
     @IsOptional()
     @IsString()
     observations?: string;
+
+    @IsOptional()
+    @IsString()
+    assignedSize?: string;
+
+    @IsOptional()
+    @IsDate()
+    @Type(() => Date)
+    returnDate?: Date;
 }
 
 export class AssignCostumeDto {
@@ -21,6 +30,8 @@ export class AssignCostumeDto {
     @ValidateNested({ each: true })
     @Type(() => StudentAssignmentItemDto)
     assignments: StudentAssignmentItemDto[];
+
+
 }
 
 export class UpdateAssignmentStatusDto {

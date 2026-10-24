@@ -5,6 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CostumesService } from './costumes.service';
 import { CostumesController } from './costumes.controller';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { S3Module } from '../s3/s3.module';
 
 @Module({
@@ -17,6 +18,7 @@ import { S3Module } from '../s3/s3.module';
                 signOptions: { expiresIn: '1d' }, // El token expira en 24 horas
             }),
         }),
+        NotificationsModule,
         S3Module
     ],
     controllers: [CostumesController],

@@ -1,17 +1,24 @@
 // /src/costumes/costumes.service.ts
-import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma, AssignmentStatus } from '@prisma/client';
+import { Prisma, AssignmentStatus, ConceptType, PaymentOrderStatus, NotificationChannel } from '@prisma/client';
 import { S3Service } from '../s3/s3.service';
 import { LockerRoomStatus } from '@prisma/client';
 import { CreateCostumeDto } from './dto/create-costume.dto';
 import { UpdateCostumeDto } from './dto/update-costume.dto';
 import { GetCostumesFilterDto } from './dto/get-costumes-filter.dto';
 import { AssignCostumeDto, UpdateAssignmentStatusDto } from './dto/assign-costume.dto';
+import { NotificationsService } from '@/notifications/notifications.service';
 
 @Injectable()
 export class CostumesService {
-    constructor(private readonly prisma: PrismaService, private readonly s3Service: S3Service,) { }
+    private readonly logger = new Logger(CostumesService.name);
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly s3Service: S3Service,
+        private notificationsService: NotificationsService
+    ) { }
 
     async create(createCostumeDto: CreateCostumeDto) {
         const { images, ...data } = createCostumeDto;
@@ -72,7 +79,7 @@ export class CostumesService {
                 orderBy: { createdAt: 'desc' },
                 include: {
                     costumeAssignments: {
-                        include: { student: true }
+                        include: { student: true, client: true }
                     },
                     images: true,
                 }
@@ -173,19 +180,17 @@ export class CostumesService {
             id,
         };
     }
-    // 🎯 ASIGNAR VESTUARIO A UN ALUMNO
-    async assignToStudent(assignDto: AssignCostumeDto) {
-        const { costumeId, assignments } = assignDto;
-
+    // 🌟 ASIGNAR VESTUARIO Y GENERAR 50% DE ADELANTO
+    async assignToStudent(dto: AssignCostumeDto) {
+        const { costumeId, assignments } = dto;
         if (!assignments || assignments.length === 0) {
             throw new BadRequestException('Debes agregar al menos un estudiante para realizar la asignación.');
         }
 
-        // 1. Validar existencia de todos los estudiantes
-        const studentIds = assignments.map((a) => a.studentId);
+        const studentIds = assignments.map((a: any) => a.studentId);
         const students = await this.prisma.student.findMany({
             where: { id: { in: studentIds } },
-            include: { clients: true },
+            include: { clients: { include: { representative: true } }, },
         });
 
         if (students.length !== studentIds.length) {
@@ -194,7 +199,6 @@ export class CostumesService {
 
         const studentMap = new Map(students.map((s) => [s.id, s]));
 
-        // 2. Ejecutar transacción para descuento de stock y creación de registros
         return await this.prisma.$transaction(async (tx) => {
             const costume = await tx.costume.findUnique({
                 where: { id: costumeId },
@@ -204,43 +208,111 @@ export class CostumesService {
                 throw new NotFoundException('Vestuario no encontrado.');
             }
 
-            // Crear los registros de asignación masiva
-            const createdAssignments = await Promise.all(
-                assignments.map((item) => {
-                    const student = studentMap.get(item.studentId);
-                    return tx.studentCostume.create({
+            const unitPrice = Number(costume.price);
+            const downPayment = unitPrice * 0.5; // 50% de adelanto
+
+            const createdAssignments: any[] = [];
+
+            for (const item of assignments) {
+                const student = studentMap.get(item.studentId);
+                const clientId = student?.clients?.[0]?.id || null;
+                const userId = student?.clients?.[0]?.representative?.id || student?.clients?.[0]?.userId || null;
+
+                // 1. Crear la asignación del vestuario
+                const studentCostume = await tx.studentCostume.create({
+                    data: {
+                        costumeId,
+                        studentId: item.studentId,
+                        assignedSize: item.assignedSize || null,
+                        observations: item.observations || null,
+                        clientId,
+                        status: AssignmentStatus.Asignado,
+                        assignedAt: new Date(),
+                        returnDate: item.returnDate ? new Date(item.returnDate) : null,
+                    },
+                    include: { student: true, costume: true },
+                });
+
+                // 2. Emitir la Orden de Pago del 50% de Adelanto (Consideración 2)
+                if (clientId) {
+                    const order = await tx.paymentOrder.create({
                         data: {
-                            costumeId,
-                            studentId: item.studentId,
-                            observations: item.observations || null,
-                            clientId: student?.clients?.[0]?.id || null,
-                            status: AssignmentStatus.Asignado,
-                            assignedAt: new Date(),
-                        },
-                        include: {
-                            student: true,
-                            costume: true,
+                            clientId,
+                            amount: downPayment,
+                            concept: ConceptType.Vestuario, //concept: `Adelanto 50% - Vestuario: ${costume.name} (Talla: ${item.assignedSize || 'N/A'})`,
+                            status: PaymentOrderStatus.Pendiente,
+                            dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 días para pagar el adelanto
                         },
                     });
-                })
-            );
+
+                    // Notificar al usuario sobre la orden de pago del adelanto
+                    if (userId) {
+                        await this.notificationsService.sendNotification({
+                            userId,
+                            title: 'Orden de Pago Generada (Adelanto Vestuario)',
+                            message: `Se ha generado la orden de pago del 50% ($${downPayment.toFixed(2)}) para el vestuario "${costume.name}".`,
+                            channel: NotificationChannel.Aplicación,
+                            link: `/client/payment-orders/${order.id}`
+                        });
+                    }
+                }
+
+                createdAssignments.push(studentCostume);
+            }
 
             return createdAssignments;
         });
     }
 
-    // 🎯 ACTUALIZAR ESTADO DE LA ASIGNACIÓN (DEVOLVER/DAÑADO/EXTRAVIADO)
+    // 🌟 ACTUALIZAR ESTADO (Y EMITIR SEGUNDO PAGO 50% SI ESTÁ LISTO PARA ENTREGAR)
     async updateAssignmentStatus(assignmentId: string, dto: UpdateAssignmentStatusDto) {
-        const assignment = await this.prisma.studentCostume.findUnique({ where: { id: assignmentId } });
-        if (!assignment) throw new NotFoundException('Registro de asignación no encontrado.');
+        return await this.prisma.$transaction(async (tx) => {
+            const assignment = await tx.studentCostume.findUnique({
+                where: { id: assignmentId },
+                include: { costume: true, client: true },
+            });
 
-        return this.prisma.studentCostume.update({
-            where: { id: assignmentId },
-            data: {
-                status: dto.status,
-                observations: dto.observations,
-                ...(dto.status !== AssignmentStatus.Asignado && { returnedAt: new Date() }),
-            },
+            if (!assignment) throw new NotFoundException('Registro de asignación no encontrado.');
+
+            const previousStatus = assignment.status;
+            const updated = await tx.studentCostume.update({
+                where: { id: assignmentId },
+                data: {
+                    status: dto.status,
+                    observations: dto.observations,
+                    ...(dto.status !== AssignmentStatus.Asignado && { returnedAt: new Date() }),
+                },
+                include: { client: { include: { representative: true, user: true } }, costume: true },
+            });
+
+            // Consideración 2: Si el estado cambia a 'ListoParaEntregar' (o el equivalente en tu enum), emitir el 50% restante
+            // Nota: Ajusta 'Listo_Para_Entregar' al valor exacto de tu enum AssignmentStatus
+            if (dto.status === AssignmentStatus.Listo_Para_Entregar && previousStatus !== AssignmentStatus.Listo_Para_Entregar && updated.clientId) {
+                const unitPrice = Number(updated.costume.price);
+                const remainingPayment = unitPrice * 0.5;
+
+                const order = await tx.paymentOrder.create({
+                    data: {
+                        clientId: updated.clientId,
+                        amount: remainingPayment,
+                        concept: ConceptType.Vestuario, // concept: `Saldo Restante 50% - Vestuario: ${updated.costume.name} (Listo para entrega)`,
+                        status: PaymentOrderStatus.Pendiente,
+                        dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+                    },
+                });
+
+                if (updated.client?.representative?.id || updated.client?.user?.id) {
+                    await this.notificationsService.sendNotification({
+                        userId: updated.client.representative?.id || updated.client.user?.id,
+                        title: 'Segundo Pago de Vestuario - Listo para Entregar',
+                        message: `Tu vestuario "${updated.costume.name}" está listo para entrega. Se ha generado la orden por el 50% restante ($${remainingPayment.toFixed(2)}).`,
+                        channel: NotificationChannel.Aplicación,
+                        link: `/client/payment-orders/${order.id}`
+                    });
+                }
+            }
+
+            return updated;
         });
     }
 
@@ -276,5 +348,55 @@ export class CostumesService {
             total,
             byStatus: statusMap,
         };
+    }
+
+    // 🌟 TAREA PROGRAMADA (CRON): NOTIFICACIONES DE DEVOLUCIÓN A LAS 72 Y 24 HORAS (Consideración 4)
+    @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+    async notifyPendingReturns() {
+        this.logger.log('Verificando fechas de devolución de vestuarios pendientes...');
+
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+
+        // Definimos las fechas objetivo: exactamete en 3 días (72h) y en 1 día (24h)
+        const date72h = new Date(now);
+        date72h.setDate(date72h.getDate() + 3);
+
+        const date24h = new Date(now);
+        date24h.setDate(date24h.getDate() + 1);
+
+        const assignmentsToNotify = await this.prisma.studentCostume.findMany({
+            where: {
+                returnedAt: null,
+                returnDate: {
+                    in: [date72h, date24h],
+                },
+            },
+            include: {
+                costume: true,
+                client: {
+                    include: {
+                        representative: true,
+                        user: true,
+                    },
+                },
+            },
+        });
+
+        for (const item of assignmentsToNotify) {
+            if ((!item.client?.user?.id && !item.client?.representative?.id) || !item.returnDate) continue;
+
+            const is72h = item.returnDate.getTime() === date72h.getTime();
+            const hoursText = is72h ? '72 horas (3 días)' : '24 horas (mañana)';
+
+            await this.notificationsService.sendNotification({
+                userId: item.client.representative?.id || item.client.user?.id,
+                title: `Recordatorio: Devolución de Vestuario en ${hoursText} ⏳`,
+                message: `Te recordamos que el vestuario "${item.costume.name}" asignado debe ser devuelto el ${item.returnDate.toLocaleDateString('es-ES')}.`,
+                channel: NotificationChannel.Aplicación,
+            });
+
+            this.logger.log(`[NOTIFICACIÓN DEVOLUCIÓN] Enviada a usuario ${item.client.userId} para el vestuario "${item.costume.name}"`);
+        }
     }
 }

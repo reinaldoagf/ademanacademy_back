@@ -36,7 +36,7 @@ export class StudentsController {
         const userId = user?.sub;
 
         // Enviamos el userId extraído de forma segura al servicio
-        return await this.studentsService.findByUserId(userId, filters);
+        return await this.studentsService.findByRepresentativeId(userId, filters);
     }
 
     @Get(':id')
