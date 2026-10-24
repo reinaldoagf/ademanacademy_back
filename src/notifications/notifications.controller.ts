@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Param, Patch } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '@/auth/decorators/current-user.decorator';
@@ -15,5 +15,25 @@ export class NotificationsController {
     ) {
         const userId = user?.sub;
         return this.notificationsService.findAll(userId, params);
+    }
+    @Get('recent')
+    async getRecent(
+        @CurrentUser() user: any,) {
+        const userId = user?.sub;
+        return this.notificationsService.getRecentUnreadByUser(userId);
+    }
+
+    @Patch(':id/read')
+    async markOneAsRead(
+        @CurrentUser() user: any,
+        @Param('id') id: string) {
+        const userId = user?.sub;
+        return this.notificationsService.markAsRead(id, userId);
+    }
+
+    @Patch('read-all')
+    async markAll(@CurrentUser() user: any) {
+        const userId = user?.sub;
+        return this.notificationsService.markAllAsRead(userId);
     }
 }

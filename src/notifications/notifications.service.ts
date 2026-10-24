@@ -87,15 +87,7 @@ export class NotificationsService {
         });
     }
 
-    // 4. Marcar como leída
-    async markAsRead(notificationId: string) {
-        return this.prisma.notification.update({
-            where: { id: notificationId },
-            data: { status: NotificationStatus.Leido },
-        });
-    }
-
-    // 5. Admin - Obtener notificaciones (para el dashboard)
+    // 4. Admin - Obtener notificaciones (para el dashboard)
     async findAll(userId: string, filters: GetNotificationsFilterDto) {
         const { page = 1, limit = 10, search, ownerFilter } = filters;
         const skip = (page - 1) * limit;
@@ -143,5 +135,29 @@ export class NotificationsService {
                 itemCount: notifications.length,
             }
         };
+    }
+    async getRecentUnreadByUser(userId: string) {
+        return await this.prisma.notification.findMany({
+            where: {
+                userId,
+                status: NotificationStatus.Pendiente, // O el estado que consideres no leído
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 8,
+        });
+    }
+
+    async markAsRead(notificationId: string, userId: string) {
+        return await this.prisma.notification.update({
+            where: { id: notificationId, userId },
+            data: { status: NotificationStatus.Leido },
+        });
+    }
+
+    async markAllAsRead(userId: string) {
+        return await this.prisma.notification.updateMany({
+            where: { userId, status: NotificationStatus.Pendiente },
+            data: { status: NotificationStatus.Leido },
+        });
     }
 }
