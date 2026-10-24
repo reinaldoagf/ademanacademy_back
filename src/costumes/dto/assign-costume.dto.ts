@@ -1,4 +1,4 @@
-import { IsString, IsArray, ValidateNested, IsOptional, IsNotEmpty, IsEnum, IsDate } from 'class-validator';
+import { IsString, IsArray, ValidateNested, IsOptional, IsNotEmpty, IsEnum, IsBoolean, IsDate } from 'class-validator';
 import { Type } from 'class-transformer';
 import { AssignmentStatus } from '@prisma/client';
 
@@ -10,6 +10,10 @@ export class StudentAssignmentItemDto {
     @IsOptional()
     @IsString()
     observations?: string;
+
+    @IsOptional()
+    @IsBoolean()
+    issuePaymentOrder: boolean;
 
     @IsOptional()
     @IsString()
