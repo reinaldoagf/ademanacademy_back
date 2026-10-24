@@ -791,7 +791,7 @@ model Notification {
   title   String              @db.VarChar(150)
   message String              @db.Text
   link    String?             @db.VarChar(150)
-  channel NotificationChannel @default(En_la_App)
+  channel NotificationChannel @default(Aplicación)
   status  NotificationStatus  @default(Pendiente)
 
   // Relación opcional con el Usuario destinatario
@@ -1040,7 +1040,7 @@ enum ClientType {
 }
 
 enum NotificationChannel {
-  En_la_App
+  Aplicación
   Whatsapp
   Ambos
 }

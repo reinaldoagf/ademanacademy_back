@@ -38,9 +38,9 @@ CREATE TABLE `employees` (
     `address` TEXT NOT NULL,
     `countryCode` VARCHAR(40) NULL,
     `phone` VARCHAR(40) NULL,
+    `baseSalary` DECIMAL(10, 2) NULL,
     `hoursTaughtMonth` INTEGER NOT NULL DEFAULT 1,
     `hourlyRate` DECIMAL(10, 2) NOT NULL,
-    `bonus` DECIMAL(10, 2) NOT NULL,
     `payrollStatus` ENUM('Pendiente', 'Pagado') NOT NULL DEFAULT 'Pendiente',
     `userId` VARCHAR(36) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -60,6 +60,7 @@ CREATE TABLE `students` (
     `groupId` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
+    `specialRehearsalId` VARCHAR(191) NULL,
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -117,6 +118,7 @@ CREATE TABLE `order_items` (
 CREATE TABLE `payment_orders` (
     `id` VARCHAR(191) NOT NULL,
     `clientId` VARCHAR(36) NULL,
+    `studentId` VARCHAR(36) NULL,
     `orderId` VARCHAR(255) NULL,
     `concept` ENUM('Clase', 'Mensualidad', 'Inscripción', 'Vestuario', 'Entradas_Gala', 'Producto', 'Otro') NOT NULL,
     `amount` DECIMAL(10, 2) NOT NULL,
@@ -187,10 +189,23 @@ CREATE TABLE `transactions` (
     `status` ENUM('Aprobado', 'Pendiente', 'Rechazado') NOT NULL DEFAULT 'Pendiente',
     `referenceNumber` VARCHAR(100) NULL,
     `bankName` VARCHAR(100) NULL,
-    `receiptPath` VARCHAR(255) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `image_of_payment_receipts` (
+    `id` VARCHAR(191) NOT NULL,
+    `url` VARCHAR(191) NOT NULL,
+    `key` VARCHAR(191) NOT NULL,
+    `altText` VARCHAR(191) NULL,
+    `transactionId` VARCHAR(191) NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    UNIQUE INDEX `image_of_payment_receipts_key_key`(`key`),
+    UNIQUE INDEX `image_of_payment_receipts_transactionId_key`(`transactionId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -375,7 +390,8 @@ CREATE TABLE `settings` (
 -- CreateTable
 CREATE TABLE `Supplier` (
     `id` VARCHAR(191) NOT NULL,
-    `name` VARCHAR(191) NOT NULL,
+    `firstName` VARCHAR(191) NOT NULL,
+    `lastName` VARCHAR(191) NOT NULL,
     `dni` VARCHAR(191) NOT NULL,
     `email` VARCHAR(191) NULL,
     `phone` VARCHAR(191) NULL,
@@ -543,7 +559,8 @@ CREATE TABLE `notifications` (
     `id` VARCHAR(191) NOT NULL,
     `title` VARCHAR(150) NOT NULL,
     `message` TEXT NOT NULL,
-    `channel` ENUM('En_la_App', 'Whatsapp', 'Ambos') NOT NULL DEFAULT 'En_la_App',
+    `link` VARCHAR(150) NULL,
+    `channel` ENUM('Aplicación', 'Whatsapp', 'Ambos') NOT NULL DEFAULT 'Aplicación',
     `status` ENUM('Pendiente', 'Enviado', 'Leido', 'Fallido') NOT NULL DEFAULT 'Pendiente',
     `userId` VARCHAR(36) NULL,
     `recipientPhone` VARCHAR(40) NULL,
@@ -556,11 +573,49 @@ CREATE TABLE `notifications` (
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- CreateTable
+CREATE TABLE `fixed_expenses` (
+    `id` VARCHAR(191) NOT NULL,
+    `title` VARCHAR(150) NOT NULL,
+    `description` TEXT NULL,
+    `amount` DOUBLE NOT NULL,
+    `frequency` ENUM('Semanal', 'Quincenal', 'Mensual', 'Anual') NOT NULL DEFAULT 'Mensual',
+    `nextDueDate` DATE NOT NULL,
+    `isActive` BOOLEAN NOT NULL DEFAULT true,
+    `supplierId` VARCHAR(36) NULL,
+    `employeeId` VARCHAR(36) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `special_rehearsals` (
+    `id` VARCHAR(191) NOT NULL,
+    `title` VARCHAR(150) NOT NULL,
+    `description` TEXT NULL,
+    `date` DATE NOT NULL,
+    `startTime` VARCHAR(10) NOT NULL,
+    `endTime` VARCHAR(10) NOT NULL,
+    `classroomId` VARCHAR(191) NULL,
+    `location` VARCHAR(255) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    INDEX `special_rehearsals_date_idx`(`date`),
+    INDEX `special_rehearsals_classroomId_idx`(`classroomId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 -- AddForeignKey
 ALTER TABLE `employees` ADD CONSTRAINT `employees_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `students` ADD CONSTRAINT `students_groupId_fkey` FOREIGN KEY (`groupId`) REFERENCES `groups`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `students` ADD CONSTRAINT `students_specialRehearsalId_fkey` FOREIGN KEY (`specialRehearsalId`) REFERENCES `special_rehearsals`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `clients` ADD CONSTRAINT `clients_studentId_fkey` FOREIGN KEY (`studentId`) REFERENCES `students`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
@@ -587,6 +642,9 @@ ALTER TABLE `order_items` ADD CONSTRAINT `order_items_clientId_fkey` FOREIGN KEY
 ALTER TABLE `payment_orders` ADD CONSTRAINT `payment_orders_clientId_fkey` FOREIGN KEY (`clientId`) REFERENCES `clients`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE `payment_orders` ADD CONSTRAINT `payment_orders_studentId_fkey` FOREIGN KEY (`studentId`) REFERENCES `students`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE `payment_orders` ADD CONSTRAINT `payment_orders_orderId_fkey` FOREIGN KEY (`orderId`) REFERENCES `orders`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -606,6 +664,9 @@ ALTER TABLE `transactions` ADD CONSTRAINT `transactions_clientId_fkey` FOREIGN K
 
 -- AddForeignKey
 ALTER TABLE `transactions` ADD CONSTRAINT `transactions_paymentOrderId_fkey` FOREIGN KEY (`paymentOrderId`) REFERENCES `payment_orders`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `image_of_payment_receipts` ADD CONSTRAINT `image_of_payment_receipts_transactionId_fkey` FOREIGN KEY (`transactionId`) REFERENCES `transactions`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `schedules` ADD CONSTRAINT `schedules_groupId_fkey` FOREIGN KEY (`groupId`) REFERENCES `groups`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
@@ -696,3 +757,12 @@ ALTER TABLE `event_seats` ADD CONSTRAINT `event_seats_paymentOrderId_fkey` FOREI
 
 -- AddForeignKey
 ALTER TABLE `notifications` ADD CONSTRAINT `notifications_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `fixed_expenses` ADD CONSTRAINT `fixed_expenses_supplierId_fkey` FOREIGN KEY (`supplierId`) REFERENCES `Supplier`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `fixed_expenses` ADD CONSTRAINT `fixed_expenses_employeeId_fkey` FOREIGN KEY (`employeeId`) REFERENCES `employees`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `special_rehearsals` ADD CONSTRAINT `special_rehearsals_classroomId_fkey` FOREIGN KEY (`classroomId`) REFERENCES `classrooms`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;

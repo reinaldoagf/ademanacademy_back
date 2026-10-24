@@ -261,7 +261,7 @@ export class TransactionsService {
         // 1. Verificar que la transacción exista
         const transaction = await this.prisma.transaction.findUnique({
             where: { id: transactionId },
-            include: { client: true }
+            include: { client: true, paymentOrder: true }
         });
 
         if (!transaction) {
@@ -292,6 +292,7 @@ export class TransactionsService {
                     title: '¡Pago Confirmado! 🎉',
                     message: `Hola ${client?.firstName || ''}, hemos recibido con éxito tu pago de ${formattedAmount} por concepto de "${transaction.concept}".`,
                     channel: NotificationChannel.Ambos,   // Genera Realtime In-App y envía a WhatsApp
+                    link: transaction.paymentOrder?.id ? `/client/payment-orders/${transaction.paymentOrder?.id}` : undefined,
                     metadata: {
                         transactionId: transaction.id,
                         amount: transaction.amount,
@@ -408,7 +409,7 @@ export class TransactionsService {
                 // 3. Emitir y registrar la notificación (In-App + WhatsApp)
                 await this.notificationsService.sendNotification(notification);
                 return {
-                    message: notification.message || 'Transacción aprobada con éxito.',
+                    message: 'Transacción aprobada con éxito.',
                     transaction: updatedTransaction,
                 };
             });

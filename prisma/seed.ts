@@ -57,7 +57,6 @@ async function main() {
             phone: '4141234567',
             hoursTaughtMonth: 40,
             hourlyRate: 15.50,
-            bonus: 50.00,
             payrollStatus: PayrollStatus.Pendiente,
         },
         {
@@ -73,7 +72,6 @@ async function main() {
             phone: '4249876543',
             hoursTaughtMonth: 32,
             hourlyRate: 18.00,
-            bonus: 75.50,
             payrollStatus: PayrollStatus.Pendiente,
         },
         {
@@ -88,7 +86,6 @@ async function main() {
             phone: null, // Campo opcional
             hoursTaughtMonth: 20,
             hourlyRate: 12.00,
-            bonus: 30.00,
             payrollStatus: PayrollStatus.Pendiente,
         },
         {
@@ -104,7 +101,6 @@ async function main() {
             phone: '4125551234',
             hoursTaughtMonth: 50,
             hourlyRate: 20.00,
-            bonus: 100.00,
             payrollStatus: PayrollStatus.Pendiente,
         },
     ];

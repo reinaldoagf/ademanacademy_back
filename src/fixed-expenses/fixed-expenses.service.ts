@@ -207,7 +207,7 @@ export class FixedExpensesService {
                         recipientPhone: admin.phone,
                         title: 'Nueva Orden de Pago / Nómina Generada 💳',
                         message: `Se ha generado automáticamente la orden de pago para "${expense.title}" (${beneficiaryName}) por un monto de $${calculatedAmount}. Vence el ${paymentDueDate.toLocaleDateString('es-ES')}.`,
-                        channel: NotificationChannel.En_la_App,
+                        channel: NotificationChannel.Aplicación,
                         link: `/admin/accounts-payable/${accountPayable.id}`,
                     });
                 }

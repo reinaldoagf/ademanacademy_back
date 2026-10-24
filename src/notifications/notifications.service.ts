@@ -23,7 +23,7 @@ export class NotificationsService {
         channel?: NotificationChannel;
         metadata?: any;
     }) {
-        const channel = dto.channel || NotificationChannel.En_la_App;
+        const channel = dto.channel || NotificationChannel.Aplicación;
 
         // A. Registrar en base de datos
         const notification = await this.prisma.notification.create({
@@ -40,7 +40,7 @@ export class NotificationsService {
         });
 
         // B. Enviar en tiempo real (In-App)
-        if (channel === NotificationChannel.En_la_App || channel === NotificationChannel.Ambos) {
+        if (channel === NotificationChannel.Aplicación || channel === NotificationChannel.Ambos) {
             if (dto.userId) {
                 this.notificationsGateway.emitToUser(dto.userId, notification);
             } else {
