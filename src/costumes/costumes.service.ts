@@ -216,14 +216,11 @@ export class CostumesService {
             for (const item of assignments) {
                 const student = studentMap.get(item.studentId);
                 const clientId = student?.clients?.[0]?.id || null;
-                console.log({ item })
-                console.log({ student })
                 if (clientId) {
                     const client = await tx.client.findUnique({
                         where: { id: clientId },
                         include: { representative: { include: { ownedClients: true } }, user: true },
                     });
-                    console.log({ client })
                     if (client) {
                         // 1. Crear la asignación del vestuario
                         const studentCostume = await tx.studentCostume.create({
@@ -244,6 +241,7 @@ export class CostumesService {
                         if (!!item.issuePaymentOrder) {
                             const order = await tx.paymentOrder.create({
                                 data: {
+                                    studentId: item.studentId,
                                     clientId: client.representative?.ownedClients[0]?.id || client?.id,
                                     amount: downPayment,
                                     concept: ConceptType.Vestuario, //concept: `Adelanto 50% - Vestuario: ${costume.name} (Talla: ${item.assignedSize || 'N/A'})`,
@@ -304,6 +302,7 @@ export class CostumesService {
 
                 const order = await tx.paymentOrder.create({
                     data: {
+                        studentId: updated.studentId,
                         clientId: updated.clientId,
                         amount: remainingPayment,
                         concept: ConceptType.Vestuario, // concept: `Saldo Restante 50% - Vestuario: ${updated.costume.name} (Listo para entrega)`,

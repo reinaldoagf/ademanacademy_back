@@ -61,7 +61,8 @@ export class PaymentOrdersService {
                 orderBy: { createdAt: 'desc' },
                 include: {
                     registeringUser: true,
-                    client: { include: { student: true } }
+                    client: { include: { student: true } },
+                    student: { include: { clients: true } },
                 }
             }),
         ]);
@@ -129,7 +130,8 @@ export class PaymentOrdersService {
                 orderBy: { createdAt: 'desc' },
                 include: {
                     registeringUser: true,
-                    client: { include: { student: true } }
+                    client: { include: { student: true } },
+                    student: { include: { clients: true } },
                 }
             }),
         ]);
@@ -193,7 +195,8 @@ export class PaymentOrdersService {
                 orderBy: { createdAt: 'desc' },
                 include: {
                     registeringUser: true,
-                    client: { include: { user: true, student: true } }
+                    client: { include: { user: true, student: true } },
+                    student: { include: { clients: true } },
                 }
             }),
         ]);
