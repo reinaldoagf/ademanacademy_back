@@ -5,6 +5,7 @@ CREATE TABLE `users` (
     `dni` VARCHAR(30) NOT NULL,
     `firstName` VARCHAR(150) NOT NULL,
     `lastName` VARCHAR(150) NOT NULL,
+    `birthDate` DATE NOT NULL,
     `email` VARCHAR(180) NOT NULL,
     `countryCode` VARCHAR(40) NULL,
     `phone` VARCHAR(180) NOT NULL,

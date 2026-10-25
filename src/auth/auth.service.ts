@@ -17,28 +17,30 @@ export class AuthService {
     private jwtService: JwtService,
   ) { }
 
-  async signup(registerDto: SignupDto) {
+  async signup(dto: SignupDto) {
     // 1. Validar si el email ya existe
-    const userExists = await this.usersService.findByEmail(registerDto.email);
+    const userExists = await this.usersService.findByEmail(dto.email);
     if (userExists) {
       throw new BadRequestException('El correo electrónico ya está registrado');
     }
 
     // 2. Encriptar contraseña
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(registerDto.password, salt);
+    const hashedPassword = await bcrypt.hash(dto.password, salt);
 
     // 3. 🧠 LÓGICA DE NEGOCIO: Verificar si es el primer usuario del sistema
     const totalUsers = await this.usersService.countAll(); // Necesitas crear este método en UsersService
 
     // 4. Enviar al UsersService incluyendo el rol calculado internamente
     const user = await this.usersService.create({
-      firstName: registerDto.firstName,
-      lastName: registerDto.lastName,
-      email: registerDto.email,
-      phone: registerDto.phone,
-      IDNumberPrefix: registerDto.IDNumberPrefix,
-      dni: registerDto.dni,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      email: dto.email,
+      birthDate: dto.birthDate,
+      countryCode: dto.countryCode,
+      phone: dto.phone,
+      IDNumberPrefix: dto.IDNumberPrefix,
+      dni: dto.dni,
       password: hashedPassword,
       isAdmin: totalUsers === 0, // 👈 Pasado de forma segura en el servidor
     });

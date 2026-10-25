@@ -18,6 +18,7 @@ model User {
   dni               String         @unique @db.VarChar(30) // 💡 Añadido DNI único
   firstName         String         @db.VarChar(150)
   lastName          String         @db.VarChar(150)
+  birthDate         DateTime       @db.Date
   email             String         @unique @db.VarChar(180)
   countryCode       String?        @db.VarChar(40) // Opcional
   phone             String         @unique @db.VarChar(180)

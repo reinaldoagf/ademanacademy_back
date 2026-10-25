@@ -33,36 +33,36 @@ export class UsersService {
   /**
    * Crea un nuevo usuario en la base de datos
    */
-  async create(createUserDto: CreateUserDto): Promise<User> {
+  async create(dto: CreateUserDto): Promise<User> {
     try {
       // 1. Verificamos si ya existe un usuario con el mismo DNI
       const existingUserByDni = await this.prisma.user.findUnique({
-        where: { dni: createUserDto.dni },
+        where: { dni: dto.dni },
       });
 
       if (existingUserByDni) {
-        throw new ConflictException(`Ya existe un usuario registrado con el DNI: ${createUserDto.dni}`);
+        throw new ConflictException(`Ya existe un usuario registrado con el DNI: ${dto.dni}`);
       }
 
       // 2. Opcional: Verificar por correo electrónico si aplica
       const existingUserByEmail = await this.prisma.user.findUnique({
-        where: { email: createUserDto.email },
+        where: { email: dto.email },
       });
 
       if (existingUserByEmail) {
-        throw new ConflictException(`El correo electrónico ${createUserDto.email} ya está en uso.`);
+        throw new ConflictException(`El correo electrónico ${dto.email} ya está en uso.`);
       }
 
       // 2. Opcional: Verificar por correo electrónico si aplica
       const existingUserByPhone = await this.prisma.user.findUnique({
-        where: { phone: createUserDto.phone },
+        where: { phone: dto.phone },
       });
 
       if (existingUserByPhone) {
-        throw new ConflictException(`El teléfono ${createUserDto.phone} ya está en uso.`);
+        throw new ConflictException(`El teléfono ${dto.phone} ya está en uso.`);
       }
       const user = await this.prisma.user.create({
-        data: createUserDto,
+        data: dto,
       });
       return user;
     } catch (error) {
@@ -127,8 +127,11 @@ export class UsersService {
           id: true,
           firstName: true,
           lastName: true,
+          IDNumberPrefix: true,
           dni: true,
           email: true,
+          birthDate: true,
+          countryCode: true,
           phone: true,
           createdAt: true,
         },
@@ -167,13 +170,17 @@ export class UsersService {
   /**
    * Actualiza los datos de un usuario
    */
-  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
+  async update(id: string, dto: UpdateUserDto): Promise<User> {
+    const { birthDate, ...data } = dto;
     // Validamos primero la existencia del registro
     await this.findOne(id);
 
     return await this.prisma.user.update({
       where: { id },
-      data: updateUserDto,
+      data: {
+        ...data,
+        ...(birthDate && { birthDate: new Date(birthDate) })
+      },
     });
   }
 
@@ -221,7 +228,7 @@ export class UsersService {
             profileOnboarding: true,
             occupation: dto.profileType === ProfileType.Representante ? dto.representativeOccupation : undefined,
           },
-          select: { id: true, firstName: true, lastName: true, email: true, phone: true, profileType: true, profileOnboarding: true, occupation: true },
+          select: { id: true, firstName: true, lastName: true, email: true, phone: true, countryCode: true, profileType: true, profileOnboarding: true, occupation: true },
 
         });
 

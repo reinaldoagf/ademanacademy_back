@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional, IsBoolean, Matches } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional, IsBoolean, Matches, IsDateString } from 'class-validator';
 
 export class CreateUserDto {
   @IsString({ message: 'El nombre debe ser una cadena de texto' })
@@ -12,6 +12,13 @@ export class CreateUserDto {
   @IsEmail({}, { message: 'El formato del correo electrónico no es válido' })
   @IsNotEmpty({ message: 'El correo electrónico es un campo obligatorio' })
   email: string;
+
+  @IsDateString()
+  birthDate: string;
+
+  @IsOptional()
+  @IsString()
+  countryCode?: string;
 
   @IsString({ message: 'El número de WhatsApp debe ser una cadena de texto' })
   @IsNotEmpty({ message: 'El número de WhatsApp es obligatorio' })

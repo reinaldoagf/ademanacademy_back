@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength, Matches } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MinLength, Matches, IsDateString, IsOptional } from 'class-validator';
 
 export class SignupDto {
   @IsString()
@@ -20,6 +20,17 @@ export class SignupDto {
   @IsEmail({}, { message: 'El formato del correo electrónico no es válido' })
   @IsNotEmpty({ message: 'El correo electrónico es obligatorio' })
   email: string;
+
+  @IsString({ message: 'La fecha de nacimiento debe ser una cadena de texto' })
+  @IsNotEmpty({ message: 'La fecha de nacimiento es obligatoria' })
+  @Matches(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?)?$/, {
+    message: 'birthDate must be a valid ISO 8601 date string',
+  })
+  birthDate: string;
+
+  @IsOptional()
+  @IsString()
+  countryCode?: string;
 
   @IsString({ message: 'El número de WhatsApp debe ser una cadena de texto' })
   @IsNotEmpty({ message: 'El número de WhatsApp es obligatorio' })
