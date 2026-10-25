@@ -21,27 +21,6 @@ export class EmployeesService {
             if (!birthDate || isNaN(birthDate.getTime())) {
                 throw new BadRequestException('La fecha de nacimiento (birthDate) no es válida.');
             }
-            /*             model FixedExpense {
-              id          String           @id @default(uuid())
-              title       String           @db.VarChar(150)
-              description String?          @db.Text
-              amount      Float // Monto del abono/pago realizado
-              frequency   ExpenseFrequency @default(Mensual) // Frecuencia de repetición
-              nextDueDate DateTime         @db.Date // Próxima fecha en que se genera la cuenta por pagar
-              isActive    Boolean          @default(true)
-            
-              // Proveedor opcional asociado al gasto fijo
-              supplierId String?   @db.VarChar(36)
-              supplier   Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-              // 🌟 Empleado opcional (para gastos fijos de nómina)
-              employeeId String?   @db.VarChar(36)
-              employee   Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
-              createdAt  DateTime  @default(now())
-              updatedAt  DateTime  @updatedAt
-            
-              @@map("fixed_expenses")
-            } */
-
             const employee = await this.prisma.employee.create({
                 data: {
                     IDNumberPrefix: data.IDNumberPrefix,
@@ -76,6 +55,14 @@ export class EmployeesService {
             })
 
             if (employee) {
+                if (employee.user?.id) {
+                    await this.prisma.user.update({
+                        where: { id: employee.user.id },
+                        data: {
+                            isEmployee: true,
+                        },
+                    })
+                }
                 await this.prisma.fixedExpense.create({
                     data: {
                         title: "Nómina",
@@ -222,7 +209,7 @@ export class EmployeesService {
         }
 
         try {
-            return await this.prisma.employee.update({
+            const employee = await this.prisma.employee.update({
                 where: { id },
                 data: {
                     ...data,
@@ -243,6 +230,15 @@ export class EmployeesService {
                     groups: true,
                 },
             });
+            if (employee.user?.id) {
+                await this.prisma.user.update({
+                    where: { id: employee.user.id },
+                    data: {
+                        isEmployee: true,
+                    },
+                })
+            }
+            return employee;
         } catch (error) {
             if (
                 error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -258,10 +254,22 @@ export class EmployeesService {
     async remove(id: string) {
         await this.findOne(id); // Lanza NotFoundException si no existe
 
-        await this.prisma.employee.delete({
+        const employee = await this.prisma.employee.delete({
             where: { id },
+            include: {
+                user: {
+                    select: { id: true, email: true },
+                },
+            },
         });
-
+        if (employee.user?.id) {
+            await this.prisma.user.update({
+                where: { id: employee.user.id },
+                data: {
+                    isEmployee: false,
+                },
+            })
+        }
         return {
             message: 'Empleado eliminado correctamente.',
             id,

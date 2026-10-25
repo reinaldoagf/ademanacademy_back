@@ -24,6 +24,7 @@ model User {
   phone             String         @unique @db.VarChar(180)
   password          String?        @db.VarChar(255)
   isAdmin           Boolean        @default(false)
+  isEmployee        Boolean        @default(false)
   profileOnboarding Boolean        @default(false)
   profileType       ProfileType?
   // 🎯 NUEVO: Ocupación exclusiva para cuando el usuario actúa como Representante
