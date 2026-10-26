@@ -27,6 +27,7 @@ export class EmployeesService {
                     dni: data.dni,
                     firstName: data.firstName,
                     lastName: data.lastName,
+                    email: data.email,
                     birthDate,
                     typeOfContract: data.typeOfContract,
                     typeOfEmployee: data.typeOfEmployee,
@@ -213,6 +214,7 @@ export class EmployeesService {
                 where: { id },
                 data: {
                     ...data,
+                    isEmployee: false,
                     ...(birthDate && { birthDate: new Date(birthDate) }),
                     ...(hourlyRate !== undefined && { hourlyRate: new Prisma.Decimal(hourlyRate) }),
                     ...(baseSalary !== undefined && { baseSalary: new Prisma.Decimal(baseSalary) }),

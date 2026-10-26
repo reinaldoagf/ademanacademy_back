@@ -27,6 +27,10 @@ export class CreateEmployeeDto {
     @IsOptional()
     dni?: string;
 
+    @IsOptional()
+    @IsString()
+    email?: string;
+
     @IsEnum(TypeOfContract)
     @IsOptional()
     typeOfContract?: TypeOfContract;
