@@ -1,12 +1,19 @@
 // src/metrics/metrics.service.ts
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ConceptType, EventType, RegistrationStatus, TransactionStatus, LockerRoomStatus, AssignmentStatus, User } from '@prisma/client';
+import {
+    ConceptType,
+    EventType,
+    RegistrationStatus,
+    TransactionStatus,
+    LockerRoomStatus,
+    AssignmentStatus,
+    User
+} from '@prisma/client';
 
 @Injectable()
 export class MetricsService {
     constructor(private readonly prisma: PrismaService) { }
-
     // 🔍 READ ALL (Con paginación y filtro por nombre del salón o tipo)
     async getBorrowedCostumes() {
         try {
@@ -58,7 +65,6 @@ export class MetricsService {
             };
         }
     }
-
     async getRevenueByCategoryMetrics() {
         try {
             const incomeAggregations = await this.prisma.transaction.groupBy({
@@ -125,7 +131,6 @@ export class MetricsService {
             };
         }
     }
-
     async getBalanceChartMetrics(startDateParam?: string, endDateParam?: string) {
         try {
             const now = new Date();
@@ -483,6 +488,50 @@ export class MetricsService {
             return {
                 success: false,
                 error: "No se pudo obtener el control de vestuarios.",
+            };
+        }
+    }
+    async getContractData(user: User) {
+        try {
+
+            // 🌟 Buscamos al empleado asociado mediante el userId
+            const employee = await this.prisma.employee.findUnique({
+                where: { userId: user.id },
+                select: {
+                    typeOfContract: true,
+                    baseSalary: true,
+                    hourlyRate: true,
+                    hoursTaughtMonth: true,
+                },
+            });
+
+            // Si el usuario no tiene un perfil de empleado registrado, lanzamos una excepción o devolvemos valores por defecto
+            if (!employee) {
+                throw new NotFoundException('No se encontró información de contrato para este usuario.');
+            }
+
+            return {
+                data: {
+                    typeOfContract: employee.typeOfContract,
+                    // Prisma maneja los Decimal como objetos Decimal o strings, los convertimos a Number de forma segura
+                    baseSalary: employee.baseSalary ? Number(employee.baseSalary) : 0,
+                    hourlyRate: employee.hourlyRate ? Number(employee.hourlyRate) : 0,
+                    hoursTaughtMonth: employee.hoursTaughtMonth ?? 0,
+                },
+            };
+        } catch (error) {
+            console.error('Error al obtener métricas de ingresos por concepto:', error);
+
+            // Si prefieres lanzar el error hacia el controlador para manejarlo con un HttpException, puedes hacerlo:
+            // throw new InternalServerErrorException('Error al procesar los datos del contrato');
+
+            return {
+                data: {
+                    typeOfContract: "Fijo",
+                    baseSalary: 0,
+                    hourlyRate: 0,
+                    hoursTaughtMonth: 0,
+                },
             };
         }
     }

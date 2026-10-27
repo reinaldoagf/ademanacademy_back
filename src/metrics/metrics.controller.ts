@@ -7,6 +7,10 @@ import { CurrentUser } from '@/auth/decorators/current-user.decorator';
 @UseGuards(JwtAuthGuard) // 🛡️ Protege la gestión de infraestructura
 export class MetricsController {
     constructor(private readonly metricsService: MetricsService) { }
+    @Get('contract-data')
+    async getContractData(@CurrentUser() user: any) {
+        return this.metricsService.getContractData({ ...user, id: user.sub });
+    }
     @Get('revenue-by-category')
     async getRevenueByCategoryMetrics() {
         return this.metricsService.getRevenueByCategoryMetrics();
