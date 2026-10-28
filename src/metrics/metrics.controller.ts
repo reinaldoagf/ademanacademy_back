@@ -50,4 +50,9 @@ export class MetricsController {
     async getCostumeInventoryMetrics() {
         return this.metricsService.getCostumeInventoryMetrics();
     }
+
+    @Get('employee-dashboard')
+    async getEmployeeDashboardMetrics(@CurrentUser() user: any) {
+        return this.metricsService.getEmployeeDashboardMetrics({ ...user, id: user.sub });
+    }
 }

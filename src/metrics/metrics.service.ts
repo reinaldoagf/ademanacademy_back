@@ -571,4 +571,69 @@ export class MetricsService {
             return { data: [] };
         }
     }
+    async getEmployeeDashboardMetrics(user: User) {
+        try {
+            // 1. Buscar el empleado asociado al usuario logueado con sus grupos
+            const employee = await this.prisma.employee.findUnique({
+                where: { userId: user.id },
+                include: {
+                    groups: {
+                        select: { id: true },
+                    },
+                },
+            });
+
+            if (!employee) {
+                return {
+                    data: {
+                        firstName: user.firstName,
+                        lastName: user.lastName,
+                        typeOfContract: 'Fijo',
+                        baseSalary: 0,
+                        hourlyRate: 0,
+                        hoursTaughtMonth: 0,
+                        payrollStatus: 'Pendiente',
+                        groupsCount: 0,
+                        calculatedEarnings: 0,
+                    },
+                };
+            }
+
+            // 2. Calcular ganancias según el tipo de contrato ('Fijo' vs por hora)
+            const baseSalary = employee.baseSalary ? Number(employee.baseSalary) : 0;
+            const hourlyRate = Number(employee.hourlyRate);
+            const hoursTaught = employee.hoursTaughtMonth || 0;
+
+            const calculatedEarnings = employee.typeOfContract === 'Fijo'
+                ? baseSalary
+                : hoursTaught * hourlyRate;
+
+            return {
+                data: {
+                    firstName: employee.firstName,
+                    lastName: employee.lastName,
+                    typeOfContract: employee.typeOfContract,
+                    baseSalary,
+                    hourlyRate,
+                    hoursTaughtMonth: hoursTaught,
+                    payrollStatus: employee.payrollStatus,
+                    groupsCount: employee.groups.length,
+                    calculatedEarnings,
+                },
+            };
+        } catch (error) {
+            console.error('Error al obtener métricas del dashboard del empleado:', error);
+            return {
+                data: {
+                    typeOfContract: 'Fijo',
+                    baseSalary: 0,
+                    hourlyRate: 0,
+                    hoursTaughtMonth: 0,
+                    payrollStatus: 'Pendiente',
+                    groupsCount: 0,
+                    calculatedEarnings: 0,
+                },
+            };
+        }
+    }
 }
