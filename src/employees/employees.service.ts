@@ -213,8 +213,7 @@ export class EmployeesService {
             const employee = await this.prisma.employee.update({
                 where: { id },
                 data: {
-                    ...data,
-                    isEmployee: false,
+                    ...data, // 🌟 Corregido: Se esparcen las propiedades del objeto data correctamente
                     ...(birthDate && { birthDate: new Date(birthDate) }),
                     ...(hourlyRate !== undefined && { hourlyRate: new Prisma.Decimal(hourlyRate) }),
                     ...(baseSalary !== undefined && { baseSalary: new Prisma.Decimal(baseSalary) }),

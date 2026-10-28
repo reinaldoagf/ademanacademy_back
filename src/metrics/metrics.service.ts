@@ -428,7 +428,6 @@ export class MetricsService {
             return { success: false, error: 'Error al consultar el calendario.' };
         }
     }
-
     async getCostumeInventoryMetrics() {
         try {
             // Consultar asignaciones de vestuarios junto con el estudiante y su cliente (representante/alumno)
@@ -533,6 +532,43 @@ export class MetricsService {
                     hoursTaughtMonth: 0,
                 },
             };
+        }
+    }
+    async getGroupsByInstructor(user: User) {
+        try {
+            // 1. Buscar el empleado asociado al usuario actual
+            const employee = await this.prisma.employee.findUnique({
+                where: { userId: user.id },
+                select: { id: true },
+            });
+
+            if (!employee) {
+                return { data: [] };
+            }
+
+            // 2. Consultar los grupos donde este empleado es el instructor
+            const groups = await this.prisma.group.findMany({
+                where: { instructorId: employee.id },
+                include: {
+                    category: { select: { name: true } },
+                    _count: {
+                        select: { students: true }, // Conteo de estudiantes relacionados al grupo
+                    },
+                },
+            });
+
+            return {
+                data: groups.map((group) => ({
+                    id: group.id,
+                    name: group.name,
+                    totalNumberOfSlots: group.totalNumberOfSlots,
+                    category: { name: group.category?.name || 'General' },
+                    _count: { students: group._count.students },
+                })),
+            };
+        } catch (error) {
+            console.error('Error al obtener los grupos del empleado:', error);
+            return { data: [] };
         }
     }
 }

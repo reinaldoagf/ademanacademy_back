@@ -11,6 +11,10 @@ export class MetricsController {
     async getContractData(@CurrentUser() user: any) {
         return this.metricsService.getContractData({ ...user, id: user.sub });
     }
+    @Get('groups-by-instructor')
+    async getGroupsByInstructor(@CurrentUser() user: any) {
+        return this.metricsService.getGroupsByInstructor({ ...user, id: user.sub });
+    }
     @Get('revenue-by-category')
     async getRevenueByCategoryMetrics() {
         return this.metricsService.getRevenueByCategoryMetrics();
